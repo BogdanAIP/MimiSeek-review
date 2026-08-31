@@ -16,7 +16,8 @@ Allow CAP, UV, and future repositories to consume one standalone stable MimiSeek
 - learner and candidate lifecycle;
 - candidate evaluation and promotion protocol;
 - release of stable reviewer versions;
-- distribution of stable-version update PRs to registered consumers.
+- tracking desired-versus-installed reviewer versions for consumers;
+- safety-gated distribution of stable-version updates.
 
 ### Consumer repository owns
 
@@ -26,7 +27,7 @@ Allow CAP, UV, and future repositories to consume one standalone stable MimiSeek
 - exact PR/BASE/HEAD identity;
 - finding adjudication under its governing semantics;
 - project-local policy overlay and document owners;
-- production decision whether an update PR can merge under that project's own acceptance rules.
+- authoritative signals for whether reviewer/infrastructure changes are permitted at the current project state.
 
 ## Consumer binding
 
@@ -35,6 +36,8 @@ A consumer must identify the exact MimiSeek stable reviewer it uses. The machine
 - reviewer version;
 - immutable MimiSeek commit/content identity;
 - compatibility/policy version where required.
+
+Each individual agent/review/procedure run must also bind the reviewer version it started with. Updating the repository-level reviewer pin must never mutate reviewer semantics for a run already in progress.
 
 ## Evidence export
 
@@ -56,23 +59,52 @@ The common reviewer must read and obey project-local policy. Generic methodology
 
 A stricter project-local rule remains authoritative for that project unless the integration contract explicitly makes the combination incompatible.
 
-## Stable update distribution
+## Stable promotion versus consumer installation
 
-After `PROMOTE`, MimiSeek's distributor prepares a separate auditable version-update change for each registered compatible consumer.
+MimiSeek promotion and consumer installation are separate transactions.
 
-Default behavior:
+A new MimiSeek stable may exist while a consumer remains intentionally pinned to the previous stable because the consumer is not in a safe update window.
 
-```text
-MimiSeek stable vN → vN+1
-    ↓
-consumer A update PR
-consumer B update PR
-consumer C update PR
-```
+This is normal, not an error.
 
-Do not silently push a reviewer update directly to a consumer's stable branch.
+Track at least:
 
-A consumer may remain pinned when compatibility cannot be established; that state must be explicit and visible to MimiSeek.
+- `mimiseek_stable` — current globally promoted reviewer;
+- `consumer_installed` — exact reviewer currently installed in each consumer;
+- `consumer_target` — stable version MimiSeek wants the consumer to receive;
+- `distribution_state` — installed, pending, blocked, or incompatible with reason.
+
+## Consumer safe-update gate
+
+Before creating or applying a reviewer update in a consumer repository, `mimiseek-update` must independently resolve whether the current project state permits that change.
+
+A consumer is not safe to update merely because MimiSeek has promoted a new stable.
+
+Potential blockers include:
+
+- active agent/procedure/reviewer runs;
+- frozen exact-head review, acceptance, release, or physical-test gates;
+- project stages that forbid unrelated infrastructure/policy mutations;
+- open migrations affecting reviewer/policy ownership;
+- operations whose exact reviewer identity must remain stable until completion;
+- unresolved compatibility with project-local review policy.
+
+If no trustworthy project-local signal can prove the absence of such blockers, distribution is deferred fail-closed.
+
+## Safe distribution
+
+For a consumer proven `SAFE_TO_UPDATE`, MimiSeek prepares an auditable reviewer-version update according to that repository's governing workflow.
+
+Default behavior is an update PR rather than a silent write to the stable branch.
+
+For a consumer not safe to update:
+
+- do not modify its reviewer pin;
+- preserve its currently installed reviewer;
+- record the target new stable and defer reason as `PENDING_DISTRIBUTION`;
+- retry safety evaluation on a later `mimiseek-update` invocation.
+
+This allows different projects to adopt the same MimiSeek stable at different times without blocking global reviewer evolution.
 
 ## Failure behavior
 
@@ -83,4 +115,6 @@ Fail closed on:
 - incompatible policy/reviewer versions;
 - stale exact-head result presented as current evidence;
 - ambiguous finding disposition;
-- attempted automatic distribution without an authoritative promotion result.
+- attempted consumer update without authoritative MimiSeek promotion;
+- attempted consumer update without a proven current safe-update window;
+- any attempt to change reviewer semantics for an already-running run.
