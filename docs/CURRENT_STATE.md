@@ -15,23 +15,22 @@ Last synchronized: 2026-08-31
 - Registered initial consumers: `BogdanAIP/chat-agent-platform`, `BogdanAIP/uv-studio`
 - Native ChatGPT skill identities: `mimiseek-review-run` and `mimiseek-review-update`
 - Natural-language commands: `Запусти Мимисик` and `Обнови Мимисик`
-- Active implementation focus: finalize Stage 0 product boundary, two-chat evolution workflow, native-skill routing, and safe consumer rollout contract
+- Active implementation focus: finish Stage 0 bootstrap so the repository-driven run skill can continue development from durable state and later operate the reviewer-learning cycle without being reinstalled for each lifecycle change
 
 For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplicate a self-referential current commit SHA here during active development.
 
 ## Established product boundary
 
 - MimiSeek Review is standalone and multi-project, not owned by CAP or UV.
-- Its job is to collect accepted reviewer outcomes, learn, build candidate reviewers, independently evaluate them, publish a better stable reviewer, and distribute stable-version updates when each consumer is safe to change.
+- Its product job is to collect accepted reviewer outcomes, learn, build candidate reviewers, independently evaluate them, publish a better stable reviewer, and distribute stable-version updates when each consumer is safe to change.
 - MimiSeek does **not** own the ordinary code-review/fix loop inside consumer repositories.
 - Consumer repositories are evidence producers + stable-reviewer consumers.
 - Stable and candidate reviewer roles are separate.
 - Learner/candidate cannot change their own evaluation policy.
-- Routine reviewer evolution uses two user-visible chats/workflows:
-  1. `Запусти Мимисик` / `mimiseek-review-run` — collect, learn, build candidate, regression, freeze `PENDING_UPDATE`;
-  2. in a new chat, `Обнови Мимисик` / `mimiseek-review-update` — independently evaluate candidate, promote only if proven, then safety-check each consumer before rollout.
-- Both native skills are hard-bound to the exact GitHub repository `BogdanAIP/MimiSeek-review`. Any route to another product named MimiSeek must fail closed with `WRONG_MIMISEEK_TARGET` before mutation.
-- S3/PostgreSQL/`CONFIG_ENV` application setup is an explicit wrong-target warning unless such infrastructure is later introduced by the canonical MimiSeek Review repository itself.
+- `mimiseek-review-run` is repository-driven: on every invocation it reconstructs live GitHub state and continues the next canonical MimiSeek work. During bootstrap this means continuing project implementation; once the evolution pipeline exists it means running the governed collect/learn/candidate/regression half.
+- `mimiseek-review-update` runs in a new independent chat when an eligible candidate/update package or deferred distribution state exists; it evaluates promotion and then consumer rollout safety under live project governance.
+- Installed skills are stable launch contracts, not frozen copies of the evolving implementation. Repository-owned governance and current state define implementation details.
+- Both native skills are hard-bound to the exact GitHub repository `BogdanAIP/MimiSeek-review`; another product named MimiSeek is out of scope.
 - Global MimiSeek promotion and consumer installation are separate transactions.
 - A consumer may remain pinned to an older stable while its live project state makes an update unsafe.
 - Already-running agent/reviewer/procedure runs remain bound to the reviewer version with which they started.
@@ -47,7 +46,7 @@ Stage 1 will import those data into canonical machine-readable text datasets und
 - Historical workbook data are not yet imported into canonical MimiSeek datasets.
 - No CAP/UV `code-review` skill has yet been selected or derived as first MimiSeek stable.
 - No collector, outcome store, learner, regression runner, promotion registry, or consumer safe-window detector/distributor implementation exists yet.
-- The two workflow skills currently define the required contracts; later roadmap stages implement the machinery behind them.
+- Therefore a real `Запусти Мимисик` invocation today must continue the current repository-development work rather than pretending the later operational learning pipeline already exists.
 - Consumer repositories do not yet expose the final machine-readable safe-update signal/contract; until that exists, inability to prove a safe update window must defer distribution.
 
 The existing CAP and UV reviewer policies differ. The first stable baseline must be derived explicitly rather than accidentally copying one consumer's current policy.
@@ -59,13 +58,10 @@ Complete review/acceptance of PR #1. Then Stage 1 must do two bootstrap jobs tog
 1. import/reconcile the existing historical reviewer workbook into canonical MimiSeek data, preserving the 84 BUGGY→FIXED cases and provenance;
 2. inventory accepted CAP/UV review policies at exact refs and derive the first reusable stable MimiSeek reviewer while retaining project-specific overlays.
 
-Native ChatGPT installation/testing must use the unique skill identities `mimiseek-review-run` and `mimiseek-review-update`; any older/generic MimiSeek skill that routes to an unrelated project must not be used for this workflow.
-
 Consumer integration must also define how CAP/UV expose a trustworthy live `SAFE_TO_UPDATE` / defer state so MimiSeek never changes reviewer policy while an agent, frozen exact-head gate, or protected project stage is in progress.
 
 ## Open risks
 
-- A generic MimiSeek skill name can route ChatGPT to an unrelated project; unique native-skill identity plus exact-repository preflight is mandatory.
 - A naive common baseline could silently lose CAP- or UV-specific obligations.
 - Historical outcomes are selection-biased; they are learning/regression evidence, not a neutral leaderboard.
 - Consumer safe-window detection must not infer safety from silence or absence of visible GitHub activity.
