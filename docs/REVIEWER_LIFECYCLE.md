@@ -1,82 +1,88 @@
 # Reviewer Lifecycle
 
-## States
+## Stable
 
-### Stable
+The reviewer version released for real consumer use. Stable identity must be immutable and resolvable.
 
-The reviewer version approved for real consumer use. Stable identity must be immutable and resolvable.
+## Candidate
 
-### Candidate
+A proposed next version generated from evidence-backed learning. It is not consumer-authoritative merely because it exists or performs well on one case.
 
-A proposed next reviewer version. It may be evaluated and shadow-run but is not authoritative for consumer acceptance merely because it exists.
+## Rejected candidate
 
-### Rejected candidate
+A candidate that failed evaluation. Its evidence remains useful; rejection does not rewrite prior results.
 
-A candidate that failed evaluation. Its evidence remains useful for later learning; rejection does not rewrite history.
+## Source learning loop
 
-## Learning loop
+Consumer projects naturally generate evidence during their own ordinary development/review work:
 
-Real project work naturally produces learning evidence:
+- MimiSeek findings are confirmed or rejected;
+- Codex may find a defect MimiSeek missed;
+- MimiSeek may find a defect Codex missed;
+- development work may expose defects missed by reviewers;
+- fixes produce BUGGY→FIXED pairs;
+- later failures can reveal post-review escapes.
 
-- development finds defects before review;
-- Codex may find defects MimiSeek missed;
-- MimiSeek may find defects Codex missed;
-- MimiSeek findings may be confirmed or rejected;
-- later fixes create BUGGY→FIXED pairs;
-- post-review defects expose misses.
-
-The intended loop is:
+MimiSeek imports that evidence and runs:
 
 ```text
 stable reviewer
     ↓
-real PR outcomes
+consumer outcomes
+    ↓
+collect + normalize
     ↓
 learning events
     ↓
-learner analysis
+learner
     ↓
 candidate
     ↓
-regression evaluation
+regression / protected-capability evaluation
     ↓
-shadow/real evidence when required
-    ↓
-fresh independent evaluator
+fresh independent ChatGPT evaluator
     ↓
 PROMOTE / REJECT / ABSTAIN
+    ↓
+new stable only on PROMOTE
+    ↓
+consumer update PRs
 ```
 
 ## Learning event principles
 
-Events must be derived from evidence, not reviewer popularity.
+Events are derived from adjudicated evidence, not reviewer popularity.
 
 Examples:
 
 - `OUR_HIT`: MimiSeek finding was confirmed.
-- `OUR_MISS_CODEX_HIT`: MimiSeek did not report a defect on the relevant identity; Codex did; defect was later confirmed.
-- `OUR_HIT_CODEX_MISS`: MimiSeek confirmed finding was not reported by a suitable Codex run on the same relevant identity.
+- `OUR_MISS_CODEX_HIT`: suitable MimiSeek evidence missed a defect that Codex reported and that was later confirmed.
+- `OUR_HIT_CODEX_MISS`: MimiSeek confirmed a defect not reported by a suitable Codex run.
 - `OUR_FALSE_POSITIVE`: MimiSeek finding was rejected after falsification.
 - `BOTH_MISS_LATER_CONFIRMED`: suitable runs missed a later-confirmed defect.
 
-Exact comparison requirements must prevent different-head fixes from being mislabelled as reviewer misses.
+Different-head review sequences are not automatically reviewer misses. Identity/timing/visibility conditions must support the inference.
 
-## What the learner should learn
+## Learner output
 
-Prefer transferable mechanics, such as:
+The learner should extract transferable mechanics rather than historical answers.
 
-- enumerate every writer to a durable object;
-- trace consequence-bearing operations through effect, observation, verification, durable receipt, crash, restart, and reconciliation;
-- prove capability unreachability rather than trusting a policy statement;
-- inspect callers/consumers when local correctness depends on cross-file semantics;
-- require evidence that survives falsification before publishing a finding.
+Good:
 
-Do not encode exact SHA, file name, line number, or historical answer as the learned rule unless that identity is itself a generic protocol element.
+> For a modified durable object, enumerate all independently reachable writers and prove the intended serialization boundary covers all of them.
+
+Bad:
+
+> On SHA abc123 inspect file X line 417.
+
+Every candidate change must cite evidence for why the mechanic is proposed and identify capabilities it could affect.
 
 ## Protected capabilities
 
-A demonstrated strength can be marked as protected evaluation coverage. A later candidate should not be promoted if it loses that capability beyond the governing evaluation tolerance.
+Demonstrated strengths may become protected evaluation coverage. A candidate must not be promoted if it loses protected capability beyond fixed policy tolerance.
 
 ## Promotion authority
 
-The learner proposes. The evaluator judges under `EVALUATION_POLICY.md`. A candidate cannot promote itself.
+The learner proposes. Regression evaluation measures. A fresh independent ChatGPT evaluator judges under `EVALUATION_POLICY.md`.
+
+Only an authoritative `PROMOTE` result can update the stable reviewer identity. `REJECT` and `ABSTAIN` leave stable unchanged.

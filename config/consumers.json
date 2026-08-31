@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "consumers": [
+    {
+      "repository": "BogdanAIP/chat-agent-platform",
+      "distribution": "pull_request"
+    },
+    {
+      "repository": "BogdanAIP/uv-studio",
+      "distribution": "pull_request"
+    }
+  ]
+}

@@ -2,100 +2,150 @@
 
 ## System boundary
 
-MimiSeek Review is a standalone system. CAP, UV, and future repositories are consumers, not owners of the generic reviewer implementation.
+MimiSeek Review is a standalone reviewer-improvement and release system.
+
+CAP, UV, and future repositories are:
+
+- consumers of the stable reviewer;
+- producers of real review/outcome evidence;
+- owners of their own development, review/fix loop, architecture truth, and project-specific policy.
+
+MimiSeek Review does **not** own or orchestrate the ordinary PR review loop in those repositories.
+
+## End-to-end architecture
+
+```text
+CAP / UV / future projects
+  ordinary development + Codex + MimiSeek reviews
+  adjudicated findings / PASS / fixes / exact identities
+                    |
+                    v
+              COLLECTOR
+                    |
+                    v
+          NORMALIZED OUTCOME STORE
+                    |
+                    v
+          LEARNING EVENT BUILDER
+                    |
+                    v
+                 LEARNER
+                    |
+                    v
+          CANDIDATE REVIEWER
+                    |
+                    v
+       REGRESSION / CAPABILITY GATE
+                    |
+                    v
+      FRESH CHATGPT EVALUATOR
+        /           |          \
+   PROMOTE        REJECT      ABSTAIN
+      |
+      v
+ NEW STABLE REVIEWER
+      |
+      v
+ DISTRIBUTOR → version-update PRs → consumers
+```
 
 ## Logical components
 
-### Reviewer
+### Stable reviewer artifact
 
-Runs an independent semantic review against an immutable review identity and the consuming repository's governing policy.
+The reviewer version currently released for consumer use. Its identity is immutable and resolvable by version plus content/commit identity.
 
-Authority:
+### Collector
 
-- may inspect allowed evidence;
-- may emit structured review results/findings;
-- may not adjudicate its own findings as ground truth;
-- may not promote a reviewer candidate.
+Reads new structured review outcomes from registered consumer repositories and imports only evidence that satisfies identity and provenance requirements.
+
+The collector must be idempotent and must not infer missing adjudication as truth.
 
 ### Outcome store
 
-Persists review runs, findings, dispositions, identities, and later fix/verification evidence.
+Persists normalized review runs, findings, dispositions, exact identities, discovery source, and fix/verification evidence.
 
-Its purpose is reconstruction and learning, not rewriting project history.
+Historical chronology remains in source repositories; this store is the canonical normalized learning input for MimiSeek.
 
 ### Learning event builder
 
-Derives evidence-backed events from adjudicated outcomes, such as OUR_HIT or OUR_MISS_CODEX_HIT.
+Derives evidence-backed events such as:
+
+- `OUR_HIT`;
+- `OUR_MISS_CODEX_HIT`;
+- `OUR_HIT_CODEX_MISS`;
+- `OUR_FALSE_POSITIVE`;
+- `BOTH_MISS_LATER_CONFIRMED`.
+
+Different-head sequences must not be mislabeled as same-head misses.
 
 ### Learner
 
-Analyzes learning events and proposes transferable changes to reviewer behavior.
+Analyzes accumulated events and proposes transferable changes to reviewer behavior.
 
 Authority:
 
 - may produce a candidate reviewer and rationale;
-- may not redefine the candidate's evaluation policy;
+- may cite concrete learning evidence;
+- may not modify the evaluation policy governing that candidate;
 - may not make a candidate stable.
 
 ### Regression corpus
 
-Contains real BUGGY→FIXED cases and protected-capability cases. It is development/regression evidence, not an external blind benchmark.
+Contains real BUGGY→FIXED cases and protected-capability cases.
 
-### Evaluator
+The existing historical reviewer workbook is the bootstrap source for this corpus and outcome history. Canonical machine data will live in text formats under `data/`; Excel remains a generated/reporting representation.
 
-Separately governed path that determines whether a candidate has sufficient evidence for `PROMOTE`, must `REJECT`, or must `ABSTAIN`.
+### Regression evaluator
 
-The evaluator role is intended to run in a fresh independent ordinary-chat context for semantic promotion evaluation.
+Executes stable and candidate against appropriate historical cases and protected capabilities and records target detection, old-defect persistence on FIXED, regressions, and false positives.
+
+### Fresh ChatGPT evaluator
+
+A separately governed evaluator run in a **new isolated ChatGPT chat/context**. It independently checks candidate identity, evaluation evidence, governing policy, and regression/protected-capability results, then returns only an authoritative `PROMOTE`, `REJECT`, or `ABSTAIN` result under `docs/EVALUATION_POLICY.md`.
+
+The learner and candidate do not control this context.
 
 ### Version registry
 
-Identifies stable/candidate reviewer versions and their immutable implementation/policy refs.
+Identifies stable and candidate reviewer versions, immutable content identity, evaluation-policy identity, and promotion evidence.
 
-### Consumer adapter/contract
+### Distributor
 
-Binds a consuming repository to an exact reviewer version while retaining project-specific policy locally.
+After authoritative `PROMOTE`, prepares auditable reviewer-version update changes for every registered compatible consumer repository.
+
+Default distribution mechanism is a separate update PR per consumer. Distribution must not silently push incompatible reviewer changes to consumer `main`.
+
+### ChatGPT evolution orchestrator
+
+The user-facing `mimiseek-evolve` skill starts the whole MimiSeek improvement pipeline from ChatGPT.
+
+Internally it invokes collector, learner, regression, fresh evaluation, promotion, and distribution in order. It must stop fail-closed if required evidence, authority, or fresh-context capability is unavailable.
 
 ## Authority separation
 
-```text
-real projects
-    |
-    v
-stable reviewer ----> review outcomes ----> learning events
-                                            |
-                                            v
-                                         learner
-                                            |
-                                            v
-                                         candidate
-                                            |
-                           fixed evaluation policy + corpus
-                                            |
-                                            v
-                                     fresh evaluator
-                                  /        |        \
-                           PROMOTE      REJECT     ABSTAIN
-                              |
-                              v
-                         new stable
-```
-
-No single mutable reviewer candidate owns every arrow in this loop.
+- Consumer review processes create source evidence but do not promote MimiSeek versions.
+- Collector imports evidence but does not decide learning changes.
+- Learner proposes candidate changes but cannot promote them.
+- Candidate cannot modify the policy or corpus result used to judge itself.
+- Regression evaluator measures; it does not independently waive required fresh evaluation.
+- Fresh evaluator judges under fixed policy but does not author candidate changes.
+- Distributor acts only on an accepted immutable promotion result.
 
 ## Generic versus project-specific knowledge
 
-A rule may enter the generic reviewer only when it is transferable beyond the originating project.
+A rule may enter the generic stable reviewer only when it is transferable beyond the originating project.
 
-Example generic mechanic:
+Generic example:
 
 > For a modified durable object, enumerate all independent writers and prove they share the intended serialization/authority boundary.
 
-Example project-specific rule:
+Project-specific example:
 
-> A particular CAP procedure must use a named receipt or a UV architecture document is the owner of a specific product state.
+> A named CAP receipt or UV document is authoritative for a specific local state.
 
-Project-specific rules stay in the consumer repository's policy/overlay.
+Project-specific rules remain in the consumer repository's governing policy/overlay.
 
 ## Durable state principle
 
-Chat contexts are execution environments, not state stores. Canonical project state, reviewer versions, evidence, decisions, and accepted policy must be recoverable from repositories and structured persisted data.
+Chat contexts are workers, not state stores. Canonical project state, reviewer versions, normalized evidence, learning events, candidate rationale, evaluation results, and promotion history must be recoverable from Git/GitHub and structured persisted data.

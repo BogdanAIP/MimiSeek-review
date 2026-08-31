@@ -2,62 +2,50 @@
 
 ## Purpose
 
-Enable continuous development by ChatGPT across many disposable chats without depending on previous-chat memory.
+Enable MimiSeek Review itself to be developed by ChatGPT across many disposable chats without depending on previous-chat memory.
+
+This document governs development of the MimiSeek improvement system. It does not own the ordinary review/fix loop of CAP, UV, or other consumer projects.
 
 ## Starting a new development chat
 
-Follow the bootstrap in `AGENTS.md`, then independently resolve live GitHub state. The new chat should be able to answer:
+Follow `AGENTS.md`, then independently resolve live GitHub state. A new chat must be able to answer:
 
-1. What are we building?
-2. Where are we now?
+1. What is MimiSeek Review responsible for?
+2. Where is development now?
 3. What is the next canonical action?
-4. Which accepted decisions and constraints must not be silently changed?
+4. Which accepted decisions and authority boundaries must not be silently changed?
 
-If those answers cannot be reconstructed from the repository, fix the repository state/document owners rather than creating a per-chat handoff note.
+If those answers cannot be reconstructed from the repository, fix the canonical owners rather than creating a per-chat handoff note.
 
-## Normal implementation cycle
+## Normal MimiSeek implementation cycle
 
 ```text
-implement/change
+implement one roadmap slice
     ↓
 development-chat verification
     ↓
 tests / CI
     ↓
-Codex review when available and useful
+independent review according to MimiSeek repository policy
     ↓
 adjudicate + fix confirmed findings
     ↓
-new exact HEAD
+CURRENT exact-head acceptance evidence
     ↓
-fresh independent MimiSeek review
+merge
     ↓
-FINDINGS? ─ yes → adjudicate + fix → new HEAD → new fresh review
-    │
-    no
-    ↓
-CURRENT PASS + required acceptance evidence
-    ↓
-merge/accept according to project policy
+update CURRENT_STATE / ROADMAP / EVIDENCE_INDEX as applicable
 ```
 
-The exact ordering of optional Codex runs may evolve, but Codex is an evidence source, not the authority that defines MimiSeek quality.
+Consumer repositories may use different local review sequences. MimiSeek only consumes their accepted structured outcomes through the integration contract.
 
-## Review identity
+## Evolution pipeline versus development pipeline
 
-Every semantic review run must bind to immutable review identity including at least repository, base SHA, and head SHA. A material change to HEAD invalidates older exact-head terminal evidence for the new HEAD.
+The product's evolution pipeline is started by `.agents/skills/mimiseek-evolve/SKILL.md`:
 
-## Finding disposition
+`collect → normalize → learn → candidate → regression → fresh evaluation → promote/reject/abstain → distribute`.
 
-A finding is an assertion until adjudicated.
-
-Minimum dispositions:
-
-- `CONFIRMED`: defect is accepted as real under governing semantics;
-- `REJECTED`: evidence falsifies the finding;
-- `SUPERSEDED`: later code/state makes the finding no longer the operative item without pretending the earlier assertion was evaluated on the new HEAD.
-
-Additional states may be added only with clear semantics.
+Do not confuse that product pipeline with development of MimiSeek's own implementation.
 
 ## Cross-chat continuity
 
@@ -70,10 +58,12 @@ At the end of significant work:
 - update `CURRENT_STATE` when project position changes;
 - update `EVIDENCE_INDEX` when accepted evidence changes;
 - record a decision only for durable architectural choices;
-- ensure the PR body explains the proposed change and acceptance evidence.
+- keep PR body aligned with proposed change and acceptance evidence.
 
 Git history and PR discussion carry chronology. Canonical documents carry current truth.
 
 ## Safety of self-development
 
-Changes to reviewer behavior use the same development discipline as other code. A learner-generated candidate is still just a proposed change until the evaluation path authoritatively accepts it.
+A learner-generated reviewer candidate is a product artifact, not an accepted change merely because it exists.
+
+The learner may create candidate changes, but evaluation-policy authority and promotion evidence remain separate. A failure to obtain required fresh independent evaluation leaves the current stable reviewer unchanged.

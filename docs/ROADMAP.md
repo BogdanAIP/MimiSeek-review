@@ -1,133 +1,135 @@
 # Roadmap
 
-The roadmap is ordered. Later stages may be refined, but a stage is not complete merely because implementation exists; its acceptance conditions must be satisfied.
+The roadmap is ordered. A stage is not complete merely because implementation exists; acceptance conditions must be satisfied.
 
 ## Stage 0 — Continuous-development foundation — IN REVIEW
 
-Goal: make the repository self-describing so any fresh development chat can continue without previous-chat memory.
+Goal: make the repository self-describing so any fresh development chat can continue without previous-chat memory and establish the correct product boundary.
 
 Acceptance:
 
 - canonical product/current-state/roadmap/architecture/protocol owners exist;
-- document ownership is explicit;
-- durable architectural decisions are recorded;
+- MimiSeek is explicitly a reviewer-improvement/release system, not the owner of consumer PR review loops;
+- standalone multi-project ownership is recorded;
+- one ChatGPT user entry-point skill contract exists;
 - branch/PR workflow is established.
 
-## Stage 1 — First stable reviewer baseline — NEXT
+## Stage 1 — Bootstrap data + first stable reviewer baseline — NEXT
 
-Goal: derive the first reusable MimiSeek Review baseline from the accepted CAP and UV review policies.
+Goal: start MimiSeek with both its historical learning memory and an explicit reusable stable reviewer.
 
 Work:
 
-- resolve exact accepted CAP/UV policy refs;
-- classify each rule as generic or project-specific;
-- define stable reviewer identity/version format;
-- define a deterministic consumer pin/synchronization mechanism;
-- preserve project-specific policy overlays.
+- import the existing reviewer statistics workbook into canonical text-based normalized data;
+- preserve the 84 historical BUGGY→FIXED cases as regression/bootstrap evidence;
+- retain Excel as a generated/report view, not the only source of truth;
+- resolve exact accepted CAP and UV review-policy refs;
+- classify rules as generic or project-specific;
+- derive the first stable MimiSeek reviewer without weakening either consumer;
+- define immutable reviewer version identity.
 
 Acceptance:
 
-- both CAP and UV can invoke the common reviewer without losing their own governing requirements;
-- the stable version is immutable and identifiable by version + commit/hash;
-- compatibility behavior is documented and tested.
+- imported counts/identities reconcile with the audited source workbook;
+- regression cases are machine-readable and traceable to evidence;
+- first stable reviewer identity is immutable and reproducible;
+- project-specific rules remain project-local.
 
-## Stage 2 — Consumer integration
+## Stage 2 — Consumer binding + evidence export
 
-Goal: make CAP and UV real consumers of the standalone stable reviewer.
+Goal: make CAP and UV true consumers and evidence producers.
 
 Acceptance:
 
-- both repositories pin an exact stable reviewer identity;
+- both repositories pin an exact stable MimiSeek reviewer identity;
+- both can export/import structured review runs and finding dispositions;
 - updates are explicit and auditable;
-- project-local policy remains authoritative for project-specific semantics;
-- stale or mismatched reviewer identity fails closed.
+- project-local policy remains authoritative;
+- stale/mismatched reviewer identity fails closed.
 
-## Stage 3 — Review outcome collection
+## Stage 3 — Collector + normalized outcome store
 
-Goal: collect structured real-world evidence from review cycles.
-
-Model at minimum:
-
-- review run identity;
-- reviewer/version;
-- exact BASE/HEAD;
-- finding identity/category/severity;
-- disposition (`CONFIRMED`, `REJECTED`, `SUPERSEDED`);
-- discovery source (MimiSeek, Codex, development, other);
-- fix/verified head when known.
-
-Acceptance: a closed PR can be reconstructed into a trustworthy sequence of review outcomes without relying on chat history.
-
-## Stage 4 — Learning events and regression corpus
-
-Goal: transform adjudicated outcomes into reusable learning evidence.
-
-Events include:
-
-- OUR_HIT;
-- OUR_MISS_CODEX_HIT;
-- OUR_HIT_CODEX_MISS;
-- OUR_FALSE_POSITIVE;
-- BOTH_MISS_LATER_CONFIRMED;
-- other evidence-backed variants.
-
-Acceptance: events are derived from immutable identities and adjudicated evidence; BUGGY→FIXED pairs are usable as regression cases.
-
-## Stage 5 — Learner
-
-Goal: analyze repeated successes/misses and propose transferable reviewer changes.
+Goal: let MimiSeek automatically gather new accepted review evidence from all registered consumers.
 
 Acceptance:
 
-- proposed mechanics are generic, not SHA/file memorization;
-- each proposal cites learning evidence;
-- learner can create a candidate but cannot make it stable;
-- existing protected capabilities are identified.
+- collection is idempotent;
+- exact identities and provenance are preserved;
+- missing adjudication stays unknown;
+- a closed PR can be reconstructed into normalized review outcomes without chat history.
 
-## Stage 6 — Candidate regression evaluation
+## Stage 4 — Learning events
 
-Goal: automatically evaluate candidate reviewer versions against known BUGGY/FIXED and protected-capability cases.
+Goal: automatically derive trustworthy OUR/Codex/development success, miss, and false-positive events.
 
 Acceptance:
 
-- target BUGGY detection is measured;
-- old findings must disappear on FIXED;
+- event derivation respects exact-head and leakage/timing requirements;
+- different-head fixes are not mislabeled as reviewer misses;
+- events link back to source evidence.
+
+## Stage 5 — Learner + candidate generation
+
+Goal: convert repeated evidence into transferable reviewer improvements.
+
+Acceptance:
+
+- proposals are generic mechanics, not SHA/file memorization;
+- each proposal cites learning events;
+- learner creates candidate but cannot promote it;
+- potentially affected protected capabilities are declared.
+
+## Stage 6 — Automated regression / protected-capability evaluation
+
+Goal: evaluate stable versus candidate on historical and accumulated real cases.
+
+Acceptance:
+
+- BUGGY target detection is measured;
+- old target findings must disappear on FIXED;
 - false-positive/regression behavior is measured;
-- candidate cannot modify the evaluation policy governing its run.
+- protected capabilities are checked;
+- candidate cannot modify the evaluation policy governing the run.
 
-## Stage 7 — Fresh independent evaluator
+## Stage 7 — Fresh ChatGPT evaluator executor
 
-Goal: use a fresh ordinary-chat evaluator to independently validate promotion evidence.
-
-Result: `PROMOTE`, `REJECT`, or `ABSTAIN`.
+Goal: let the evolution pipeline automatically create a new isolated ChatGPT evaluation context and obtain an independent `PROMOTE`, `REJECT`, or `ABSTAIN` result.
 
 Acceptance:
 
+- evaluator runs in a new context, separate from learner/candidate development;
 - evaluator resolves evidence independently and read-only;
 - insufficient evidence yields `ABSTAIN`;
-- candidate/learner cannot authoritatively decide promotion.
+- missing fresh-context capability fails closed without promotion;
+- evaluator result is durable and identity-bound.
 
-## Stage 8 — Shadow real-PR evaluation
+## Stage 8 — Automatic promotion + distribution
 
-Goal: run stable and candidate on suitable new PR heads without allowing the candidate to control merge decisions.
-
-Acceptance: real-world confirmed/rejected outcomes can compare protected capabilities and new gains without reviewer-result leakage where isolation is required.
-
-## Stage 9 — Automated promotion and distribution
-
-Goal: promote a candidate to stable only after the fixed evaluation gate passes, then make the new stable version available to consumers.
+Goal: convert an accepted candidate into new stable and propagate it to registered consumers.
 
 Acceptance:
 
-- promotion is atomic and auditable;
-- rollback remains possible;
-- consumers can update or remain pinned according to contract;
-- no project is silently moved to an incompatible reviewer.
+- only authoritative `PROMOTE` can change stable;
+- promotion is atomic/auditable and rollback remains possible;
+- compatible consumers receive version-update PRs automatically;
+- incompatible consumers remain explicitly pinned rather than silently changed.
 
-## Stage 10 — Continuous self-improvement
+## Stage 9 — Full `mimiseek-evolve` ChatGPT skill
 
-Goal: close the loop:
+Goal: one user invocation runs the complete pipeline:
 
-`real PRs → outcomes → learning → candidate → regression/shadow evaluation → fresh evaluator → stable → more real PRs`.
+`collect → learn → candidate → regression → fresh evaluation → promote/reject/abstain → distribute`.
 
-Acceptance: the loop can operate without technical adjudication by the human project owner except for policy/product choices or ambiguous cases explicitly escalated by product policy.
+Acceptance:
+
+- no manual technical sequencing is required from the user;
+- the skill resumes idempotently after interruption;
+- unchanged evidence produces a safe no-op;
+- every mutation is traceable to an exact pipeline run;
+- failures leave the current stable reviewer unchanged.
+
+## Stage 10 — Continuous autonomous evolution
+
+Goal: optionally trigger the same proven evolution pipeline from new evidence automatically, while retaining the ChatGPT skill as the explicit manual entry point.
+
+Acceptance: reviewer improvement can continue across CAP, UV, and future projects without technical adjudication by the human owner except policy/product choices explicitly reserved to the owner.
