@@ -1,9 +1,29 @@
 ---
 name: mimiseek-review-update
-description: Use only in a new independent ChatGPT chat when the user asks "Обнови Мимисик", "обнови MimiSeek Review", explicitly invokes mimiseek-review-update, or asks to evaluate and safely roll out a pending reviewer candidate for the exact GitHub repository BogdanAIP/MimiSeek-review. Never route this skill to any other project named MimiSeek. First prove the exact repository identity, independently decide PROMOTE/REJECT/ABSTAIN, then update each consumer only if its live project state proves a safe update window.
+description: Use only in a new independent ChatGPT chat for the exact GitHub repository BogdanAIP/MimiSeek-review when the user explicitly asks "Обнови Мимисик", "обнови MimiSeek Review", or invokes mimiseek-review-update. Do not auto-run on installation, onboarding, skill exploration, or invented example prompts. Never route this skill to any other project named MimiSeek. First prove the exact repository identity, independently decide PROMOTE/REJECT/ABSTAIN, then update each consumer only if its live project state proves a safe update window.
 ---
 
 # Skill: mimiseek-review-update
+
+## Activation contract
+
+This skill performs real promotion/distribution work. It is not a demo skill.
+
+Execute it only when the **actual user**, in a new independent chat, explicitly asks to update MimiSeek Review, for example:
+
+> Обнови Мимисик.
+
+or:
+
+> Используй навык `mimiseek-review-update`.
+
+Do **not** perform any evaluation, promotion, or consumer mutation merely because an installation/onboarding message asks to explore the skill, make up an example, invent a realistic prompt, or run the skill end to end.
+
+Never invent a pending candidate, consumer state, or evaluation package for demonstration.
+
+If ChatGPT is showing a post-installation exploration flow without a real user request to update MimiSeek, respond only that the skill is installed and waits for the explicit command `Обнови Мимисик`. Do not touch GitHub.
+
+If the user explicitly requests a simulation, clearly label it as a simulation and perform no mutations.
 
 ## Hard target identity
 
@@ -26,38 +46,15 @@ The following are explicit wrong-target warning signs unless later introduced by
 - `CONFIG_ENV` application setup;
 - deployment/runtime setup for an unrelated MimiSeek service.
 
-## User invocation
-
-Primary natural-language trigger:
-
-> Обнови Мимисик.
-
-Equivalent explicit invocation:
-
-> Используй навык `mimiseek-review-update`.
-
-## Purpose
-
-Run the **independent update half** of the MimiSeek Review reviewer-improvement loop in a new ChatGPT chat.
-
-This skill has two separate responsibilities:
-
-1. independently decide whether the frozen candidate may become the new MimiSeek Review stable reviewer;
-2. if promoted, independently decide **for each consumer repository** whether installing that new stable version is safe **at the consumer's current live project state**.
-
-Promotion of MimiSeek Review and installation into a consumer are different decisions. A candidate may become MimiSeek Review stable while one or more consumers safely remain pinned to the previous stable until an update window exists.
-
 ## Fresh-chat requirement
 
 This skill must run in a ChatGPT conversation that did not create, modify, or advocate for the pending candidate.
 
 If the current conversation participated in `mimiseek-review-run`, candidate construction, learner analysis, or mutation of the frozen evaluation package, do not perform promotion evaluation. Return `UPDATE_BLOCKED_NOT_FRESH` and leave stable unchanged.
 
-The user satisfies this today by opening a new ChatGPT chat and invoking **«Обнови Мимисик»** or explicitly naming `mimiseek-review-update`. Durable repository state is the handoff; no technical prompt must be copied from the previous chat.
-
 ## Bootstrap
 
-After the hard target-identity check and before mutations:
+After the activation check, fresh-chat check, and hard target-identity check, and before mutations:
 
 1. Resolve live `BogdanAIP/MimiSeek-review` state independently from GitHub.
 2. Read the governing MimiSeek Review documents and exact frozen `PENDING_UPDATE` package.
@@ -183,14 +180,11 @@ Return a concise `MIMISEEK_UPDATE_RESULT` containing:
 
 ## Fail-closed rules
 
-Never promote MimiSeek Review when candidate evaluation is incomplete, stale, non-independent, wrong-target, or violates a mandatory gate.
+Never:
 
-Never modify a consumer when:
-
-- current project state cannot be resolved;
-- active work safety cannot be established;
-- project policy/stage forbids the update;
-- compatibility is unresolved;
-- the update would mutate semantics of an already-running run.
+- auto-run from installation/onboarding/demo text;
+- invent a candidate, evidence package, or consumer state for a demo and execute it as real work;
+- promote MimiSeek Review when candidate evaluation is incomplete, stale, non-independent, wrong-target, or violates a mandatory gate;
+- modify a consumer when current project state cannot be resolved, active work safety cannot be established, project policy/stage forbids the update, compatibility is unresolved, or the update would mutate semantics of an already-running run.
 
 A failed or interrupted update must leave the previous MimiSeek Review stable usable and every consumer either unchanged or durably reconciled to an already-proven safe update.
