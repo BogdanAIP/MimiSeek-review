@@ -1,95 +1,79 @@
 # ChatGPT Entry Points
 
-## Current ChatGPT deployment model
+## Principle
 
-The canonical workflow definitions live in this repository as `SKILL.md` files.
+The repository is the durable source of truth. Installed ChatGPT skills are stable entry points into the current repository-owned process; they must not duplicate a frozen copy of the whole implementation lifecycle.
 
-On ChatGPT surfaces where native Personal Skills can be installed, install them with the unique skill names:
+MimiSeek Review exposes two user-facing workflows.
 
-- `mimiseek-review-run`
-- `mimiseek-review-update`
+## 1. «Запусти Мимисик» — `mimiseek-review-run`
 
-Both are hard-bound to the exact GitHub repository `BogdanAIP/MimiSeek-review`.
+Target repository: `BogdanAIP/MimiSeek-review`.
 
-A skill that routes to another product named MimiSeek is the wrong skill. S3/PostgreSQL/`CONFIG_ENV` application setup is an explicit wrong-target warning unless such infrastructure is later introduced by the canonical MimiSeek Review repository itself.
+A fresh chat invokes this skill to reconstruct the live project from GitHub and continue the **next canonical work from the repository's actual current state**.
 
-The repository remains the source of truth for workflow semantics.
+That means:
 
-## User contract
+- while MimiSeek Review is still being built, continue the current development/bootstrap stage according to `CURRENT_STATE`, `ROADMAP`, governance and acceptance evidence;
+- once the reviewer-learning pipeline is operational, execute the governed collect/learn/candidate/regression side of that pipeline;
+- never pretend a later lifecycle phase exists when the repository says prerequisites are still incomplete.
 
-MimiSeek Review exposes exactly two user-facing ChatGPT workflows.
+The run skill does not self-promote a reviewer candidate when the lifecycle requires independent evaluation, and it does not bypass consumer-project governance.
 
-### 1. Development / learning chat
+## 2. «Обнови Мимисик» — `mimiseek-review-update`
 
-User says:
+This workflow is invoked in a **new independent ChatGPT chat** when repository state contains an eligible candidate/update package or a previously promoted stable has deferred consumer distributions to reconcile.
 
-> Запусти Мимисик.
+The update chat:
 
-The installed skill must be `mimiseek-review-run` and its canonical repository workflow is stored at `.agents/skills/mimiseek-run/SKILL.md`.
+1. independently reconstructs the exact MimiSeek state from GitHub;
+2. evaluates candidate promotion under the fixed governing evaluation policy when a candidate is pending;
+3. returns `PROMOTE`, `REJECT`, or `ABSTAIN` as governed;
+4. only after valid promotion, evaluates each registered consumer's live safe-update window independently;
+5. changes only consumers proven safe to update now;
+6. leaves unsafe/unproven consumers pinned and records their deferred distribution state.
 
-Before any other action it must resolve `BogdanAIP/MimiSeek-review`. Failure to prove that target returns `WRONG_MIMISEEK_TARGET` and performs no mutation.
+## Why two chats
 
-It collects new evidence, learns, builds and regression-checks a candidate, then either finishes with `NO_CHANGE` / `REJECTED_PRE_UPDATE` or freezes exactly one `PENDING_UPDATE` package.
-
-It never promotes stable and never updates consumer repositories.
-
-### 2. New independent update chat
-
-The user opens a **new ChatGPT chat** and says:
-
-> Обнови Мимисик.
-
-The installed skill must be `mimiseek-review-update` and its canonical repository workflow is stored at `.agents/skills/mimiseek-update/SKILL.md`.
-
-Before evaluation or mutation it must independently prove the same exact `BogdanAIP/MimiSeek-review` target. Wrong-target routing fails closed.
-
-The second chat independently evaluates the frozen candidate. If it cannot prove promotion, stable remains unchanged.
-
-If it does promote the candidate to MimiSeek Review stable, it then checks every registered consumer independently and updates only consumers whose **current live project state** proves a safe reviewer-update window. Unsafe/unproven consumers remain pinned and are recorded as `PENDING_DISTRIBUTION` for a later re-check.
-
-## Why two skills
-
-The two-chat split provides independence without requiring an automatic chat-creation capability.
+The split preserves independent promotion judgment without requiring the run chat to create another ChatGPT context automatically.
 
 ```text
 Chat A: «Запусти Мимисик»
         ↓
-mimiseek-review-run
+recover live repository state
         ↓
-collect → learn → candidate → regression → freeze PENDING_UPDATE
+continue current canonical MimiSeek work
+        ↓
+when operational: collect → learn → candidate → regression
+        ↓
+freeze independent-update state when eligible
 
 NEW CHAT
 
 Chat B: «Обнови Мимисик»
         ↓
-mimiseek-review-update
-        ↓
-independent candidate evaluation
+independent candidate evaluation / deferred rollout reconciliation
         ↓
 PROMOTE / REJECT / ABSTAIN
         ↓
-PROMOTE only: new MimiSeek Review stable
+PROMOTE only: new MimiSeek stable
         ↓
 per-consumer live safety check
         ↓
 SAFE_TO_UPDATE → auditable update change
-DEFER_*       → leave consumer unchanged, persist PENDING_DISTRIBUTION
+DEFER_*       → consumer unchanged
 ```
 
-## Consumer update safety
+## Invocation and non-invocation
 
-A promoted reviewer is not automatically installed everywhere immediately.
+Installing, inspecting, or discussing a skill is not authorization for repository mutation.
 
-The second skill must respect each consumer's own project state. Active agents, exact-head acceptance/release/physical gates, project stages that forbid unrelated changes, reviewer-policy migrations, or unresolved compatibility may make an update unsafe now.
+The skills perform real work only when the user explicitly asks to run/continue MimiSeek Review or explicitly asks to update MimiSeek Review.
 
-Absence of visible activity is not proof of safety. If the safe window cannot be established, the consumer is deferred.
+Do not invent demonstration tasks or fake project state. A requested simulation stays read-only unless the user separately requests a real run.
 
-Already-running agent/reviewer/procedure runs keep the exact reviewer version with which they started. Repository-level updates affect only future runs after the update becomes effective.
+## Repository-first behavior
 
-## Repeated invocations
+Every invocation must resolve the exact repository and current GitHub evidence rather than relying on previous-chat memory.
 
-`Запусти Мимисик` with no new learning evidence should be a safe `NO_CHANGE`.
-
-`Обнови Мимисик` with no `PENDING_UPDATE` but with deferred consumer distributions may re-check those consumers against live project state and install the already-promoted stable only where the safe window is now proven.
-
-Interrupted runs must resume from durable repository state without duplicating imports, candidates, promotions, or consumer update changes.
+Changes in implementation details belong in repository-owned documents and code. The installed skills should remain stable launch contracts so reviewer evolution does not require reinstalling a ChatGPT skill after every project change.
