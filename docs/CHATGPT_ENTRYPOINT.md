@@ -1,5 +1,13 @@
 # ChatGPT Entry Points
 
+## Current ChatGPT deployment model
+
+The canonical workflow definitions live in this repository as `SKILL.md` files.
+
+On ChatGPT surfaces where native Personal Skills can be installed, these repository skills may be installed/imported as native skills while preserving the repository as the source of truth.
+
+On a personal ChatGPT plan/surface where native Personal Skills are unavailable, use a dedicated ChatGPT Project named `MimiSeek Review` with the routing instructions from `docs/CHATGPT_PROJECT_INSTRUCTIONS.md`. Those Project Instructions are only the launcher/router; they must always resolve and execute the live canonical `SKILL.md` from GitHub.
+
 ## User contract
 
 MimiSeek Review exposes exactly two user-facing ChatGPT workflows.
@@ -10,7 +18,7 @@ User says:
 
 > Запусти Мимисик.
 
-This invokes `.agents/skills/mimiseek-run/SKILL.md`.
+This routes to `.agents/skills/mimiseek-run/SKILL.md`.
 
 It collects new evidence, learns, builds and regression-checks a candidate, then either finishes with `NO_CHANGE` / `REJECTED_PRE_UPDATE` or freezes exactly one `PENDING_UPDATE` package.
 
@@ -18,11 +26,11 @@ It never promotes stable and never updates consumer repositories.
 
 ### 2. New independent update chat
 
-The user opens a **new ChatGPT chat** and says:
+The user opens a **new ChatGPT chat** in the same MimiSeek Project (or another proven native-skill context) and says:
 
 > Обнови Мимисик.
 
-This invokes `.agents/skills/mimiseek-update/SKILL.md`.
+This routes to `.agents/skills/mimiseek-update/SKILL.md`.
 
 The second chat independently evaluates the frozen candidate. If it cannot prove promotion, stable remains unchanged.
 
