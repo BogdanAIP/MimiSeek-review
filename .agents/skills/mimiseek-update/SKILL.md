@@ -1,3 +1,8 @@
+---
+name: mimiseek-update
+description: Use only in a new independent ChatGPT chat when the user asks "Обнови Мимисик", "обнови MimiSeek", explicitly invokes mimiseek-update, or asks to evaluate and safely roll out a pending MimiSeek reviewer candidate. Independently decide PROMOTE/REJECT/ABSTAIN, then update each consumer only if its live project state proves a safe update window.
+---
+
 # Skill: mimiseek-update
 
 ## User invocation
