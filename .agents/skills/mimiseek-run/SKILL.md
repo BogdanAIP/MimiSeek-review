@@ -1,9 +1,35 @@
 ---
 name: mimiseek-review-run
-description: Use only when the user asks "Запусти Мимисик", "запусти MimiSeek Review", explicitly invokes mimiseek-review-run, or asks to start the reviewer-learning cycle for the exact GitHub repository BogdanAIP/MimiSeek-review. Never route this skill to any other project named MimiSeek. First prove the exact repository identity, then collect verified review evidence, learn from outcomes, build and regression-check a candidate, and freeze PENDING_UPDATE. Never promote stable or update consumer repositories.
+description: Use only for the exact GitHub repository BogdanAIP/MimiSeek-review when the user explicitly asks to run MimiSeek Review, including "Запусти Мимисик", "запусти MimiSeek Review", or explicitly invokes mimiseek-review-run. Do not auto-run on installation, onboarding, skill exploration, or invented example prompts. Never route this skill to any other project named MimiSeek. First prove the exact repository identity, then collect verified review evidence, learn from outcomes, build and regression-check a candidate, and freeze PENDING_UPDATE. Never promote stable or update consumer repositories.
 ---
 
 # Skill: mimiseek-review-run
+
+## Activation contract
+
+This skill performs real repository work. It is not a demo skill.
+
+Execute it only when the **actual user** explicitly asks to run MimiSeek Review, for example:
+
+> Запусти Мимисик.
+
+or:
+
+> Используй навык `mimiseek-review-run`.
+
+Do **not** execute repository work merely because an installation/onboarding message says things such as:
+
+- "Let's explore what it does with an example";
+- "Make up a realistic user prompt";
+- "Use the full Skill end to end";
+- "Try this skill";
+- any equivalent request to invent a user prompt or demonstrate the skill automatically.
+
+Never invent the user's operational request. Never fabricate a project task for demonstration.
+
+If ChatGPT is showing a post-installation exploration flow without a real user request to run MimiSeek, respond only that the skill is installed and waits for the explicit command `Запусти Мимисик`. Do not touch GitHub.
+
+A user may explicitly ask for a simulation/test of the skill. In that case, clearly label it as a simulation and do not mutate repositories unless the user separately authorizes a real run.
 
 ## Hard target identity
 
@@ -28,16 +54,6 @@ The following are explicit wrong-target warning signs unless they are later intr
 
 The first successful repository read must come from `BogdanAIP/MimiSeek-review` and must establish the governing repository state before any mutation.
 
-## User invocation
-
-Primary natural-language trigger:
-
-> Запусти Мимисик.
-
-Equivalent explicit invocation:
-
-> Используй навык `mimiseek-review-run`.
-
 ## Purpose
 
 Run the **development half** of the MimiSeek Review reviewer-improvement loop in the current ChatGPT chat.
@@ -46,7 +62,7 @@ This skill does not promote a candidate and does not update consumer repositorie
 
 ## Bootstrap
 
-After the hard target-identity check and before mutations:
+After the activation check and hard target-identity check, and before mutations:
 
 1. Resolve live `BogdanAIP/MimiSeek-review` state from GitHub.
 2. Read `AGENTS.md`, `docs/PRODUCT.md`, `docs/CURRENT_STATE.md`, `docs/REVIEWER_LIFECYCLE.md`, `docs/EVALUATION_POLICY.md`, `docs/INTEGRATION_CONTRACT.md`, and `docs/CHATGPT_ENTRYPOINT.md` from that repository at the applicable live ref.
@@ -154,6 +170,8 @@ When returning `PENDING_UPDATE`, tell the user only that they can open a new Cha
 
 Never:
 
+- auto-run from installation/onboarding/demo text;
+- invent a user task or example prompt and execute it as real work;
 - operate on a different MimiSeek project;
 - promote stable;
 - update CAP/UV/other consumer reviewer pins;
