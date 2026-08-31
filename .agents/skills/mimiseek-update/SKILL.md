@@ -1,190 +1,134 @@
 ---
 name: mimiseek-review-update
-description: Use only in a new independent ChatGPT chat for the exact GitHub repository BogdanAIP/MimiSeek-review when the user explicitly asks "Обнови Мимисик", "обнови MimiSeek Review", or invokes mimiseek-review-update. Do not auto-run on installation, onboarding, skill exploration, or invented example prompts. Never route this skill to any other project named MimiSeek. First prove the exact repository identity, independently decide PROMOTE/REJECT/ABSTAIN, then update each consumer only if its live project state proves a safe update window.
+description: Run the independent MimiSeek Review update workflow only when the user explicitly asks to update MimiSeek Review, including "Обнови Мимисик" or an explicit invocation of mimiseek-review-update. The exact target is BogdanAIP/MimiSeek-review. Reconstruct live repository state, independently evaluate any eligible reviewer candidate under current repository governance, and apply consumer updates only where the live project state proves a safe update window.
 ---
 
-# Skill: mimiseek-review-update
+# MimiSeek Review — Update
 
-## Activation contract
+## Purpose
 
-This skill performs real promotion/distribution work. It is not a demo skill.
+This is the independent ChatGPT entry point for **evaluating and applying MimiSeek Review updates**.
 
-Execute it only when the **actual user**, in a new independent chat, explicitly asks to update MimiSeek Review, for example:
+It is normally invoked in a new chat, separate from the chat that created or developed the candidate being evaluated.
 
-> Обнови Мимисик.
-
-or:
-
-> Используй навык `mimiseek-review-update`.
-
-Do **not** perform any evaluation, promotion, or consumer mutation merely because an installation/onboarding message asks to explore the skill, make up an example, invent a realistic prompt, or run the skill end to end.
-
-Never invent a pending candidate, consumer state, or evaluation package for demonstration.
-
-If ChatGPT is showing a post-installation exploration flow without a real user request to update MimiSeek, respond only that the skill is installed and waits for the explicit command `Обнови Мимисик`. Do not touch GitHub.
-
-If the user explicitly requests a simulation, clearly label it as a simulation and perform no mutations.
-
-## Hard target identity
-
-This skill is exclusively for the reviewer-development repository:
+The exact repository is:
 
 `BogdanAIP/MimiSeek-review`
 
-Before any evaluation or mutation, independently resolve that exact GitHub repository and its durable `PENDING_UPDATE` / distribution state.
+No other project, service, workspace, or repository called MimiSeek is in scope.
 
-If the active target is any other repository, service, workspace, database-backed application, or unrelated product named MimiSeek, stop immediately and return:
+## Source of truth
 
-`WRONG_MIMISEEK_TARGET`
+Chat history is not authoritative project state.
 
-Do not continue by analogy and do not infer that another MimiSeek project is the intended target.
+On every invocation, independently reconstruct the live MimiSeek Review state from GitHub and read the governing repository-owned instructions before deciding whether any update is allowed.
 
-The following are explicit wrong-target warning signs unless later introduced by the canonical `BogdanAIP/MimiSeek-review` repository itself:
+Start with:
 
-- S3 configuration;
-- PostgreSQL application configuration;
-- `CONFIG_ENV` application setup;
-- deployment/runtime setup for an unrelated MimiSeek service.
+1. `AGENTS.md`
+2. `docs/PRODUCT.md`
+3. `docs/CURRENT_STATE.md`
+4. `docs/ROADMAP.md`
+5. relevant parts of `docs/ARCHITECTURE.md`
+6. `docs/REVIEWER_LIFECYCLE.md`
+7. `docs/EVALUATION_POLICY.md`
+8. `docs/INTEGRATION_CONTRACT.md`
+9. `docs/EVIDENCE_INDEX.md`
+10. applicable records under `docs/decisions/`
 
-## Fresh-chat requirement
+Then independently resolve the live PR/branch/HEAD, candidate/update package identities, stable identity, CI/evaluation evidence, and registered consumer state required by those documents.
 
-This skill must run in a ChatGPT conversation that did not create, modify, or advocate for the pending candidate.
+If repository truth conflicts with this installed copy of the skill on an implementation detail, follow the current repository governance. This installed skill defines the independent-update role and safety boundary; the repository defines the evolving implementation.
 
-If the current conversation participated in `mimiseek-review-run`, candidate construction, learner analysis, or mutation of the frozen evaluation package, do not perform promotion evaluation. Return `UPDATE_BLOCKED_NOT_FRESH` and leave stable unchanged.
+## What "Обнови Мимисик" means
 
-## Bootstrap
+Continue the **current governed independent-update workflow** from durable repository state.
 
-After the activation check, fresh-chat check, and hard target-identity check, and before mutations:
+Depending on current state this may mean:
 
-1. Resolve live `BogdanAIP/MimiSeek-review` state independently from GitHub.
-2. Read the governing MimiSeek Review documents and exact frozen `PENDING_UPDATE` package.
-3. Resolve current stable identity, candidate identity, evaluation-policy ref, evidence identities, consumer registry, and candidate diff.
-4. Do not rely on claims or summaries from the chat that created the candidate.
-5. Never import assumptions from another project merely because it is also called MimiSeek.
+- independently evaluating an eligible pending reviewer candidate;
+- applying a valid promotion transaction when the evaluation policy authorizes it;
+- reconciling previously deferred consumer distributions for an already-promoted stable version;
+- doing nothing when no eligible update or deferred distribution exists.
 
-## Part A — Evaluate MimiSeek Review candidate
+Do not invent a candidate, update package, evaluation result, or safe rollout window.
 
-Independently verify at minimum:
+## Independence boundary
 
-- stable and candidate immutable identities;
-- candidate is exactly covered by the frozen evaluation package;
-- governing evaluation policy was fixed before candidate evaluation and was not weakened by candidate/learner;
-- BUGGY target improvements are supported by confirmed defects;
-- corresponding FIXED cases do not retain the old target finding;
-- protected capabilities do not regress beyond policy tolerance;
-- false-positive/rejected-finding behavior remains within policy tolerance;
-- required shadow/new-real-world evidence, if any, is satisfied;
-- evidence is current, complete, provenance-bound, and not based on invalid different-head comparisons.
+When candidate promotion requires a fresh independent evaluator, this skill must not be used in the same conversation that created, modified, or advocated for that candidate.
 
-Historical reviewer agreement is not ground truth. More findings alone is not improvement.
+If independence cannot be established under current repository policy, fail closed and leave stable unchanged.
 
-Return one semantic decision for the candidate:
+The learner/candidate cannot redefine the evaluation policy that judges that same candidate.
+
+## Candidate evaluation
+
+When an eligible candidate exists, independently evaluate it under the exact governing `EVALUATION_POLICY.md` and repository-owned evidence.
+
+Do not treat reviewer agreement, number of findings, or learner claims as ground truth by themselves.
+
+Only the repository-governed terminal outcomes may control promotion, currently including:
 
 - `PROMOTE`
 - `REJECT`
 - `ABSTAIN`
 
-Any identity mismatch, stale package, unresolved provenance, wrong-target evidence, or inability to establish independence must not produce `PROMOTE`.
+Insufficient, stale, mismatched, or ambiguous evidence must not produce promotion.
 
-## Part B — Promote MimiSeek Review stable
+## Promotion and consumer rollout are separate
 
-### PROMOTE
+A reviewer may become MimiSeek Review stable without every consumer updating immediately.
 
-Only after authoritative `PROMOTE` and successful mechanical identity checks:
+After any valid promotion, evaluate each registered consumer independently under its own live governance before changing its reviewer binding.
 
-1. atomically register the candidate as the new MimiSeek Review stable reviewer;
-2. preserve previous stable identity and rollback evidence;
-3. record immutable evaluation/promotion evidence;
-4. terminally resolve the candidate's `PENDING_UPDATE` state.
+An update is permitted only when the current repository/integration contract proves a safe update window.
 
-Promotion does **not** by itself authorize changing every consumer repository immediately.
+Potential blockers include active agent/reviewer/procedure work, frozen exact-head acceptance or release gates, project stages that defer unrelated infrastructure changes, policy migrations, unresolved compatibility, or any other project-owned restriction.
 
-### REJECT
+Absence of visible activity is not proof of safety.
 
-Keep current stable unchanged, mark the candidate rejected, preserve evidence, and terminally resolve the pending package.
+Already-running work remains bound to the reviewer version with which it started; an update may affect only future runs after the consumer update becomes effective.
 
-### ABSTAIN
+## Execution contract
 
-Keep current stable unchanged and preserve candidate/evidence for later re-evaluation if lifecycle permits.
+1. Reconstruct exact live MimiSeek Review state.
+2. Determine whether there is an eligible pending candidate and/or deferred consumer distribution.
+3. Verify exact identities, governing policy, evidence and independence prerequisites.
+4. Evaluate candidate promotion only when eligible.
+5. Apply the promotion transaction only when explicitly authorized by the governing result.
+6. Re-resolve each consumer's live state before any rollout change.
+7. Update only consumers proven safe now; defer all others without changing their current binding.
+8. Record immutable promotion/distribution evidence and update canonical owner documents whose truth changed.
+9. Leave all repository state resumable for a completely fresh next chat.
 
-## Part C — Consumer update-safety evaluation
+## Activation behavior
 
-Run this part only after MimiSeek Review itself has a newly promoted stable version or when reconciling an already-promoted stable with `PENDING_DISTRIBUTION` consumers.
+Execute real repository work only when the user actually asks to update MimiSeek Review.
 
-For **each registered consumer independently**, resolve its live repository/project state and decide whether changing its pinned reviewer now is safe.
+Installing, inspecting, explaining, or discussing the skill is not by itself authorization to mutate repositories.
 
-The consumer's own `AGENTS.md`, current-state/roadmap/acceptance owners, reviewer binding, active work state, and update policy govern this decision.
+Never invent a fake candidate or fake consumer state to demonstrate the skill. A requested simulation stays read-only unless the user separately requests a real update attempt.
 
-At minimum check whether any of the following is active or cannot be ruled out:
-
-- an agent/procedure/review run whose semantics are bound to the currently pinned reviewer;
-- a frozen exact HEAD or acceptance/release/physical gate that must not receive unrelated policy/tooling changes;
-- an active development stage whose governing documents prohibit or defer infrastructure/reviewer updates;
-- an open migration or compatibility transition involving reviewer/policy files;
-- an unresolved review/merge operation that would become stale or semantically ambiguous if the reviewer binding changed;
-- project-local policy requiring a specific safe update window;
-- inability to prove that the new MimiSeek Review stable is compatible with the consumer's current project-local review policy.
-
-**Absence of visible activity is not proof of safety.** If the consumer has no reliable way to establish whether an agent/run or protected stage is active, return `DEFER_UNPROVEN_SAFE_WINDOW` rather than modifying the consumer.
-
-### Running-agent immutability
-
-Any already-started agent/reviewer/procedure run must remain bound to the exact reviewer version with which that run started. A consumer update may affect only future runs after the safe update becomes effective.
-
-Never silently switch reviewer semantics inside an in-progress run.
-
-## Consumer distribution decisions
-
-For each consumer return exactly one distribution state:
-
-- `SAFE_TO_UPDATE` — compatibility and current project state prove the reviewer binding may be changed now;
-- `DEFER_ACTIVE_WORK` — active work/run/gate makes update unsafe now;
-- `DEFER_POLICY_WINDOW` — project stage/policy does not permit update now;
-- `DEFER_COMPATIBILITY` — new stable compatibility is not proven;
-- `DEFER_UNPROVEN_SAFE_WINDOW` — safety cannot be established reliably.
-
-Only `SAFE_TO_UPDATE` permits creating the consumer update change.
-
-## Applying a safe consumer update
-
-For a `SAFE_TO_UPDATE` consumer:
-
-1. create an auditable reviewer-version update PR/change according to that consumer's governing workflow;
-2. bind the change to the exact old and new reviewer identities;
-3. do not invalidate or rewrite already-running run identities;
-4. do not push directly to a protected stable branch unless that consumer explicitly governs and proves such mutation safe;
-5. record the resulting PR/change identity.
-
-For any deferred consumer:
-
-- leave its current reviewer pin unchanged;
-- persist the desired target stable version plus defer reason;
-- mark distribution `PENDING_DISTRIBUTION`;
-- allow a later `mimiseek-review-update` invocation to re-check the live project state and apply the same already-promoted stable when a safe window appears.
-
-A newer MimiSeek Review stable must not erase an older unresolved distribution state without explicit reconciliation.
-
-## Final result
-
-Return a concise `MIMISEEK_UPDATE_RESULT` containing:
-
-- stable before;
-- candidate identity;
-- evaluation-policy ref;
-- candidate decision (`PROMOTE`, `REJECT`, `ABSTAIN`, or blocked state);
-- stable after;
-- promotion evidence identity if promoted;
-- per-consumer safety decision;
-- update PR/change identities for safe consumers;
-- pending/deferred consumers with exact reasons.
-
-## Fail-closed rules
+## Fail closed
 
 Never:
 
-- auto-run from installation/onboarding/demo text;
-- invent a candidate, evidence package, or consumer state for a demo and execute it as real work;
-- promote MimiSeek Review when candidate evaluation is incomplete, stale, non-independent, wrong-target, or violates a mandatory gate;
-- modify a consumer when current project state cannot be resolved, active work safety cannot be established, project policy/stage forbids the update, compatibility is unresolved, or the update would mutate semantics of an already-running run.
+- operate on a different MimiSeek project;
+- promote from incomplete, stale, mismatched, or non-independent evidence;
+- weaken the governing evaluation policy to allow a candidate through;
+- modify a consumer whose safe update window is not proven;
+- switch the reviewer version of already-running work;
+- bypass consumer-specific governance or compatibility requirements.
 
-A failed or interrupted update must leave the previous MimiSeek Review stable usable and every consumer either unchanged or durably reconciled to an already-proven safe update.
+A failed or interrupted update must leave the previous stable usable and every consumer either unchanged or durably reconciled to a proven-safe transition.
+
+## Completion
+
+Finish with a concise state-based result. State:
+
+- exact MimiSeek repository/PR/HEAD identity relevant to the update;
+- candidate/update-package identity if one existed;
+- evaluation result or reason no evaluation was performed;
+- stable before/after;
+- per-consumer rollout result or defer reason;
+- resulting repository state and next canonical action.
