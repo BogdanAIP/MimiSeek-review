@@ -1,183 +1,122 @@
 ---
 name: mimiseek-review-run
-description: Use only for the exact GitHub repository BogdanAIP/MimiSeek-review when the user explicitly asks to run MimiSeek Review, including "Запусти Мимисик", "запусти MimiSeek Review", or explicitly invokes mimiseek-review-run. Do not auto-run on installation, onboarding, skill exploration, or invented example prompts. Never route this skill to any other project named MimiSeek. First prove the exact repository identity, then collect verified review evidence, learn from outcomes, build and regression-check a candidate, and freeze PENDING_UPDATE. Never promote stable or update consumer repositories.
+description: Run MimiSeek Review only when the user explicitly asks to start or continue the MimiSeek Review project, including "Запусти Мимисик" or an explicit invocation of mimiseek-review-run. The exact target is BogdanAIP/MimiSeek-review. Reconstruct live repository state and continue the next canonical work from the repository; do not invent demo tasks or operate on any other project named MimiSeek.
 ---
 
-# Skill: mimiseek-review-run
-
-## Activation contract
-
-This skill performs real repository work. It is not a demo skill.
-
-Execute it only when the **actual user** explicitly asks to run MimiSeek Review, for example:
-
-> Запусти Мимисик.
-
-or:
-
-> Используй навык `mimiseek-review-run`.
-
-Do **not** execute repository work merely because an installation/onboarding message says things such as:
-
-- "Let's explore what it does with an example";
-- "Make up a realistic user prompt";
-- "Use the full Skill end to end";
-- "Try this skill";
-- any equivalent request to invent a user prompt or demonstrate the skill automatically.
-
-Never invent the user's operational request. Never fabricate a project task for demonstration.
-
-If ChatGPT is showing a post-installation exploration flow without a real user request to run MimiSeek, respond only that the skill is installed and waits for the explicit command `Запусти Мимисик`. Do not touch GitHub.
-
-A user may explicitly ask for a simulation/test of the skill. In that case, clearly label it as a simulation and do not mutate repositories unless the user separately authorizes a real run.
-
-## Hard target identity
-
-This skill is exclusively for the reviewer-development repository:
-
-`BogdanAIP/MimiSeek-review`
-
-Before doing anything else, independently resolve that exact GitHub repository.
-
-If the active target is any other repository, service, workspace, database-backed application, or unrelated product named MimiSeek, stop immediately and return:
-
-`WRONG_MIMISEEK_TARGET`
-
-Do not continue by analogy and do not infer that another MimiSeek project is the intended target.
-
-The following are explicit wrong-target warning signs unless they are later introduced by the canonical `BogdanAIP/MimiSeek-review` repository itself:
-
-- S3 configuration;
-- PostgreSQL application configuration;
-- `CONFIG_ENV` application setup;
-- deployment/runtime setup for an unrelated MimiSeek service.
-
-The first successful repository read must come from `BogdanAIP/MimiSeek-review` and must establish the governing repository state before any mutation.
+# MimiSeek Review — Run
 
 ## Purpose
 
-Run the **development half** of the MimiSeek Review reviewer-improvement loop in the current ChatGPT chat.
+This is the primary ChatGPT entry point for **continuing and operating MimiSeek Review**.
 
-This skill does not promote a candidate and does not update consumer repositories. Its terminal responsibility is to leave durable repository state that a completely new chat can independently evaluate through the update skill.
+The user should be able to open a chat, invoke this skill, and have ChatGPT recover the project from durable repository state and continue the correct work without requiring a handoff from a previous chat.
 
-## Bootstrap
+The exact repository is:
 
-After the activation check and hard target-identity check, and before mutations:
+`BogdanAIP/MimiSeek-review`
 
-1. Resolve live `BogdanAIP/MimiSeek-review` state from GitHub.
-2. Read `AGENTS.md`, `docs/PRODUCT.md`, `docs/CURRENT_STATE.md`, `docs/REVIEWER_LIFECYCLE.md`, `docs/EVALUATION_POLICY.md`, `docs/INTEGRATION_CONTRACT.md`, and `docs/CHATGPT_ENTRYPOINT.md` from that repository at the applicable live ref.
-3. Resolve current stable reviewer identity, registered consumers, collection cursors, pending candidate state, and applicable immutable policy refs.
-4. Never treat previous-chat prose as authority.
-5. Never import assumptions from another project merely because it is also called MimiSeek.
+No other project, service, workspace, or repository called MimiSeek is in scope.
 
-## Preconditions
+## Source of truth
 
-- If an unresolved `PENDING_UPDATE` candidate already exists, do not create another competing candidate. Collecting additional evidence may be allowed only if the governing lifecycle says it cannot mutate the already-frozen evaluation package.
-- If durable state is corrupt, ambiguous, or cannot be reconciled, stop fail-closed.
-- If the exact target repository cannot be proven, stop with `WRONG_MIMISEEK_TARGET` or an explicit repository-resolution failure before any mutation.
+Chat history is never authoritative project state.
 
-## Pipeline
+On every real invocation, independently resolve the live GitHub repository and read the applicable repository-owned instructions before deciding what to do.
 
-### 1. COLLECT
+Start with:
 
-Gather new review/outcome evidence from registered consumer repositories.
+1. `AGENTS.md`
+2. `docs/PRODUCT.md`
+3. `docs/CURRENT_STATE.md`
+4. `docs/ROADMAP.md`
+5. relevant parts of `docs/ARCHITECTURE.md`
+6. `docs/DEVELOPMENT_PROTOCOL.md`
+7. `docs/REVIEWER_LIFECYCLE.md`
+8. `docs/EVALUATION_POLICY.md`
+9. `docs/INTEGRATION_CONTRACT.md`
+10. `docs/EVIDENCE_INDEX.md`
+11. applicable records under `docs/decisions/`
 
-Collection must be idempotent and provenance-bound. Import only evidence whose repository/PR/BASE/HEAD/reviewer identities can be resolved.
+Then independently resolve the live branch/PR/HEAD, CI, and other GitHub evidence required by those documents.
 
-Do not infer a reviewer MISS merely from absence of a finding.
+If repository truth conflicts with this installed copy of the skill on an implementation detail, follow the current repository governance. This installed skill defines the entry-point role and safety boundary; the repository defines the evolving implementation.
 
-### 2. NORMALIZE
+## What "Запусти Мимисик" means
 
-Normalize new review runs, findings, dispositions, discovery sources, fix heads, verified heads, and evidence links into the canonical MimiSeek data model.
+Continue MimiSeek Review from its **actual current state**.
 
-Preserve historical exact-head truth; later heads do not rewrite earlier review results.
+Do not assume the system is already fully implemented.
 
-### 3. DERIVE LEARNING EVENTS
+- During bootstrap/development stages, perform the next canonical repository-development work needed to make MimiSeek Review operational.
+- Once the reviewer-learning pipeline exists, run the current governed learning/evolution cycle.
+- If the repository says another prerequisite must be completed first, do that prerequisite instead of pretending the later pipeline already exists.
 
-Derive only evidence-supported events, including when applicable:
+The product goal remains constant: build and continuously improve one reusable reviewer from verified evidence, independently evaluate candidate versions, and distribute promoted stable versions safely to registered consumer projects.
 
-- `OUR_HIT`
-- `OUR_MISS_CODEX_HIT`
-- `OUR_HIT_CODEX_MISS`
-- `OUR_FALSE_POSITIVE`
-- `BOTH_MISS_LATER_CONFIRMED`
+## Execution contract
 
-Respect exact-head, timing, visibility, and adjudication constraints. Use `UNKNOWN` when a miss or comparison cannot be proven.
+After reconstructing live state:
 
-### 4. LEARN
+1. Identify the single next canonical action from repository-owned state and roadmap.
+2. Verify its prerequisites and governing policy at exact refs.
+3. Execute the work autonomously with available tools.
+4. Use branches/PRs and repository acceptance rules; do not bypass project governance merely to make progress faster.
+5. Run the required tests/checks/evidence collection for the work performed.
+6. Re-read live state after consequence-bearing changes when needed to detect drift.
+7. Update only the canonical owner documents whose truth changed.
+8. Leave the repository in a resumable, internally coherent state for a completely fresh next chat.
 
-Analyze new evidence together with the historical learning/regression corpus and protected capabilities.
+Do not ask the user to reconstruct prior technical context that can be recovered from GitHub.
 
-A useful improvement must be transferable beyond one SHA/file/line. Record:
+## Reviewer-evolution boundary
 
-- supporting learning events;
-- generalized mechanic;
-- expected capability gain;
-- protected capabilities potentially affected;
-- false-positive/overfitting risks;
-- why the change is preferable to leaving stable unchanged.
+When the operational evolution pipeline is available, the run-side responsibility is the **development/learning half** only. Under the repository's current lifecycle this may include:
 
-If no defensible improvement is supported, persist collected evidence and finish `NO_CHANGE`.
+- collecting new adjudicated review evidence from registered consumers;
+- normalizing evidence and deriving supported learning events;
+- learning transferable reviewer mechanics from hits, misses, and false positives;
+- creating an immutable candidate separate from stable;
+- regression/protected-capability evaluation;
+- freezing the governed independent-update package/state.
 
-### 5. BUILD CANDIDATE
+This skill must **not** independently declare its own candidate the new stable reviewer when the governing lifecycle requires a fresh independent update chat.
 
-Create an immutable candidate reviewer version separate from current stable.
+It also must not install a new reviewer into CAP, UV, or another consumer merely because a candidate exists.
 
-The candidate/learner may not modify the evaluation policy used to judge this candidate.
+## Consumer-project boundary
 
-### 6. REGRESSION
+CAP, UV, and future consumers own their ordinary development/review/fix workflows and project-specific governance.
 
-Run the candidate and stable under the fixed evaluation protocol on the required evidence set.
+MimiSeek Review may read their governed evidence and later distribute a promoted reviewer according to the integration contract, but this run skill is not a replacement orchestrator for their normal PR development cycles.
 
-At minimum cover:
+## Activation behavior
 
-- target BUGGY detection;
-- old target finding absent on FIXED;
-- protected capabilities;
-- false-positive/rejected-finding behavior;
-- identity/provenance completeness.
+Execute real repository work only when the user actually asks to run/start/continue MimiSeek Review.
 
-A mandatory regression failure marks the candidate `REJECTED` and ends the run. Do not create `PENDING_UPDATE` for a candidate that cannot pass the mechanical/regression prerequisites.
+Installing, inspecting, explaining, or discussing the skill is not by itself authorization to mutate repositories.
 
-### 7. FREEZE UPDATE PACKAGE
+Never invent a fake user task or fake project state to demonstrate the skill. If the user explicitly asks for a simulation, keep the simulation read-only unless they separately request a real run.
 
-If the candidate is eligible for independent semantic evaluation, persist a frozen `PENDING_UPDATE` package containing at least:
+## Fail closed
 
-- stable immutable identity;
-- candidate immutable identity;
-- governing evaluation-policy ref;
-- exact evaluation dataset/result identities;
-- candidate diff/change rationale;
-- regression/protected-capability evidence;
-- any required fresh real-world/shadow evidence already available;
-- package nonce/run identity as defined by implementation.
-
-The package must be sufficient for a new chat to independently reconstruct the evaluation without relying on this chat.
-
-### 8. FINALIZE
-
-Update canonical current/evidence owners when their truth changes.
-
-Return one of:
-
-- `NO_CHANGE` — evidence collected but no defensible candidate;
-- `REJECTED_PRE_UPDATE` — candidate failed mandatory pre-update evaluation;
-- `PENDING_UPDATE` — frozen candidate package is ready for a new chat.
-
-When returning `PENDING_UPDATE`, tell the user only that they can open a new ChatGPT chat and invoke the installed MimiSeek Review update skill. They must not need to copy a technical evaluation prompt manually.
-
-## Fail-closed rules
+Stop rather than guess when any consequence-bearing transition depends on unresolved repository identity, stale/mismatched exact refs, missing governing policy, corrupt durable state, or ambiguous authority.
 
 Never:
 
-- auto-run from installation/onboarding/demo text;
-- invent a user task or example prompt and execute it as real work;
 - operate on a different MimiSeek project;
-- promote stable;
-- update CAP/UV/other consumer reviewer pins;
-- evaluate promotion in the same chat;
-- create a second competing pending candidate;
-- weaken the candidate's governing evaluation policy;
-- fabricate missing review/adjudication evidence.
+- fabricate review evidence or finding dispositions;
+- silently weaken `EVALUATION_POLICY.md` to make a candidate pass;
+- overwrite project-specific consumer governance with generic reviewer rules;
+- change an already-running consumer agent/reviewer/procedure to a different reviewer version mid-run;
+- treat absence of visible activity as proof that a consumer is safe to update.
 
-An interrupted run must leave the previous stable usable and durable state resumable.
+## Completion
+
+Finish with a concise state-based result, not a narrative diary. State:
+
+- what canonical action was performed;
+- exact repository/PR/HEAD identity relevant to the result;
+- tests/evidence outcome;
+- resulting MimiSeek state;
+- the next canonical action, if work remains;
+- whether a fresh new chat should invoke the independent MimiSeek update skill.
