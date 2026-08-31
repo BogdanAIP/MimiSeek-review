@@ -37,13 +37,19 @@ One fact must have one canonical owner.
 - Stable/candidate/learning lifecycle: `docs/REVIEWER_LIFECYCLE.md`
 - Consumer evidence/update contract: `docs/INTEGRATION_CONTRACT.md`
 - Candidate evaluation and promotion rules: `docs/EVALUATION_POLICY.md`
-- ChatGPT one-skill entry point: `docs/CHATGPT_ENTRYPOINT.md`
+- ChatGPT two-skill entry point: `docs/CHATGPT_ENTRYPOINT.md`
 - Accepted evidence pointers: `docs/EVIDENCE_INDEX.md`
 - Durable architectural decisions and reasons: `docs/decisions/`
 - Registered consumers: `config/consumers.json`
 - Canonical structured learning/regression data: `data/`
 
 Do not duplicate authoritative state in convenience documents or reports.
+
+## User-facing MimiSeek skill boundary
+
+- `mimiseek-run` / **«Запусти Мимисик»** runs in the development/learning chat and may collect, learn, build/regression-check a candidate, and freeze `PENDING_UPDATE`.
+- `mimiseek-update` / **«Обнови Мимисик»** must run in a new independent chat for promotion authority and safe consumer rollout.
+- The repository is the durable handoff; do not require the user to copy technical prompts between chats.
 
 ## Development rules
 
@@ -54,7 +60,9 @@ Do not duplicate authoritative state in convenience documents or reports.
 - Learner/candidate may not change the evaluation policy used to judge that candidate.
 - Project-specific rules stay in consuming repositories unless an extracted rule is demonstrably generic.
 - Prefer fail-closed behavior when evidence, identity, freshness, compatibility, or authority is ambiguous.
-- A promoted stable reviewer is distributed through auditable consumer update changes, normally PRs.
+- A promoted MimiSeek stable does not automatically authorize immediate installation in every consumer.
+- Consumer reviewer updates occur only through governed, auditable changes when that consumer's live state proves the update safe.
+- Already-running agent/reviewer/procedure runs remain bound to the reviewer version with which they started.
 
 ## Before ending significant work
 
