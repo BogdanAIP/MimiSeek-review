@@ -4,9 +4,16 @@
 
 The canonical workflow definitions live in this repository as `SKILL.md` files.
 
-On ChatGPT surfaces where native Personal Skills can be installed, these repository skills may be installed/imported as native skills while preserving the repository as the source of truth.
+On ChatGPT surfaces where native Personal Skills can be installed, install them with the unique skill names:
 
-On a personal ChatGPT plan/surface where native Personal Skills are unavailable, use a dedicated ChatGPT Project named `MimiSeek Review` with the routing instructions from `docs/CHATGPT_PROJECT_INSTRUCTIONS.md`. Those Project Instructions are only the launcher/router; they must always resolve and execute the live canonical `SKILL.md` from GitHub.
+- `mimiseek-review-run`
+- `mimiseek-review-update`
+
+Both are hard-bound to the exact GitHub repository `BogdanAIP/MimiSeek-review`.
+
+A skill that routes to another product named MimiSeek is the wrong skill. S3/PostgreSQL/`CONFIG_ENV` application setup is an explicit wrong-target warning unless such infrastructure is later introduced by the canonical MimiSeek Review repository itself.
+
+The repository remains the source of truth for workflow semantics.
 
 ## User contract
 
@@ -18,7 +25,9 @@ User says:
 
 > Запусти Мимисик.
 
-This routes to `.agents/skills/mimiseek-run/SKILL.md`.
+The installed skill must be `mimiseek-review-run` and its canonical repository workflow is stored at `.agents/skills/mimiseek-run/SKILL.md`.
+
+Before any other action it must resolve `BogdanAIP/MimiSeek-review`. Failure to prove that target returns `WRONG_MIMISEEK_TARGET` and performs no mutation.
 
 It collects new evidence, learns, builds and regression-checks a candidate, then either finishes with `NO_CHANGE` / `REJECTED_PRE_UPDATE` or freezes exactly one `PENDING_UPDATE` package.
 
@@ -26,15 +35,17 @@ It never promotes stable and never updates consumer repositories.
 
 ### 2. New independent update chat
 
-The user opens a **new ChatGPT chat** in the same MimiSeek Project (or another proven native-skill context) and says:
+The user opens a **new ChatGPT chat** and says:
 
 > Обнови Мимисик.
 
-This routes to `.agents/skills/mimiseek-update/SKILL.md`.
+The installed skill must be `mimiseek-review-update` and its canonical repository workflow is stored at `.agents/skills/mimiseek-update/SKILL.md`.
+
+Before evaluation or mutation it must independently prove the same exact `BogdanAIP/MimiSeek-review` target. Wrong-target routing fails closed.
 
 The second chat independently evaluates the frozen candidate. If it cannot prove promotion, stable remains unchanged.
 
-If it does promote the candidate to MimiSeek stable, it then checks every registered consumer independently and updates only consumers whose **current live project state** proves a safe reviewer-update window. Unsafe/unproven consumers remain pinned and are recorded as `PENDING_DISTRIBUTION` for a later re-check.
+If it does promote the candidate to MimiSeek Review stable, it then checks every registered consumer independently and updates only consumers whose **current live project state** proves a safe reviewer-update window. Unsafe/unproven consumers remain pinned and are recorded as `PENDING_DISTRIBUTION` for a later re-check.
 
 ## Why two skills
 
@@ -43,17 +54,21 @@ The two-chat split provides independence without requiring an automatic chat-cre
 ```text
 Chat A: «Запусти Мимисик»
         ↓
+mimiseek-review-run
+        ↓
 collect → learn → candidate → regression → freeze PENDING_UPDATE
 
 NEW CHAT
 
 Chat B: «Обнови Мимисик»
         ↓
+mimiseek-review-update
+        ↓
 independent candidate evaluation
         ↓
 PROMOTE / REJECT / ABSTAIN
         ↓
-PROMOTE only: new MimiSeek stable
+PROMOTE only: new MimiSeek Review stable
         ↓
 per-consumer live safety check
         ↓
