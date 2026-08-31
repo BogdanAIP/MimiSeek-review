@@ -8,9 +8,13 @@ Last synchronized: 2026-08-31
 - Repository: `BogdanAIP/MimiSeek-review`
 - Stable branch: `main`
 - Development status: bootstrap
+- Active PR: #1 — `Bootstrap continuous development foundation`
+- Active branch: `bootstrap/continuous-development-docs`
 - Stable reviewer version: **not established yet**
 - Candidate reviewer version: none
 - Active implementation focus: continuous-development foundation and cross-project reviewer contract
+
+For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplicate a self-referential current commit SHA here during active development.
 
 ## Established decisions
 
@@ -31,7 +35,7 @@ The existing CAP and UV reviewer policies differ today. Choosing or deriving the
 
 ## Next canonical action
 
-Inventory the currently accepted review policies in CAP and UV at exact refs, separate generic review mechanics from project-specific rules, and define the first MimiSeek Review stable contract without weakening either consumer's accepted requirements.
+Complete review/acceptance of PR #1, then inventory the currently accepted review policies in CAP and UV at exact refs, separate generic review mechanics from project-specific rules, and define the first MimiSeek Review stable contract without weakening either consumer's accepted requirements.
 
 ## Open risks
 

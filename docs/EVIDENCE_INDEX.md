@@ -6,10 +6,15 @@ This document indexes accepted stage evidence. It is not a substitute for GitHub
 
 Status: IN REVIEW
 
-Evidence required before DONE:
+Implementation PR:
 
-- bootstrap PR containing canonical development documents;
-- review of the exact PR head according to the repository's then-governing acceptance policy;
+- PR #1 — `Bootstrap continuous development foundation`
+- Base: `09492f1ec8aeb1dfbfc152505d14574016a72870`
+- Development branch: `bootstrap/continuous-development-docs`
+
+Evidence still required before DONE:
+
+- review of the exact final PR head according to the repository's then-governing acceptance policy;
 - required CI once CI exists;
 - merged commit recorded here after acceptance.
 
