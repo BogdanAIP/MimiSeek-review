@@ -20,6 +20,10 @@ CAP / UV / future projects
   adjudicated findings / PASS / fixes / exact identities
                     |
                     v
+               CHAT A
+        «Запусти Мимисик»
+                    |
+                    v
               COLLECTOR
                     |
                     v
@@ -38,22 +42,36 @@ CAP / UV / future projects
        REGRESSION / CAPABILITY GATE
                     |
                     v
-      FRESH CHATGPT EVALUATOR
+          frozen PENDING_UPDATE
+                    |
+              NEW CHAT
+                    |
+                    v
+               CHAT B
+        «Обнови Мимисик»
+                    |
+                    v
+      INDEPENDENT CANDIDATE EVALUATION
         /           |          \
    PROMOTE        REJECT      ABSTAIN
       |
       v
- NEW STABLE REVIEWER
+ NEW GLOBAL MIMISEEK STABLE
       |
       v
- DISTRIBUTOR → version-update PRs → consumers
+ PER-CONSUMER LIVE SAFETY CHECK
+      |
+  SAFE_TO_UPDATE ─────→ reviewer-update PR/change
+  DEFER_*        ─────→ consumer remains pinned
 ```
 
 ## Logical components
 
 ### Stable reviewer artifact
 
-The reviewer version currently released for consumer use. Its identity is immutable and resolvable by version plus content/commit identity.
+The reviewer version currently released by MimiSeek for consumer use. Its identity is immutable and resolvable by version plus content/commit identity.
+
+Global MimiSeek stable and a consumer's currently installed reviewer version may differ temporarily because consumer rollout can be deferred.
 
 ### Collector
 
@@ -100,37 +118,59 @@ The existing historical reviewer workbook is the bootstrap source for this corpu
 
 Executes stable and candidate against appropriate historical cases and protected capabilities and records target detection, old-defect persistence on FIXED, regressions, and false positives.
 
-### Fresh ChatGPT evaluator
+A candidate that passes the required pre-update gate is frozen into a durable `PENDING_UPDATE` package. This package is the only handoff authority between Chat A and Chat B.
 
-A separately governed evaluator run in a **new isolated ChatGPT chat/context**. It independently checks candidate identity, evaluation evidence, governing policy, and regression/protected-capability results, then returns only an authoritative `PROMOTE`, `REJECT`, or `ABSTAIN` result under `docs/EVALUATION_POLICY.md`.
+### `mimiseek-run`
 
-The learner and candidate do not control this context.
+User-facing skill invoked as **«Запусти Мимисик»** in Chat A.
+
+It coordinates collection, normalization, learning-event derivation, learner execution, candidate creation, regression evaluation, and pending-package freeze.
+
+It cannot promote stable and cannot update consumer reviewer pins.
+
+### `mimiseek-update`
+
+User-facing skill invoked as **«Обнови Мимисик»** in a new independent ChatGPT chat.
+
+It has two separate authorities under fixed governing policy:
+
+1. independently evaluate the frozen candidate and return `PROMOTE`, `REJECT`, or `ABSTAIN`;
+2. after promotion, independently decide for each consumer whether the current live project state proves a safe update window.
+
+It must not rely on learner advocacy from Chat A; all required evidence is reconstructed from repository-owned durable state.
 
 ### Version registry
 
-Identifies stable and candidate reviewer versions, immutable content identity, evaluation-policy identity, and promotion evidence.
+Identifies stable and candidate reviewer versions, immutable content identity, evaluation-policy identity, pending-update state, promotion evidence, and consumer desired/installed reviewer identities.
+
+### Consumer safe-update state
+
+A promoted MimiSeek stable does not automatically authorize immediate installation everywhere.
+
+For each consumer MimiSeek must be able to resolve states such as:
+
+- `INSTALLED`;
+- `PENDING_DISTRIBUTION`;
+- `BLOCKED_COMPATIBILITY`;
+- `UPDATE_IN_PROGRESS`.
+
+If active work, exact-head gates, project policy, compatibility, or running-agent state makes an update unsafe or unprovable, the consumer remains pinned.
 
 ### Distributor
 
-After authoritative `PROMOTE`, prepares auditable reviewer-version update changes for every registered compatible consumer repository.
+Distribution is performed only for a consumer that `mimiseek-update` has classified `SAFE_TO_UPDATE` under that consumer's live governing state.
 
-Default distribution mechanism is a separate update PR per consumer. Distribution must not silently push incompatible reviewer changes to consumer `main`.
-
-### ChatGPT evolution orchestrator
-
-The user-facing `mimiseek-evolve` skill starts the whole MimiSeek improvement pipeline from ChatGPT.
-
-Internally it invokes collector, learner, regression, fresh evaluation, promotion, and distribution in order. It must stop fail-closed if required evidence, authority, or fresh-context capability is unavailable.
+Default mechanism is an auditable update PR/change. Running agent/reviewer/procedure runs remain bound to the reviewer version with which they started; repository-level updates affect only future runs after the consumer change becomes effective.
 
 ## Authority separation
 
 - Consumer review processes create source evidence but do not promote MimiSeek versions.
-- Collector imports evidence but does not decide learning changes.
-- Learner proposes candidate changes but cannot promote them.
-- Candidate cannot modify the policy or corpus result used to judge itself.
-- Regression evaluator measures; it does not independently waive required fresh evaluation.
-- Fresh evaluator judges under fixed policy but does not author candidate changes.
-- Distributor acts only on an accepted immutable promotion result.
+- `mimiseek-run` may create/freeze a candidate but cannot promote or distribute it.
+- Candidate cannot modify the policy or evaluation evidence used to judge itself.
+- `mimiseek-update` must run in a fresh independent chat for promotion authority.
+- Only `PROMOTE` advances global MimiSeek stable.
+- Global promotion does not itself prove any consumer is currently safe to update.
+- Consumer update safety is resolved per repository and fails closed when active-state safety or compatibility cannot be proven.
 
 ## Generic versus project-specific knowledge
 
@@ -148,4 +188,4 @@ Project-specific rules remain in the consumer repository's governing policy/over
 
 ## Durable state principle
 
-Chat contexts are workers, not state stores. Canonical project state, reviewer versions, normalized evidence, learning events, candidate rationale, evaluation results, and promotion history must be recoverable from Git/GitHub and structured persisted data.
+Chat contexts are workers, not state stores. Canonical project state, reviewer versions, normalized evidence, learning events, candidate rationale, frozen pending package, evaluation results, consumer distribution state, and promotion history must be recoverable from Git/GitHub and structured persisted data.
