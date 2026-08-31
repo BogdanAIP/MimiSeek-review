@@ -1,3 +1,8 @@
+---
+name: mimiseek-run
+description: Use when the user asks "Запусти Мимисик", "запусти MimiSeek", explicitly invokes mimiseek-run, or asks to start the MimiSeek reviewer-learning cycle. Collect verified review evidence, learn from outcomes, build and regression-check a candidate, and freeze PENDING_UPDATE. Never promote stable or update consumer repositories.
+---
+
 # Skill: mimiseek-run
 
 ## User invocation
