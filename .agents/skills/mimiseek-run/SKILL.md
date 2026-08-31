@@ -1,9 +1,32 @@
 ---
-name: mimiseek-run
-description: Use when the user asks "Запусти Мимисик", "запусти MimiSeek", explicitly invokes mimiseek-run, or asks to start the MimiSeek reviewer-learning cycle. Collect verified review evidence, learn from outcomes, build and regression-check a candidate, and freeze PENDING_UPDATE. Never promote stable or update consumer repositories.
+name: mimiseek-review-run
+description: Use only when the user asks "Запусти Мимисик", "запусти MimiSeek Review", explicitly invokes mimiseek-review-run, or asks to start the reviewer-learning cycle for the exact GitHub repository BogdanAIP/MimiSeek-review. Never route this skill to any other project named MimiSeek. First prove the exact repository identity, then collect verified review evidence, learn from outcomes, build and regression-check a candidate, and freeze PENDING_UPDATE. Never promote stable or update consumer repositories.
 ---
 
-# Skill: mimiseek-run
+# Skill: mimiseek-review-run
+
+## Hard target identity
+
+This skill is exclusively for the reviewer-development repository:
+
+`BogdanAIP/MimiSeek-review`
+
+Before doing anything else, independently resolve that exact GitHub repository.
+
+If the active target is any other repository, service, workspace, database-backed application, or unrelated product named MimiSeek, stop immediately and return:
+
+`WRONG_MIMISEEK_TARGET`
+
+Do not continue by analogy and do not infer that another MimiSeek project is the intended target.
+
+The following are explicit wrong-target warning signs unless they are later introduced by the canonical `BogdanAIP/MimiSeek-review` repository itself:
+
+- S3 configuration;
+- PostgreSQL application configuration;
+- `CONFIG_ENV` application setup;
+- deployment/runtime setup for an unrelated MimiSeek service.
+
+The first successful repository read must come from `BogdanAIP/MimiSeek-review` and must establish the governing repository state before any mutation.
 
 ## User invocation
 
@@ -11,27 +34,31 @@ Primary natural-language trigger:
 
 > Запусти Мимисик.
 
-Equivalent explicit invocations such as `mimiseek-run` are acceptable.
+Equivalent explicit invocation:
+
+> Используй навык `mimiseek-review-run`.
 
 ## Purpose
 
-Run the **development half** of the MimiSeek reviewer-improvement loop in the current ChatGPT chat.
+Run the **development half** of the MimiSeek Review reviewer-improvement loop in the current ChatGPT chat.
 
-This skill does not promote a candidate and does not update consumer repositories. Its terminal responsibility is to leave durable repository state that a completely new chat can independently evaluate through `mimiseek-update`.
+This skill does not promote a candidate and does not update consumer repositories. Its terminal responsibility is to leave durable repository state that a completely new chat can independently evaluate through the update skill.
 
 ## Bootstrap
 
-Before mutations:
+After the hard target-identity check and before mutations:
 
 1. Resolve live `BogdanAIP/MimiSeek-review` state from GitHub.
-2. Read `AGENTS.md`, `docs/PRODUCT.md`, `docs/CURRENT_STATE.md`, `docs/REVIEWER_LIFECYCLE.md`, `docs/EVALUATION_POLICY.md`, `docs/INTEGRATION_CONTRACT.md`, and `docs/CHATGPT_ENTRYPOINT.md`.
+2. Read `AGENTS.md`, `docs/PRODUCT.md`, `docs/CURRENT_STATE.md`, `docs/REVIEWER_LIFECYCLE.md`, `docs/EVALUATION_POLICY.md`, `docs/INTEGRATION_CONTRACT.md`, and `docs/CHATGPT_ENTRYPOINT.md` from that repository at the applicable live ref.
 3. Resolve current stable reviewer identity, registered consumers, collection cursors, pending candidate state, and applicable immutable policy refs.
 4. Never treat previous-chat prose as authority.
+5. Never import assumptions from another project merely because it is also called MimiSeek.
 
 ## Preconditions
 
 - If an unresolved `PENDING_UPDATE` candidate already exists, do not create another competing candidate. Collecting additional evidence may be allowed only if the governing lifecycle says it cannot mutate the already-frozen evaluation package.
 - If durable state is corrupt, ambiguous, or cannot be reconciled, stop fail-closed.
+- If the exact target repository cannot be proven, stop with `WRONG_MIMISEEK_TARGET` or an explicit repository-resolution failure before any mutation.
 
 ## Pipeline
 
@@ -121,12 +148,13 @@ Return one of:
 - `REJECTED_PRE_UPDATE` — candidate failed mandatory pre-update evaluation;
 - `PENDING_UPDATE` — frozen candidate package is ready for a new chat.
 
-When returning `PENDING_UPDATE`, tell the user only that they can open a new ChatGPT chat and invoke **«Обнови Мимисик»**. They must not need to copy a technical evaluation prompt manually.
+When returning `PENDING_UPDATE`, tell the user only that they can open a new ChatGPT chat and invoke the installed MimiSeek Review update skill. They must not need to copy a technical evaluation prompt manually.
 
 ## Fail-closed rules
 
 Never:
 
+- operate on a different MimiSeek project;
 - promote stable;
 - update CAP/UV/other consumer reviewer pins;
 - evaluate promotion in the same chat;
