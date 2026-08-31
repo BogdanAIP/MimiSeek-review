@@ -11,7 +11,8 @@ Acceptance:
 - canonical product/current-state/roadmap/architecture/protocol owners exist;
 - MimiSeek is explicitly a reviewer-improvement/release system, not the owner of consumer PR review loops;
 - standalone multi-project ownership is recorded;
-- one ChatGPT user entry-point skill contract exists;
+- the two ChatGPT user-facing skill contracts exist: `mimiseek-run` and `mimiseek-update`;
+- the repository is the durable handoff between the two chats;
 - branch/PR workflow is established.
 
 ## Stage 1 — Bootstrap data + first stable reviewer baseline — NEXT
@@ -45,11 +46,12 @@ Acceptance:
 - both can export/import structured review runs and finding dispositions;
 - updates are explicit and auditable;
 - project-local policy remains authoritative;
-- stale/mismatched reviewer identity fails closed.
+- stale/mismatched reviewer identity fails closed;
+- already-running runs remain bound to the reviewer version with which they started.
 
 ## Stage 3 — Collector + normalized outcome store
 
-Goal: let MimiSeek automatically gather new accepted review evidence from all registered consumers.
+Goal: let `mimiseek-run` automatically gather new accepted review evidence from all registered consumers.
 
 Acceptance:
 
@@ -81,7 +83,7 @@ Acceptance:
 
 ## Stage 6 — Automated regression / protected-capability evaluation
 
-Goal: evaluate stable versus candidate on historical and accumulated real cases.
+Goal: let `mimiseek-run` evaluate stable versus candidate on historical and accumulated real cases before independent update evaluation.
 
 Acceptance:
 
@@ -89,47 +91,71 @@ Acceptance:
 - old target findings must disappear on FIXED;
 - false-positive/regression behavior is measured;
 - protected capabilities are checked;
-- candidate cannot modify the evaluation policy governing the run.
+- candidate cannot modify the evaluation policy governing the run;
+- passing candidate is frozen into exactly one durable `PENDING_UPDATE` package.
 
-## Stage 7 — Fresh ChatGPT evaluator executor
+## Stage 7 — Independent `mimiseek-update`
 
-Goal: let the evolution pipeline automatically create a new isolated ChatGPT evaluation context and obtain an independent `PROMOTE`, `REJECT`, or `ABSTAIN` result.
+Goal: make the second user-facing skill fully functional in a new ChatGPT chat.
+
+The user opens a new chat and says **«Обнови Мимисик»**. No technical prompt is copied from the first chat.
 
 Acceptance:
 
-- evaluator runs in a new context, separate from learner/candidate development;
-- evaluator resolves evidence independently and read-only;
+- second chat reconstructs the frozen pending package independently from Git/GitHub;
+- evaluator is separate from learner/candidate development context;
 - insufficient evidence yields `ABSTAIN`;
-- missing fresh-context capability fails closed without promotion;
-- evaluator result is durable and identity-bound.
+- failed independence or identity checks fail closed;
+- only authoritative `PROMOTE` may advance global MimiSeek stable;
+- result is durable and identity-bound.
 
-## Stage 8 — Automatic promotion + distribution
+## Stage 8 — Safe consumer distribution
 
-Goal: convert an accepted candidate into new stable and propagate it to registered consumers.
-
-Acceptance:
-
-- only authoritative `PROMOTE` can change stable;
-- promotion is atomic/auditable and rollback remains possible;
-- compatible consumers receive version-update PRs automatically;
-- incompatible consumers remain explicitly pinned rather than silently changed.
-
-## Stage 9 — Full `mimiseek-evolve` ChatGPT skill
-
-Goal: one user invocation runs the complete pipeline:
-
-`collect → learn → candidate → regression → fresh evaluation → promote/reject/abstain → distribute`.
+Goal: after a MimiSeek promotion, update each registered consumer only when its current live project state proves the update safe.
 
 Acceptance:
 
-- no manual technical sequencing is required from the user;
-- the skill resumes idempotently after interruption;
-- unchanged evidence produces a safe no-op;
-- every mutation is traceable to an exact pipeline run;
-- failures leave the current stable reviewer unchanged.
+- global MimiSeek promotion and consumer installation are separate transactions;
+- `mimiseek-update` resolves each consumer independently;
+- active runs/gates/stages remain on their existing reviewer identity;
+- `SAFE_TO_UPDATE` permits an auditable update PR/change;
+- `DEFER_*` leaves the consumer unchanged and records `PENDING_DISTRIBUTION`;
+- deferred consumers can be re-checked by a later `mimiseek-update` invocation without creating a new reviewer candidate.
 
-## Stage 10 — Continuous autonomous evolution
+## Stage 9 — Complete two-skill workflow
 
-Goal: optionally trigger the same proven evolution pipeline from new evidence automatically, while retaining the ChatGPT skill as the explicit manual entry point.
+Goal: the practical user workflow is fully operational:
+
+```text
+Chat A: «Запусти Мимисик»
+collect → learn → candidate → regression → PENDING_UPDATE
+
+new Chat B: «Обнови Мимисик»
+independent evaluation → PROMOTE/REJECT/ABSTAIN → safe distribution
+```
+
+Acceptance:
+
+- no manual technical sequencing or prompt copying is required;
+- both skills resume idempotently after interruption;
+- unchanged evidence produces safe `NO_CHANGE`;
+- every mutation is traceable to an exact pipeline/update run;
+- failures leave current stable and unsafe consumers unchanged.
+
+## Stage 10 — Optional automatic fresh-chat handoff
+
+Goal: later remove even the user's manual action of opening the second chat by adding a proven executor that launches `mimiseek-update` in a genuinely fresh ChatGPT context.
+
+This is an optimization, not a prerequisite for a working self-improvement system.
+
+Acceptance:
+
+- automatic handoff preserves the exact same two-role authority separation;
+- freshness is provable;
+- failure to create/verify the fresh context leaves stable unchanged.
+
+## Stage 11 — Continuous autonomous evolution
+
+Goal: optionally trigger the proven learning pipeline from new evidence automatically while keeping the two-role evaluation boundary intact.
 
 Acceptance: reviewer improvement can continue across CAP, UV, and future projects without technical adjudication by the human owner except policy/product choices explicitly reserved to the owner.
