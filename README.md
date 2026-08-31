@@ -1,8 +1,17 @@
 # MimiSeek Review
 
-MimiSeek Review is a standalone, reusable code-review system intended for `BogdanAIP/chat-agent-platform`, `BogdanAIP/uv-studio`, and future repositories.
+MimiSeek Review is a standalone, reusable reviewer-improvement system intended for `BogdanAIP/chat-agent-platform`, `BogdanAIP/uv-studio`, and future repositories.
 
-The repository owns the generic reviewer lifecycle, versioning, learning history, regression corpus, learner, and independent evaluator. Project-specific architecture and acceptance rules remain in each consuming repository.
+The repository owns the generic reviewer lifecycle, versioning, learning history, regression corpus, learner, independent candidate evaluation, and safe distribution of promoted stable reviewer versions. Project-specific architecture and acceptance rules remain in each consuming repository.
+
+## ChatGPT usage
+
+Canonical workflows live in:
+
+- `.agents/skills/mimiseek-run/SKILL.md` — user command: **«Запусти Мимисик»**;
+- `.agents/skills/mimiseek-update/SKILL.md` — in a new independent chat: **«Обнови Мимисик»**.
+
+On ChatGPT surfaces where Personal Skills cannot be installed, use a dedicated ChatGPT Project with `docs/CHATGPT_PROJECT_INSTRUCTIONS.md` as its Project Instructions. The Project is only a launcher/router; the repository `SKILL.md` files remain authoritative.
 
 ## Start here
 
