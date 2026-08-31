@@ -13,8 +13,9 @@ Last synchronized: 2026-08-31
 - Stable reviewer version: **not established yet**
 - Candidate reviewer version: none
 - Registered initial consumers: `BogdanAIP/chat-agent-platform`, `BogdanAIP/uv-studio`
-- User-facing ChatGPT skills: `mimiseek-run` and `mimiseek-update`
-- Active implementation focus: finalize Stage 0 product boundary, two-chat evolution workflow, and safe consumer rollout contract
+- User-facing workflow definitions: `mimiseek-run` and `mimiseek-update`
+- Current personal-ChatGPT launcher: dedicated ChatGPT Project instructions from `docs/CHATGPT_PROJECT_INSTRUCTIONS.md`
+- Active implementation focus: finalize Stage 0 product boundary, two-chat evolution workflow, ChatGPT launcher, and safe consumer rollout contract
 
 For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplicate a self-referential current commit SHA here during active development.
 
@@ -26,9 +27,10 @@ For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplic
 - Consumer repositories are evidence producers + stable-reviewer consumers.
 - Stable and candidate reviewer roles are separate.
 - Learner/candidate cannot change their own evaluation policy.
-- Routine reviewer evolution uses two user-visible chats/skills:
+- Routine reviewer evolution uses two user-visible chats/workflows:
   1. `Запусти Мимисик` / `mimiseek-run` — collect, learn, build candidate, regression, freeze `PENDING_UPDATE`;
   2. in a new chat, `Обнови Мимисик` / `mimiseek-update` — independently evaluate candidate, promote only if proven, then safety-check each consumer before rollout.
+- The repository `SKILL.md` files are canonical. On ChatGPT surfaces without installable Personal Skills, a dedicated ChatGPT Project supplies only routing/bootstrap instructions and must resolve the live skill from GitHub on every invocation.
 - Global MimiSeek promotion and consumer installation are separate transactions.
 - A consumer may remain pinned to an older stable while its live project state makes an update unsafe.
 - Already-running agent/reviewer/procedure runs remain bound to the reviewer version with which they started.
@@ -44,7 +46,8 @@ Stage 1 will import those data into canonical machine-readable text datasets und
 - Historical workbook data are not yet imported into canonical MimiSeek datasets.
 - No CAP/UV `code-review` skill has yet been selected or derived as first MimiSeek stable.
 - No collector, outcome store, learner, regression runner, promotion registry, or consumer safe-window detector/distributor implementation exists yet.
-- The two ChatGPT skills currently define the required contracts; later roadmap stages implement the machinery behind them.
+- The two workflow skills currently define the required contracts; later roadmap stages implement the machinery behind them.
+- The ChatGPT Project routing instructions exist in-repo, but must still be placed into an actual ChatGPT Project by the user because this repository cannot mutate ChatGPT account UI/settings.
 - Consumer repositories do not yet expose the final machine-readable safe-update signal/contract; until that exists, inability to prove a safe update window must defer distribution.
 
 The existing CAP and UV reviewer policies differ. The first stable baseline must be derived explicitly rather than accidentally copying one consumer's current policy.
@@ -55,6 +58,8 @@ Complete review/acceptance of PR #1. Then Stage 1 must do two bootstrap jobs tog
 
 1. import/reconcile the existing historical reviewer workbook into canonical MimiSeek data, preserving the 84 BUGGY→FIXED cases and provenance;
 2. inventory accepted CAP/UV review policies at exact refs and derive the first reusable stable MimiSeek reviewer while retaining project-specific overlays.
+
+In parallel, create/configure a dedicated ChatGPT Project `MimiSeek Review` using `docs/CHATGPT_PROJECT_INSTRUCTIONS.md` so new chats can invoke `Запусти Мимисик` and `Обнови Мимисик` without manually pasting the skill bodies.
 
 Consumer integration must also define how CAP/UV expose a trustworthy live `SAFE_TO_UPDATE` / defer state so MimiSeek never changes reviewer policy while an agent, frozen exact-head gate, or protected project stage is in progress.
 
