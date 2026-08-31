@@ -1,59 +1,72 @@
-# ChatGPT Entry Point
+# ChatGPT Entry Points
 
 ## User contract
 
-MimiSeek Review exposes one primary user workflow in ChatGPT: the `mimiseek-evolve` skill.
+MimiSeek Review exposes exactly two user-facing ChatGPT workflows.
 
-Intended user interaction:
+### 1. Development / learning chat
 
-> Запусти `mimiseek-evolve`.
+User says:
 
-or an equivalent explicit invocation naming the skill.
+> Запусти Мимисик.
 
-The user should not have to manually sequence collector, learner, regression, evaluator, promotion, or distribution steps.
+This invokes `.agents/skills/mimiseek-run/SKILL.md`.
 
-## Full skill pipeline
+It collects new evidence, learns, builds and regression-checks a candidate, then either finishes with `NO_CHANGE` / `REJECTED_PRE_UPDATE` or freezes exactly one `PENDING_UPDATE` package.
+
+It never promotes stable and never updates consumer repositories.
+
+### 2. New independent update chat
+
+The user opens a **new ChatGPT chat** and says:
+
+> Обнови Мимисик.
+
+This invokes `.agents/skills/mimiseek-update/SKILL.md`.
+
+The second chat independently evaluates the frozen candidate. If it cannot prove promotion, stable remains unchanged.
+
+If it does promote the candidate to MimiSeek stable, it then checks every registered consumer independently and updates only consumers whose **current live project state** proves a safe reviewer-update window. Unsafe/unproven consumers remain pinned and are recorded as `PENDING_DISTRIBUTION` for a later re-check.
+
+## Why two skills
+
+The two-chat split provides independence without requiring an automatic chat-creation capability.
 
 ```text
-invoke mimiseek-evolve
-    ↓
-resolve MimiSeek live state
-    ↓
-collect new consumer evidence
-    ↓
-normalize + derive learning events
-    ↓
-create candidate when evidence supports a useful change
-    ↓
-run regression / protected-capability evaluation
-    ↓
-launch NEW isolated ChatGPT evaluator context
-    ↓
+Chat A: «Запусти Мимисик»
+        ↓
+collect → learn → candidate → regression → freeze PENDING_UPDATE
+
+NEW CHAT
+
+Chat B: «Обнови Мимисик»
+        ↓
+independent candidate evaluation
+        ↓
 PROMOTE / REJECT / ABSTAIN
-    ↓
-PROMOTE only: update stable registry
-    ↓
-create consumer reviewer-update PRs
-    ↓
-persist run/evidence/current state
+        ↓
+PROMOTE only: new MimiSeek stable
+        ↓
+per-consumer live safety check
+        ↓
+SAFE_TO_UPDATE → auditable update change
+DEFER_*       → leave consumer unchanged, persist PENDING_DISTRIBUTION
 ```
 
-## Fresh-context requirement
+## Consumer update safety
 
-Promotion semantic evaluation must occur in a new isolated ChatGPT context. Reusing the learner/development chat is not equivalent.
+A promoted reviewer is not automatically installed everywhere immediately.
 
-The orchestration layer therefore needs a capability that can create a fresh ChatGPT chat/context, submit the evaluator request, and return the structured evaluator result.
+The second skill must respect each consumer's own project state. Active agents, exact-head acceptance/release/physical gates, project stages that forbid unrelated changes, reviewer-policy migrations, or unresolved compatibility may make an update unsafe now.
 
-MimiSeek must define this as an adapter/capability contract rather than hard-depend on CAP. CAP or another executor may implement the contract.
+Absence of visible activity is not proof of safety. If the safe window cannot be established, the consumer is deferred.
 
-Until such an executor is available and proven, `mimiseek-evolve` must stop before promotion with stable unchanged. It must not silently substitute same-chat evaluation.
+Already-running agent/reviewer/procedure runs keep the exact reviewer version with which they started. Repository-level updates affect only future runs after the update becomes effective.
 
-## Idempotence
+## Repeated invocations
 
-Repeated invocation with no new evidence and no pending candidate should be a safe no-op.
+`Запусти Мимисик` with no new learning evidence should be a safe `NO_CHANGE`.
 
-Interrupted runs must resume from durable pipeline state rather than duplicating imported evidence, creating duplicate candidates, or distributing the same stable update twice.
+`Обнови Мимисик` with no `PENDING_UPDATE` but with deferred consumer distributions may re-check those consumers against live project state and install the already-promoted stable only where the safe window is now proven.
 
-## Authority
-
-The orchestration skill coordinates the pipeline but does not gain the learner's or evaluator's semantic authority. It may only perform each transition when the corresponding role's durable result satisfies the governing contract.
+Interrupted runs must resume from durable repository state without duplicating imports, candidates, promotions, or consumer update changes.
