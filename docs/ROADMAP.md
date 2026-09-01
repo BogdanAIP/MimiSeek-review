@@ -13,8 +13,9 @@ Acceptance:
 - standalone multi-project ownership is recorded;
 - the two ChatGPT workflow contracts exist in `.agents/skills/mimiseek-run/SKILL.md` and `.agents/skills/mimiseek-update/SKILL.md`;
 - the run workflow is repository-driven and continues bootstrap/development until later operational stages actually exist;
-- the update workflow preserves fresh-chat independent promotion authority;
+- every real update workflow invocation uses a new independent ChatGPT chat, including deferred-distribution reconciliation;
 - global promotion and per-consumer installation are separate, with fail-closed safe-update semantics;
+- the historical Stage 1 bootstrap source has a repository-owned stable locator, exact version, byte size/digest, and fail-closed recovery contract;
 - the repository is the durable handoff between chats;
 - branch/PR workflow and fresh exact-head acceptance review are established.
 
@@ -26,9 +27,10 @@ Goal: start MimiSeek with both its historical learning memory and an explicit re
 
 Work:
 
-- import the existing reviewer statistics workbook into canonical text-based normalized data;
-- preserve the 84 historical BUGGY→FIXED cases as regression/bootstrap evidence;
-- retain Excel as a generated/report view, not the only source of truth;
+- recover and authenticate the exact workbook identified by `data/bootstrap-source.json`;
+- import the reviewer statistics workbook into canonical text-based normalized data;
+- preserve supported historical BUGGY→FIXED cases as regression/bootstrap evidence after reconciliation;
+- retain Excel as a bootstrap/report artifact, not the canonical automation source of truth;
 - resolve exact accepted CAP and UV review-policy refs;
 - classify rules as generic or project-specific;
 - derive the first stable MimiSeek reviewer without weakening either consumer;
@@ -36,7 +38,8 @@ Work:
 
 Acceptance:
 
-- imported counts/identities reconcile with the audited source workbook;
+- source path/version/size/digest are verified before import;
+- imported counts/identities reconcile with the audited source workbook and underlying provenance;
 - regression cases are machine-readable and traceable to evidence;
 - first stable reviewer identity is immutable and reproducible;
 - project-specific rules remain project-local.
@@ -121,11 +124,13 @@ Goal: after a MimiSeek promotion, update each registered consumer only when its 
 Acceptance:
 
 - global MimiSeek promotion and consumer installation are separate transactions;
+- every real distribution/reconciliation run uses a new independent update chat;
+- a rollout target is accepted only when durable state proves it is the exact current authoritatively promoted stable;
 - the update workflow resolves each consumer independently;
 - active runs/gates/stages remain on their existing reviewer identity;
 - `SAFE_TO_UPDATE` permits an auditable update PR/change;
 - `DEFER_*` leaves the consumer unchanged and records `PENDING_DISTRIBUTION`;
-- deferred consumers can be re-checked by a later update invocation without creating a new reviewer candidate.
+- deferred consumers can be re-checked by a later fresh update invocation without creating or re-promoting a reviewer candidate.
 
 ## Stage 9 — Complete two-chat workflow
 
