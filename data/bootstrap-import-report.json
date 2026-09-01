@@ -24,7 +24,7 @@
       "bytes": 51522,
       "encoding": "tuple-jsonl-v1",
       "records": 84,
-      "sha256": "b9ce5c7f7faef9197b4599edd67e67127e246dff4b7c01292d6d72a553ca5b5d"
+      "sha256": "7065aab04e1a83c344607e8047b399c35f12e6aff600c4bca168600b0c925bbf"
     },
     "review-runs.jsonl": {
       "bytes": 24742,
@@ -70,6 +70,7 @@
   "reconciliation": {
     "actual_regression_cases": 84,
     "case_finding_refs_all_resolve": true,
+    "case_finding_refs_semantically_match": true,
     "declared_buggy_fixed_target": 84,
     "review_run_confirmed_rejected_severity_totals_match_findings_table": true,
     "review_run_finding_totals_match_findings_table": true,
