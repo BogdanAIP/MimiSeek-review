@@ -45,11 +45,18 @@ One fact must have one canonical owner.
 
 Do not duplicate authoritative state in convenience documents or reports.
 
-## User-facing MimiSeek skill boundary
+## User-facing workflow boundary
 
-- `mimiseek-run` / **«Запусти Мимисик»** runs in the development/learning chat and may collect, learn, build/regression-check a candidate, and freeze `PENDING_UPDATE`.
-- `mimiseek-update` / **«Обнови Мимисик»** must run in a new independent chat for promotion authority and safe consumer rollout.
-- The repository is the durable handoff; do not require the user to copy technical prompts between chats.
+The repository owns two ChatGPT workflow files:
+
+- `.agents/skills/mimiseek-run/SKILL.md`, installed/native identity `mimiseek-review-run`;
+- `.agents/skills/mimiseek-update/SKILL.md`, installed/native identity `mimiseek-review-update`.
+
+The run workflow reconstructs live repository state. During bootstrap it continues the next governed repository-development action. Only after the operational learning stages exist may it collect/learn/build/regression-check a candidate and freeze independent-update state.
+
+The update workflow is the separate fresh-chat authority for governed candidate promotion and safe consumer rollout. The run chat cannot substitute for that independent role.
+
+The repository is the durable handoff; do not require the user to copy technical prompts between chats.
 
 ## Development rules
 
@@ -63,6 +70,14 @@ Do not duplicate authoritative state in convenience documents or reports.
 - A promoted MimiSeek stable does not automatically authorize immediate installation in every consumer.
 - Consumer reviewer updates occur only through governed, auditable changes when that consumer's live state proves the update safe.
 - Already-running agent/reviewer/procedure runs remain bound to the reviewer version with which they started.
+
+## PR acceptance
+
+A development chat that materially changes a PR head cannot use its own same-chat judgment as the independent terminal acceptance review for that head.
+
+Before merge, obtain a fresh independent read-only review bound to the exact final base/head and current governing repository policy. Any fix that moves HEAD makes the prior terminal review stale for merge acceptance and requires a new exact-head independent review.
+
+If required CI or another acceptance gate is configured for the stage, it must pass on the accepted head. If no such gate exists, record that fact rather than inventing a pass.
 
 ## Before ending significant work
 
