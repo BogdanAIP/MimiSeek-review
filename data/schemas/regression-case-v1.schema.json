@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "One JSONL line is a positional array. x-columns defines the stable column order.",
+  "maxItems": 25,
+  "minItems": 25,
+  "prefixItems": [
+    {"type":"string"},{"type":"string"},{"type":"string"},{"type":"integer"},{"enum":["P1","P2","P3"]},{"type":["string","null"]},{"type":["string","null"]},{"pattern":"^[0-9a-f]{40}$","type":"string"},{"pattern":"^[0-9a-f]{40}$","type":"string"},{"pattern":"^[0-9a-f]{40}$","type":"string"},{"pattern":"^[0-9a-f]{40}$","type":"string"},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["integer","number","null"]},{"type":["integer","number","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":"integer"}
+  ],
+  "title": "MimiSeek bootstrap regression-case tuple v1",
+  "type": "array",
+  "x-bootstrap-source": {"manifest_ref":"data/bootstrap-source.json","sheet_row_column":"source_row"},
+  "x-columns": ["case_id","finding_id","repository","pr","severity","category","known_defect","buggy_base","buggy_head","fix_head","verified_head","historical_source_reviewer","codex_target","codex_basis","our_target","our_extra_confirmed","our_false_positives","buggy_rerun","fixed_rerun","regression_result","disposition","priority","source_url","notes","source_row"]
+}
