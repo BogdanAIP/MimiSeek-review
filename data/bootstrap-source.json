@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "source_kind": "historical_reviewer_statistics_workbook",
+  "repository_path": "reports/bootstrap/reviewer_statistics_improvement_dataset.xlsx",
+  "sha256": "6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a",
+  "size_bytes": 92864,
+  "source_repositories": [
+    "BogdanAIP/chat-agent-platform",
+    "BogdanAIP/uv-studio"
+  ],
+  "declared_buggy_fixed_pairs": 84,
+  "role": "Stage 1 bootstrap import and regression source",
+  "verification": {
+    "digest_required_before_import": true,
+    "counts_must_be_reconciled_from_source": true,
+    "underlying_github_provenance_must_remain_traceable": true
+  },
+  "notes": "This manifest identifies the immutable workbook snapshot committed with Stage 0. The declared pair count is a reconciliation target, not independent ground truth."
+}
