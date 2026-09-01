@@ -14,6 +14,18 @@ A candidate reviewer and the learner that produced it may not authoritatively ch
 
 Changes to this policy are separate governed product changes and cannot retroactively weaken an already-started candidate evaluation.
 
+## Policy finalization before candidate creation
+
+The bootstrap policy intentionally does not invent numeric thresholds before Stage 1 historical data are reconciled. That deferral does **not** allow the first candidate to be created before its governing exam is fixed.
+
+Before Stage 5 creates the first promotion-eligible candidate:
+
+1. the required quantitative/absolute first-promotion gate must be defined from governed baseline/regression evidence;
+2. that evaluation-policy change must be accepted as a separate repository-development change under the normal immutable BASE-derived review authority;
+3. only after that accepted policy identity exists may the learner create a candidate bound to it.
+
+The same ordering applies to later material evaluation-policy changes: policy authority must be fixed before the candidate whose promotion it governs is created. A candidate may not select, weaken, or retroactively replace its own exam.
+
 ## Fresh evaluator authority
 
 Semantic promotion evaluation uses a fresh ordinary ChatGPT context operating independently and read-only against immutable candidate/stable/policy/evidence identities.
@@ -66,7 +78,7 @@ A candidate must demonstrate all requirements of the finalized quantitative gate
 
 When no stable exists yet, stable-versus-candidate delta cannot be fabricated. The first candidate must instead satisfy the fixed absolute corpus/protected-capability requirements defined for first promotion; the non-authoritative baseline seed may be used only where the fixed policy explicitly permits comparison evidence.
 
-Until numeric thresholds are established from baseline data, uncertainty resolves to `ABSTAIN`, not optimistic promotion.
+Until numeric thresholds are established from baseline data and separately accepted before candidate creation, uncertainty resolves to `ABSTAIN` and candidate creation/promotion must not proceed optimistically.
 
 ## Ground truth
 
