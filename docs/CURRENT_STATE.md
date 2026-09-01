@@ -28,7 +28,7 @@ For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplic
 - Stable and candidate reviewer roles are separate.
 - Learner/candidate cannot change their own evaluation policy.
 - `mimiseek-review-run` is repository-driven: on every invocation it reconstructs live GitHub state and continues the next canonical MimiSeek work. During bootstrap this means continuing project implementation; once the evolution pipeline exists it means running the governed collect/learn/candidate/regression half.
-- `mimiseek-review-update` runs in a new independent chat when an eligible candidate/update package or deferred distribution state exists; it evaluates promotion and then consumer rollout safety under live project governance.
+- Every real `mimiseek-review-update` invocation runs in a new independent ChatGPT chat. This includes both candidate promotion/update-package handling and reconciliation of previously deferred consumer distributions.
 - Installed skills are stable launch contracts, not frozen copies of the evolving implementation. Repository-owned governance and current state define implementation details.
 - Global MimiSeek promotion and consumer installation are separate transactions.
 - A consumer may remain pinned to an older stable while its live project state makes an update unsafe.
@@ -40,19 +40,22 @@ For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplic
 - Canonical product, architecture, current-state, roadmap, development-protocol, lifecycle, evaluation-policy, integration, evidence, and decision owners exist.
 - Stale one-skill `mimiseek-evolve` wording has been removed from the canonical product/development/evidence owners.
 - The two-chat role split and repository-driven bootstrap behavior are now aligned across the primary governance documents.
+- The audited historical workbook needed for Stage 1 is pinned in-repository at `reports/bootstrap/reviewer_statistics_improvement_dataset.xlsx`; its digest/provenance manifest is `data/bootstrap-source.json`.
 - There is currently no configured GitHub Actions workflow providing Stage 0 CI acceptance evidence.
 - Codex review attempts on PR #1 have been blocked by usage limits and are not acceptance evidence.
 - A fresh independent exact-head semantic review of the final PR head is still required.
 
 ## Historical data role
 
-The audited reviewer-statistics workbook created before this repository is the bootstrap learning/regression source. It includes historical CAP/UV review outcomes and 84 BUGGY→FIXED cases.
+The audited reviewer-statistics workbook created before this repository is the bootstrap learning/regression source. Its Stage 0 snapshot is committed at `reports/bootstrap/reviewer_statistics_improvement_dataset.xlsx` and identified by `data/bootstrap-source.json` with SHA-256 `6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a`.
 
-Stage 1 will import those data into canonical machine-readable text datasets under `data/`. Excel remains a human report/import artifact, not the only source of truth.
+The manifest records 84 BUGGY→FIXED cases as the expected reconciliation target. Stage 1 must verify the digest and independently reconcile the workbook contents/counts and underlying GitHub provenance before converting them to canonical machine-readable datasets.
+
+Excel remains a human report/import artifact, not the only source of truth after Stage 1 import.
 
 ## What is intentionally not done yet
 
-- Historical workbook data are not yet imported into canonical MimiSeek datasets.
+- Historical workbook data are not yet imported into canonical MimiSeek datasets; only the immutable bootstrap source snapshot and its identity are now repository-owned.
 - No CAP/UV `code-review` skill has yet been selected or derived as first MimiSeek stable.
 - No collector, outcome store, learner, regression runner, promotion registry, or consumer safe-window detector/distributor implementation exists yet.
 - Therefore the run workflow today continues the current repository-development work rather than pretending the later operational learning pipeline already exists.
@@ -70,7 +73,7 @@ Run a fresh independent read-only semantic review of PR #1 at its exact live fin
 
 Stage 1 then performs two bootstrap jobs together:
 
-1. import/reconcile the existing historical reviewer workbook into canonical MimiSeek data, preserving the 84 BUGGY→FIXED cases and provenance;
+1. verify and import/reconcile the pinned historical reviewer workbook into canonical MimiSeek data, preserving the supported BUGGY→FIXED cases and provenance;
 2. inventory accepted CAP/UV review policies at exact refs and derive the first reusable stable MimiSeek reviewer while retaining project-specific overlays.
 
 Consumer integration must also define how CAP/UV expose a trustworthy live `SAFE_TO_UPDATE` / defer state so MimiSeek never changes reviewer policy while an agent, frozen exact-head gate, or protected project stage is in progress.
