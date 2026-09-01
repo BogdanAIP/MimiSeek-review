@@ -2,9 +2,11 @@
 
 ## Context
 
-Stage 1 began from a finite historical workbook, while CAP and UV continued producing new Codex reviews, fresh ordinary-ChatGPT reviews, adjudication replies, fixes, and exact-head history. Deriving the first baseline seed from a static bootstrap snapshot while evidence continued to accumulate would make the baseline stale by construction and would force recurring manual spreadsheet rebuilds.
+Stage 1 began from a finite historical workbook, while CAP and UV continued producing new Codex reviews, fresh ordinary-ChatGPT reviews, adjudication replies, fixes, exact-head history, and PR reactions. Deriving the first baseline seed from a static bootstrap snapshot while evidence continued to accumulate would make the baseline stale by construction and would force recurring manual spreadsheet rebuilds.
 
 The target architecture already contains a collector in Stage 3. The immediate problem is narrower: preserve new source evidence now, without claiming that the full Stage 3 normalized outcome store or learning pipeline already exists.
+
+GitHub reactions require special handling because adding a reaction does not reliably advance the PR/issue `updated_at` timestamp. A clean Codex review may be represented only by a PR `+1` reaction. Therefore an `updated_at`-only polling strategy can silently lose useful evidence.
 
 ## Decision
 
@@ -18,10 +20,13 @@ The foundation:
 - writes source snapshots only to the dedicated MimiSeek branch `evidence/github-intake`;
 - uses MimiSeek's own workflow `GITHUB_TOKEN` only to update that intake branch;
 - treats the intake branch as non-authoritative source evidence, not as adjudicated truth, normalized learning data, reviewer policy, candidate state, or promotion authority;
-- preserves issue comments, PR reviews, inline review comments, exact PR BASE/HEAD identity, and PR commit history needed for later reconstruction;
-- is idempotent by deterministic snapshot paths/content and uses an overlap window when advancing source watermarks;
+- preserves issue comments, PR-level reactions, PR reviews, inline review comments/reaction summaries, exact PR BASE/HEAD identity, and PR commit history needed for later reconstruction;
+- re-reads every open PR on every scheduled intake run so reaction-only changes cannot be lost merely because `updated_at` was unchanged;
+- is idempotent by deterministic snapshot paths/content and uses an overlap window when advancing source watermarks for closed/recently changed evidence;
 - deliberately backfills from a date that overlaps the historical workbook. Later normalization deduplicates by immutable GitHub/source identities rather than assuming the workbook cutoff was perfect;
 - fails closed on incomplete API evidence instead of silently truncating it.
+
+A GitHub reaction is evidence only. A `+1` must not become PASS unless later governed normalization proves reviewer identity, timing, and the applicable reviewed HEAD/semantics. Absence of a reaction is not a finding or miss.
 
 This early intake foundation does **not** satisfy Stage 3. Stage 2 must still establish the structured consumer evidence-export/binding contract, including durable export of fresh ordinary-ChatGPT terminal results. Stage 3 must still complete governed normalization, disposition handling, identity reconciliation, and operational collector/outcome-store acceptance.
 
@@ -31,6 +36,7 @@ The first Stage 1 baseline seed must not be derived until the historical workboo
 
 - New GitHub-native review evidence stops depending on manual workbook maintenance.
 - Existing public GitHub review/adjudication history can be backfilled automatically.
+- Reaction-only clean-review signals on open PRs are preserved without a second reaction-specific collector.
 - Chat-only fresh review results that were never exported to GitHub remain a known gap until Stage 2 export is implemented; absence is preserved as unknown.
 - The collector cannot mutate consumer repositories or decide whether a finding is true.
 - A one-time GitHub App setup is required for reliable authenticated polling. The app should be installed only on intended evidence-producing repositories with minimum read permissions.

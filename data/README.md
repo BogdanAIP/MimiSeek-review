@@ -28,29 +28,30 @@ The bounded Stage 1 intake foundation polls repositories registered in `config/c
 
 `evidence/github-intake`
 
-Typical paths:
+Typical path:
 
-- `evidence/github/<owner>/<repo>/pulls/<pr-number>.json` — PR metadata, comments, reviews, review comments and commits;
-- `evidence/github/<owner>/<repo>/pull-reactions/<pr-number>.json` — PR-level reactions captured separately so late reactions and reaction-only clean-review signals are not lost.
+`evidence/github/<owner>/<repo>/pulls/<pr-number>.json`
 
-Collector state/watermarks live alongside those snapshots on the intake branch.
+Each snapshot preserves PR identity/BASE/HEAD, issue comments, PR-level reactions, PR reviews, inline review comments with GitHub reaction summaries, and PR commit history. Collector state/watermarks live alongside those snapshots on the intake branch.
+
+Every open PR is refreshed on each scheduled run because GitHub reactions do not reliably advance the PR/issue `updated_at` timestamp. Closed-PR refresh uses the configured backfill/watermark overlap; the initial collector is source preservation infrastructure, not yet the complete Stage 3 normalized outcome store.
 
 The intake branch is deliberately **non-authoritative**:
 
-- it preserves source GitHub facts/comments/reviews/commits/reactions;
+- it preserves source GitHub facts/comments/reviews/reactions/commits;
 - it does not decide that a finding is confirmed merely because text says so;
-- it does not interpret a `+1` reaction as a clean review unless later governed normalization proves reviewer identity and timing;
+- it does not interpret a `+1` reaction as PASS without later governed reviewer-identity/timing normalization;
 - it does not convert absence into a reviewer miss;
 - it does not create learning events, candidate state, stable state, or promotion authority;
 - it may overlap the bootstrap workbook and later normalization must deduplicate by immutable GitHub/source identity.
 
-The collectors are implemented by `tools/collect_github_evidence.py` and `tools/collect_github_pr_reactions.py` and scheduled by `.github/workflows/collect-review-evidence.yml`. Reliable scheduled operation requires the dedicated read-only GitHub App credentials described by ADR 0012.
+The collector is implemented by `tools/collect_github_evidence.py` and scheduled by `.github/workflows/collect-review-evidence.yml`. Reliable scheduled operation requires the dedicated read-only GitHub App credentials described by ADR 0012.
 
 Stage 2 will add the structured consumer evidence-export contract required to make fresh ordinary-ChatGPT terminal results automatically recoverable from consumer GitHub state. Stage 3 will complete normalized operational collector/outcome-store semantics.
 
 ## Rules
 
-- Source evidence remains traceable to exact repository/PR/comment/review/commit/reaction identities.
+- Source evidence remains traceable to exact repository/PR/comment/review/reaction/commit identities.
 - Imports and collection are idempotent.
 - Unknown stays unknown.
 - Different HEADs are not silently collapsed into direct reviewer comparisons.

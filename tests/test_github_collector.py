@@ -41,7 +41,7 @@ class FakeClient:
         self.listed = [pr()]
         self.calls = []
 
-    def pulls_updated_since(self, repository, since):
+    def pulls_to_refresh(self, repository, since):
         self.calls.append(("list", repository, collector.to_z(since)))
         return list(self.listed)
 
