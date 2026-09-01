@@ -8,7 +8,7 @@ Its job is not to run the normal review/fix loop inside CAP, UV, or another cons
 
 MimiSeek Review consumes verified outcomes from those workflows, learns from them, produces a better reviewer candidate, independently evaluates that candidate, and publishes a new stable reviewer when improvement is sufficiently proven.
 
-The core product loop is:
+The operational product loop is:
 
 ```text
 consumer review outcomes
@@ -23,14 +23,20 @@ candidate reviewer
     ↓
 regression / protected-capability evaluation
     ↓
-fresh independent ChatGPT evaluator
+frozen independent-update state
+    ↓
+NEW CHAT: independent evaluator
     ↓
 PROMOTE / REJECT / ABSTAIN
     ↓
 new stable reviewer when PROMOTE
     ↓
-auditable update PRs to consumers
+per-consumer live safe-update evaluation
+    ↓
+auditable update PR/change only where safe
 ```
+
+Global reviewer promotion and installation into a consumer are separate transactions. A promoted stable reviewer may exist while one or more consumers intentionally remain pinned to an older stable until their current project state proves an update safe.
 
 ## Learning sources
 
@@ -57,13 +63,31 @@ Initial consumers:
 
 Future repositories must be attachable without embedding CAP- or UV-specific assumptions in the generic reviewer.
 
-## User-facing entry point
+## User-facing ChatGPT workflows
 
-The intended ChatGPT interface is one repository skill: `mimiseek-evolve`.
+MimiSeek Review exposes two separate user-facing ChatGPT roles.
 
-The user should be able to invoke that skill and let the system execute the full improvement pipeline. Internal roles may remain separate for authority and isolation, but they are not separate user workflows.
+### Run / development / learning
 
-See `docs/CHATGPT_ENTRYPOINT.md` and `.agents/skills/mimiseek-evolve/SKILL.md`.
+Native skill identity: `mimiseek-review-run`.
+
+Canonical repository workflow: `.agents/skills/mimiseek-run/SKILL.md`.
+
+The run chat reconstructs live repository state and continues the next canonical work. During bootstrap this means continuing MimiSeek Review implementation according to `CURRENT_STATE.md`, `ROADMAP.md`, and repository governance. Once the reviewer-learning machinery exists, the same entry point performs the governed collection/learning/candidate/regression half and freezes the state required for independent evaluation.
+
+The run chat may not make its own candidate stable when the lifecycle requires independent evaluation, and it may not treat candidate creation as authority to update consumers.
+
+### Independent update
+
+Native skill identity: `mimiseek-review-update`.
+
+Canonical repository workflow: `.agents/skills/mimiseek-update/SKILL.md`.
+
+This workflow runs in a new independent chat when the repository contains an eligible candidate/update package or an already-promoted stable has deferred consumer distributions to reconcile. It independently evaluates promotion under the fixed governing policy and then evaluates each consumer's current live safe-update window before any rollout.
+
+Repository state is the durable handoff between the two chats. The user must not need to copy a technical evaluation prompt from the run chat into the update chat.
+
+See `docs/CHATGPT_ENTRYPOINT.md`, `docs/REVIEWER_LIFECYCLE.md`, and `docs/INTEGRATION_CONTRACT.md`.
 
 ## Product principles
 
@@ -76,7 +100,8 @@ See `docs/CHATGPT_ENTRYPOINT.md` and `.agents/skills/mimiseek-evolve/SKILL.md`.
 7. **No self-defined exam.** A candidate and learner cannot weaken or rewrite the policy used to evaluate that candidate.
 8. **Preserve acquired strengths.** Improvements must not silently destroy previously demonstrated capabilities.
 9. **False positives matter.** More findings alone are not improvement.
-10. **Distribution is auditable.** A promoted stable reviewer is propagated to consumers by explicit versioned changes, normally update PRs.
+10. **Distribution is auditable and safety-gated.** A promoted stable reviewer is propagated only through explicit versioned changes when each consumer's live state permits the update.
+11. **Running work is immutable.** An already-started agent/reviewer/procedure run remains bound to the reviewer version with which it started.
 
 ## Non-goals
 
@@ -86,3 +111,4 @@ See `docs/CHATGPT_ENTRYPOINT.md` and `.agents/skills/mimiseek-evolve/SKILL.md`.
 - Ranking Fresh ChatGPT versus Codex as the central objective.
 - Majority voting between reviewers as a truth mechanism.
 - Allowing a learner or candidate to certify itself.
+- Forcing every consumer to adopt a newly promoted stable reviewer at the same time.
