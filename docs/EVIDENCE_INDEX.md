@@ -1,6 +1,6 @@
 # Evidence Index
 
-This document indexes accepted stage evidence and review/remediation chronology. It is not a substitute for GitHub, CI logs, review results, or immutable commits; it points to them.
+This document indexes accepted stage evidence and review/remediation chronology. It is not a substitute for GitHub, CI logs, review results, immutable commits, or canonical data manifests; it points to them.
 
 ## Stage 0 — Continuous-development foundation
 
@@ -77,7 +77,7 @@ Stage 0 established:
    - reported findings: `0`;
    - rejected candidates: `15`;
    - all requested remediation checks: PASS;
-   - historical Library artifact independently recovered and verified at version `1`, size `92864`, SHA-256 `6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a`;
+   - historical Library artifact independently recovered and verified against the canonical source manifest;
    - GitHub evidence showed no workflow runs, commit statuses, check runs, required status checks, or rulesets; classification `NOT_CONFIGURED`;
    - accepted for Stage 0 merge under bootstrap `review_policy_ref=09492f1ec8aeb1dfbfc152505d14574016a72870`.
 
@@ -91,19 +91,9 @@ Stage 0 CI remains accurately recorded as `NOT_CONFIGURED`, not PASS.
 
 Status: NOT STARTED
 
-Pinned bootstrap source identity:
+Canonical bootstrap source identity and recovery contract: `data/bootstrap-source.json`.
 
-- manifest: `data/bootstrap-source.json`
-- provider: ChatGPT File Library
-- Library path: `/MimiSeek Review/bootstrap/reviewer_statistics_improvement_dataset.xlsx`
-- version id: `1`
-- file name: `reviewer_statistics_improvement_dataset.xlsx`
-- byte size: `92864`
-- SHA-256: `6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a`
-- expected reconciliation target: 84 historical BUGGY→FIXED pairs
-- source repositories: `BogdanAIP/chat-agent-platform`, `BogdanAIP/uv-studio`
-
-Stage 1 must resolve/materialize the exact pinned Library version, verify size/digest, and independently reconcile counts/records and underlying GitHub provenance before creating canonical machine-readable datasets.
+This index intentionally does not duplicate the manifest's exact Library path/version/size/digest or declared reconciliation target. Stage 1 must resolve that canonical manifest, authenticate the exact source, independently reconcile the source contents/counts and underlying GitHub provenance, then create canonical machine-readable datasets.
 
 Stage 1 also resolves exact accepted CAP/UV reviewer-policy refs and derives an immutable reviewer **baseline seed**. That seed is not stable, not a promotion result, and not distributable. Do not pre-fill final imported counts or later candidate/stable identities before those governed stages execute.
 
