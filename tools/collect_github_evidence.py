@@ -88,12 +88,17 @@ class GitHubApiError(RuntimeError):
 
 
 class GitHubClient:
-    def __init__(self, token: str | None, api_url: str = "https://api.github.com", timeout: int = DEFAULT_TIMEOUT_SECONDS):
+    def __init__(
+        self,
+        token: str | None,
+        api_url: str = "https://api.github.com",
+        timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    ):
         self.token = token or None
         self.api_url = api_url.rstrip("/")
         self.timeout = timeout
 
-    def _request(self, url: str) -> tuple[Any, dict[str, str]]:
+    def _request(self, url: str) -> Any:
         headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": API_VERSION,
@@ -104,8 +109,7 @@ class GitHubClient:
         request = urllib.request.Request(url, headers=headers, method="GET")
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-                return payload, {k.lower(): v for k, v in response.headers.items()}
+                return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
             remaining = exc.headers.get("x-ratelimit-remaining")
@@ -124,8 +128,7 @@ class GitHubClient:
         url = f"{self.api_url}{path}"
         if query:
             url += "?" + query
-        payload, _ = self._request(url)
-        return payload
+        return self._request(url)
 
     def paged(self, path: str, params: dict[str, Any] | None = None) -> list[Any]:
         params = dict(params or {})
@@ -180,6 +183,16 @@ def compact_user(raw: Any) -> dict[str, Any] | None:
     return {"id": raw.get("id"), "login": raw.get("login"), "type": raw.get("type")}
 
 
+def compact_reaction(raw: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": raw.get("id"),
+        "node_id": raw.get("node_id"),
+        "user": compact_user(raw.get("user")),
+        "content": raw.get("content"),
+        "created_at": raw.get("created_at"),
+    }
+
+
 def compact_pr(raw: dict[str, Any]) -> dict[str, Any]:
     return {
         "number": raw.get("number"),
@@ -214,6 +227,7 @@ def compact_issue_comment(raw: dict[str, Any]) -> dict[str, Any]:
         "node_id": raw.get("node_id"),
         "user": compact_user(raw.get("user")),
         "body": raw.get("body"),
+        "reactions": raw.get("reactions"),
         "created_at": raw.get("created_at"),
         "updated_at": raw.get("updated_at"),
         "html_url": raw.get("html_url"),
@@ -243,6 +257,7 @@ def compact_review_comment(raw: dict[str, Any]) -> dict[str, Any]:
         "in_reply_to_id": raw.get("in_reply_to_id"),
         "user": compact_user(raw.get("user")),
         "body": raw.get("body"),
+        "reactions": raw.get("reactions"),
         "commit_id": raw.get("commit_id"),
         "original_commit_id": raw.get("original_commit_id"),
         "path": raw.get("path"),
@@ -280,6 +295,7 @@ def build_snapshot(client: GitHubClient, repository: str, pr_number: int) -> dic
     prefix = f"/repos/{owner}/{name}"
     pr = client.get(f"{prefix}/pulls/{pr_number}")
     issue_comments = client.paged(f"{prefix}/issues/{pr_number}/comments")
+    issue_reactions = client.paged(f"{prefix}/issues/{pr_number}/reactions")
     reviews = client.paged(f"{prefix}/pulls/{pr_number}/reviews")
     review_comments = client.paged(f"{prefix}/pulls/{pr_number}/comments")
     commits = client.paged(f"{prefix}/pulls/{pr_number}/commits")
@@ -304,6 +320,7 @@ def build_snapshot(client: GitHubClient, repository: str, pr_number: int) -> dic
         "pr_number": pr_number,
         "pull_request": compact_pr(pr),
         "issue_comments": sort_by_id(compact_issue_comment(item) for item in issue_comments),
+        "issue_reactions": sort_by_id(compact_reaction(item) for item in issue_reactions),
         "reviews": sort_by_id(compact_review(item) for item in reviews),
         "review_comments": sort_by_id(compact_review_comment(item) for item in review_comments),
         "commits": sorted((compact_commit(item) for item in commits), key=lambda item: item.get("committer_date") or ""),
