@@ -1,267 +1,739 @@
-# Reviewer-context research handoff from CAP
+# MimiSeek reviewer architecture research
 
-Status: **research input only / non-authoritative / no architecture selected**
+Status: **research input only / non-authoritative / no production architecture selected**
 
-This document preserves reviewer-specific research and experiment evidence produced while `BogdanAIP/chat-agent-platform` was developing automatic independent-review orchestration. It does not change MimiSeek Stage 1 state, does not create a baseline/candidate/stable reviewer, and does not authorize consumer installation.
+Research baseline: 2026-09-01.
 
-The handoff is intentionally separate from the active Stage 1 PR. It exists so reviewer-specific work is not lost or further developed inside CAP merely because CAP needs review during its own development.
+This document studies how MimiSeek should become a strong reusable semantic code reviewer. CAP research is an important experimental input, but CAP is not the authority for MimiSeek reviewer design.
 
-## 1. Product-boundary conclusion
+The intended long-term product split is:
 
-The handoff follows accepted MimiSeek ADR 0001 and ADR 0006:
+```text
+CAP
+= agent / execution environment / transport / sandbox / durable handoff
 
-- CAP/UV/future consumers own their ordinary development/review/fix workflows and project-local acceptance policy;
-- MimiSeek owns the reusable reviewer methodology, learning, evaluation, versioning and release lifecycle;
-- CAP may own generic multi-chat/worker orchestration, but CAP should not become the long-term owner of reviewer-specific repository-context methodology.
+MimiSeek
+= reviewer / review methodology / repository exploration strategy /
+  candidate finding generation / falsification / review decision
+```
 
-### Keep in CAP as generic agent infrastructure
+This document does not change Stage 1 state, create a baseline/candidate/stable reviewer, authorize a consumer installation, or select Temporary Chat, snapshots, graphs, MCP, a context engine, or any other production implementation.
 
-The following mechanics are useful to reviewers but are not reviewer-specific and should remain candidates for CAP/general worker orchestration:
+Its purpose is to preserve existing evidence, extend the research with current external practice, define falsifiable reviewer-context hypotheses, and specify experiments that can choose the architecture later from measured review quality rather than convenience.
 
-- launch a genuinely fresh bounded worker chat;
-- prove worker context/capability isolation;
-- correlate parent operation to child run;
-- durable exactly-once/one-Send ownership;
-- browser lifecycle, crash/restart and stale-run handling;
-- deliver bounded task inputs/files to a worker;
-- capture a structured terminal result and return it durably to the parent;
-- generic privilege separation and fail-closed dispatch/result handling.
+## 1. Product boundary
 
-### Move to MimiSeek reviewer research/methodology
+Accepted MimiSeek ADR 0001 and ADR 0006 already establish the durable ownership boundary:
 
-The following concerns are reviewer-specific and belong here as research/candidate/evaluation inputs rather than CAP product architecture:
+- CAP/UV/future consumers own their normal development/review/fix workflows and project-local policy;
+- MimiSeek owns reusable reviewer methodology, learning, evaluation, versioning and release lifecycle;
+- generic worker orchestration may live in CAP, while reviewer-specific semantic behavior belongs to MimiSeek.
 
-- how a reviewer obtains trustworthy BASE/HEAD repository truth;
-- whole-repository versus diff-only context;
-- changed/unchanged cross-file impact;
-- source/config/test relationship discovery;
-- snapshot/shard/archive/retrieval strategies;
-- code maps/graphs, definitions/references, blast radius and retrieval ranking;
-- reviewer-specific prompt/evidence contracts;
-- known-finding, cross-file and large-repository review controls;
-- false-positive/recall evaluation of context strategies;
-- reviewer confidentiality risks when private repository content and external web research coexist.
+### CAP should eventually provide generic execution mechanics
 
-## 2. Accepted reviewer-specific lessons already present in CAP
+Candidate responsibilities for CAP/general agent infrastructure:
 
-The accepted CAP `main` at the handoff baseline `90a8e16e6a1badecd3315968339ca691634b7ee4` already contains reviewer-specific research that should be treated as MimiSeek input rather than re-invented later.
+- launch a genuinely fresh bounded worker/reviewer context;
+- prove context/capability isolation;
+- bind one run to immutable task/repository identities;
+- exactly-once/one-Send or equivalent consequence ownership;
+- browser/process lifecycle, crash/restart and stale-run handling;
+- expose bounded read-only repository/test capabilities to the reviewer;
+- capture a structured terminal result and return it durably;
+- enforce privilege separation and fail-closed dispatch/result handling.
 
-Relevant durable sources include:
+CAP must not become the semantic selector of which unchanged files are sufficient for a review finding. If CAP chooses the reviewer's semantic context too narrowly, MimiSeek cannot recover evidence that was never exposed.
 
-- `project-context/AUTOMATIC_REVIEWER_RESEARCH.md`;
-- `.agents/skills/code-review/SKILL.md`;
-- `project-context/BENCHMARK_EVALUATION_STRATEGY.md`;
-- the accepted automatic-review PR sequence #140, #141 and #142.
+### MimiSeek should own reviewer semantics
 
-Reusable reviewer-methodology lessons include:
+Reviewer-specific concerns belong here:
 
-- bind review to exact repository / PR / BASE / HEAD / governing-policy identity;
-- use a genuinely fresh independent ordinary-ChatGPT context when independence is required;
-- reconstruct evidence independently rather than trusting development-chat advocacy;
-- treat proposed HEAD governance as target semantics when accepted BASE policy governs the review;
-- falsify candidate findings before reporting them;
-- require structurally complete finding evidence rather than accepting a count or severity label alone;
-- distinguish a current semantic result from stale, malformed, pending, ambiguous or insufficient evidence;
-- treat `ABSTAIN`/insufficient evidence as a safe non-success rather than manufacturing PASS;
-- keep reviewer authority least-privileged and avoid giving the reviewer consequence-bearing repository mutation authority merely for convenience;
-- do not let the reviewer become a second development planner whose own state silently controls the consumer project.
+- exact review identity and governing-policy reconstruction;
+- PR intent versus actual implementation;
+- changed/unchanged cross-file impact analysis;
+- repository exploration strategy;
+- source/config/test/schema/document relationship discovery;
+- candidate finding generation;
+- risk-directed investigation;
+- falsification and validation of candidate findings;
+- review-specific use of tests/static/runtime evidence;
+- high-signal final output and `PASS/FINDINGS/ABSTAIN/STALE` semantics;
+- learning from hits, misses and false positives;
+- regression/protected-capability evaluation of context strategies and reviewer versions.
 
-These are methodology/evaluation inputs. CAP-specific lock/checkpoint/`procedure_run` state implementation remains consumer/orchestration infrastructure and should not be copied as generic MimiSeek reviewer semantics.
+## 2. What CAP #145 already established experimentally
 
-### Quality-evaluation lessons to preserve
+Source repository: `BogdanAIP/chat-agent-platform`.
 
-CAP research explicitly separated two planes:
+Experiment source: PR #145, head used by this research: `df0aa462ade7d36172347adfcbc292dd1c6f95da`.
 
-1. **semantic reviewer quality** — does the reviewer actually find real defects with acceptable false positives?;
-2. **review lifecycle reliability** — was the fresh context launched, bound, delivered, captured and reconciled correctly?
+The main value of #145 for MimiSeek is its **experimental method**, not its browser implementation.
 
-A faster or more automatic launch path is not an improvement if semantic review quality regresses.
+### 2.1 Positive, stale and hidden-defect controls
 
-Reviewer-specific benchmark/research candidates already identified by CAP include:
+#145 used materially different controls:
 
-- Harbor as an evaluation harness only, not reviewer production authority;
-- ReviewBench as a small initial review-quality baseline;
-- SWE-Review-Bench as a broader decision/revision control;
-- CR-Bench / CR-Evaluator as a signal-to-noise / false-positive control;
-- real adjudicated CAP/UV BUGGY→FIXED and known-finding cases as project-derived regression evidence.
+1. accepted exact PR -> reviewer should be capable of returning `PASS`;
+2. superseded requested identity -> reviewer should reject it as `STALE` rather than review a fetchable old commit as current;
+3. known defective exact range -> reviewer must recover real historical defects without being told the expected findings/count.
 
-The first benchmark run should establish a measured baseline rather than inventing an arbitrary release threshold. MimiSeek's own `EVALUATION_POLICY.md` remains the authority for eventual promotion criteria.
+The known-defect control reproduced the historical CAP #140 defective range and the fresh reviewer recovered the same four later-confirmed P1 categories without the launcher supplying those answers.
 
-## 3. Durable CAP experiment sources
+Reusable MimiSeek lesson:
 
-### PR #145 — automatic Temporary Chat reviewer experiment
+> Reviewer experiments need positive, stale, negative/known-finding and later false-positive controls. A PASS-shaped response is not evidence of reviewer quality.
 
-Repository: `BogdanAIP/chat-agent-platform`
+### 2.2 Answer-leakage controls
 
-PR: `#145 Experiment: automate Temporary Chat reviewer probe`
+#145 tests explicitly prevented the launcher from embedding expected finding count/category in the review request.
 
-Current research head at handoff: `df0aa462ade7d36172347adfcbc292dd1c6f95da`
+Reusable MimiSeek lesson:
 
-Accepted CAP baseline used by the experiment: `90a8e16e6a1badecd3315968339ca691634b7ee4`
+> Regression/evaluation fixtures must separate task inputs from ground truth. Expected findings, disposition and post-fix knowledge must not leak into the candidate reviewer context.
 
-Useful physical evidence already obtained before this handoff:
+### 2.3 Private-context isolation controls
 
-1. **PASS control** — accepted CAP PR #142: an automatically opened non-personalized Temporary Chat independently reconstructed public GitHub evidence and returned exact-head `PASS`.
-2. **STALE control** — an obsolete intermediate PR #140 identity was correctly rejected as `STALE / STALE_MATERIAL_CHANGE` instead of being reviewed as current.
-3. **Known-finding negative control** — experiment PR #146 reproduced historical defective range:
-   - BASE `b10a5fa3122bb6c76c12d37d67911b88e5e1ce28`
-   - HEAD `7077ecb8496ee89530cbe5efaa1b2112e7be330f`
+#145 compared public reconstruction with private evidence transport, including bundle/file experiments whose repository truth could not be supplemented through public repository lookup.
 
-   Without being told the expected answer, the Temporary Chat reviewer returned `CURRENT FINDINGS` and recovered the same four historical P1 defect categories later recorded as confirmed/fixed in CAP PR #140:
-   - mutation-capable GitHub actions remained reachable when merely unselected;
-   - ambiguous GitHub result publication could race manual fallback;
-   - required direct filesystem/IndexedDB/service-worker engineering evidence was missing;
-   - architecture-lineage decisions were compound/non-canonical.
+Reusable MimiSeek lesson:
 
-This is evidence that the fresh Temporary Chat approach can perform non-trivial semantic review. It is **not** proof that its repository-context strategy is sufficient across private/large/cross-file repositories.
+> Context quality and execution transport must be measurable independently. A reviewer should not appear better merely because one transport leaks more historical or public answer evidence.
 
-Important experiment paths at exact CAP head above include:
+### 2.4 Result binding and failure discipline
 
-- `experiments/chatgpt-temporary-reviewer/`;
-- `scripts/launch-temporary-reviewer-probe.ps1`;
-- `tests/test_temporary_reviewer_physical_experiment.py`;
-- `experiments/chatgpt-snapshot-reviewer/build_snapshot.py`.
+The experiment bound requests/results to exact run identity, required a terminal marker, classified malformed output as unstructured, and treated the transport as non-authoritative.
 
-The loopback/browser harness is experiment transport, not a MimiSeek production design.
+Reusable MimiSeek lesson:
 
-### PR #147 — reviewer context transport research
+> Semantic quality evidence is useful only when the exact reviewer run, source identity and result are durably correlated.
 
-Repository: `BogdanAIP/chat-agent-platform`
+## 3. What CAP #147 / snapshot research already established
 
-PR: `#147 Research: automatic reviewer context transport`
+Relevant CAP research source: PR #147, research head `d732ef190160891b60c953bb584a273b10be0a7e` plus `experiments/chatgpt-snapshot-reviewer/build_snapshot.py` from the related research branch.
 
-Research head at handoff: `d732ef190160891b60c953bb584a273b10be0a7e`
+The important result is not a selected CAP production design. It is a set of context-integrity properties that MimiSeek should test and likely preserve regardless of transport.
 
-State at handoff: **DEFER**. The earlier attempt to select a bounded private evidence package was explicitly superseded because a reviewer-selected/developer-selected small package had not proven sufficient whole-codebase context.
+### 3.1 Provider/Git object authority
 
-The useful research conclusions to preserve are below.
+For provider-backed PR review, developer working-tree bytes should not silently define repository truth.
 
-## 4. Repository source authority
-
-For a final provider-backed PR review, a developer working tree must not be silently trusted as current.
-
-Preferred source-truth sequence under research:
+Research sequence:
 
 ```text
 live provider PR identity
  -> exact BASE_SHA / HEAD_SHA
- -> isolated reviewer-side or consumer-side Git mirror/cache
- -> fresh fetch of exact remote objects
- -> verify commit/tree/blob identity
- -> build deterministic review representation from those Git objects
- -> independently compare the developer checkout with remote
+ -> isolated Git mirror/cache
+ -> fetch exact remote refs/objects
+ -> verify expected commits
+ -> verify tree/blob identities
+ -> construct reviewer evidence from those immutable objects
+ -> independently classify local checkout parity
 ```
 
-Local parity should be explicit, for example:
+Useful parity states include:
 
-`MATCH | LOCAL_AHEAD | REMOTE_AHEAD | DIVERGED | DIRTY | LOCAL_ONLY | REMOTE_UNAVAILABLE`
+`MATCH | LOCAL_AHEAD | REMOTE_AHEAD | DIVERGED | DIRTY | LOCAL_ONLY | REMOTE_UNAVAILABLE`.
 
-A GitHub-generated source ZIP may be tested as a transport format, but should not replace Git objects as repository truth.
+This distinction is reviewer-relevant because a locally correct checkout does not prove a remote PR head and a remotely correct PR does not prove a dirty local workspace.
 
-For committed local-only development, a pre-PR review may bind to exact local commits. Dirty/local-only work requires a frozen byte snapshot/digest. If the same work is later pushed, a new provider-backed exact review is required; the local preview must not silently become remote acceptance.
+### 3.2 Explicit omissions instead of silent truncation
 
-## 5. Whole-repository context hypothesis
+The snapshot experiment inventories text, binary, non-UTF8, LFS pointers, symlinks and submodules and raises `SNAPSHOT_OVERSIZE` instead of silently deleting source context to fit the transport budget.
 
-Research against professional/repository-aware tools suggests that strong review should not be modeled as `diff + a few manually preselected files`.
+Reusable MimiSeek lesson:
 
-Patterns investigated include:
+> Context incompleteness must be represented explicitly. Silent omission is incompatible with an authoritative PASS.
 
-- full/sandboxed repository availability plus agentic exploration;
-- full-project context gathering;
-- repository indexing/RAG;
-- code graph across files/functions/dependencies;
-- definition/reference/symbol search with graph fallback;
-- Tree-sitter definitions/references plus ranked repo maps under token budgets;
-- impact/blast-radius traversal from changed code.
+### 3.3 Whole-repository hypothesis
 
-The reusable conclusion is not that any one implementation is already selected. It is:
+A reviewer must have a path to evidence outside the diff. The unchanged caller/control case exists specifically because semantic breakage often lives in code that did not change.
 
-> the reviewer should have a path to evidence across the repository, and context ranking/graphs are retrieval hints rather than repository truth.
+A graph/index is useful for finding such evidence, but it cannot become source authority. Dynamic dispatch, reflection, generated code, runtime registration, configuration coupling and unsupported languages can make structural indexes incomplete.
 
-A graph can miss dynamic calls, reflection, generated code, unusual configuration coupling, runtime registration and unsupported languages. Therefore `not present in graph` must never mean `not relevant`.
+Reusable MimiSeek rule candidate:
 
-## 6. Direct snapshot/attachment candidates
+> `not found in the graph/index` must never mean `not relevant` or `does not exist` unless the indexing contract proves that conclusion for the concrete language/mechanism.
 
-For a private repository, one investigated path is a deterministic representation built from exact Git objects and directly attached to a fresh Temporary Chat rather than persisted in ChatGPT Library.
+## 4. External practice reviewed for MimiSeek
 
-Library is not required for this design and creates separate retention/cleanup concerns. ZIP/TAR support must not be assumed unless physically verified.
+These sources are research evidence, not authority over MimiSeek policy. Product claims can change and must be re-verified when an implementation decision is made.
 
-A stronger text-based candidate under research was deterministic whole-repository source/TXT shards with explicit manifests and no silent truncation.
+### 4.1 OpenAI Codex code review
 
-Snapshot semantics considered useful:
+Sources:
 
-- exact repository/BASE/HEAD commit and tree identity;
-- ordered path/mode/blob inventory and snapshot digest;
-- BASE governing review policy/instructions;
-- applicable HEAD reviewer/project skills;
-- exact changed-file inventory and BASE..HEAD diff;
-- all reviewable HEAD text/source/config/test files;
-- BASE versions of changed/renamed/deleted files;
-- explicit binary/non-UTF8/LFS/symlink/submodule declarations;
-- deterministic per-file/per-shard digests;
-- `OVERSIZE/ABSTAIN` rather than silent omission when a transport limit is exceeded.
+- `https://openai.com/index/introducing-upgrades-to-codex/`
+- `https://help.openai.com/en/articles/20001107-codex-security`
 
-This remains a candidate to evaluate, not a selected MimiSeek architecture.
+Current published Codex review description says the reviewer navigates the codebase, reasons through dependencies, and runs code/tests to validate correctness. Codex Security goes further for security analysis by building a codebase-specific threat model, exploring realistic paths, and attempting reproduction in an isolated environment before surfacing a vulnerability.
 
-## 7. Cross-file control
+Research implications:
 
-CAP experiment PR #148 was created specifically to test whether a reviewer can discover a defect that requires an **unchanged related file**.
+- repository exploration is part of review, not merely preprocessing;
+- execution can be used as **validation**, not only as generation tooling;
+- a useful reviewer may build risk/domain models (for example trust boundaries) before searching for findings;
+- validation/reproduction is a strong mechanism for reducing false positives.
 
-Repository: `BogdanAIP/chat-agent-platform`
+### 4.2 GitHub Copilot code review
 
-PR: `#148 Experiment control: cross-file reviewer context`
+Sources:
 
-BASE: `8f019b47d0a49ba343a6a90ea761e55b9b364227`
+- `https://docs.github.com/en/copilot/concepts/agents/code-review`
+- `https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/copilot-code-review`
 
-HEAD: `b7ce6366170cc7e8768929e6a12c457a3672d28d`
+Current GitHub documentation describes agentic full-project context gathering for code review and support for repository instructions, `AGENTS.md`, skills and MCP context.
 
-Structural property: GitHub reports exactly one changed source file. The semantically relevant caller remains unchanged and is available only if the reviewer actually examines wider repository context. The expected semantic defect is intentionally not stated in the control PR.
+Important caution for MimiSeek: GitHub documents that Copilot review reads relevant custom instructions/skills from the PR **head**. MimiSeek already has a stronger accepted governance requirement for its own acceptance reviews: accepted BASE policy governs and proposed HEAD governance is target semantics only unless BASE delegates otherwise.
 
-This is a useful future regression/context-recall case. It should be imported only through normal MimiSeek evidence/provenance rules rather than copied as ground truth merely because this document references it.
+Research implications:
 
-## 8. Suggested future evaluation ladder
+- full-project context gathering is a useful capability class;
+- repository-local instructions and skills are valuable context;
+- context tools can be externalized behind bounded interfaces;
+- MimiSeek must preserve its own BASE/HEAD authority semantics rather than copy another product's instruction precedence.
 
-When MimiSeek reaches the stage that owns reviewer candidate/evaluation mechanics, compare context strategies on the **same cases** rather than selecting by convenience:
+### 4.3 CodeRabbit
 
-1. public repository + independent web/GitHub reconstruction;
-2. exact remote-fetched whole-repository text/source snapshot;
-3. snapshot plus structural repo map/index;
-4. large-repository / shard-boundary controls;
-5. archive transport only after actual platform support is proven;
-6. narrow read-only repository context engine if static snapshot approaches are insufficient.
+Source:
+
+- `https://docs.coderabbit.ai/overview/architecture`
+
+Current documentation describes a sandboxed full repository clone, many static analyzers/linters/SAST tools, agentic codebase exploration and specialized review/verification agents.
+
+Research implications:
+
+- LLM reasoning and deterministic analyzers are complementary;
+- a reviewer can use multiple evidence producers without treating their agreement as ground truth;
+- a separate verification pass/role is worth evaluating for precision.
+
+### 4.4 Greptile
+
+Sources:
+
+- `https://www.greptile.com/docs/how-greptile-works/graph-based-codebase-context`
+- `https://www.greptile.com/docs/code-review/key-features`
+
+Current Greptile documentation describes a repository graph over functions/classes/imports/dependencies and review reasoning about ripple effects beyond the diff, including callers/contracts and cross-file inconsistencies.
+
+Research implications:
+
+- callers/references/dependency traversal is a high-value reviewer capability;
+- graph-assisted impact expansion deserves a direct controlled comparison;
+- graph evidence should remain a retrieval hint/finding lead, not immutable repository truth.
+
+### 4.5 Sourcegraph
+
+Sources:
+
+- `https://sourcegraph.com/docs/code-navigation`
+- `https://sourcegraph.com/docs/code-navigation/precise-code-navigation`
+
+Sourcegraph exposes definitions, references, implementations and cross-repository navigation. It distinguishes search-based navigation from precise compile/index-derived navigation and explicitly notes that search-based navigation can have false positives and false negatives.
+
+Research implications:
+
+- MimiSeek should distinguish approximate search results from precise semantic navigation when both exist;
+- callers/references/implementations can be first-class review tools;
+- tool result confidence/provenance should be visible to the reviewer.
+
+### 4.6 SWE-Review
+
+Source:
+
+- `https://arxiv.org/abs/2607.06065`
+
+SWE-Review reports that an agentic reviewer which explores a repository outperforms single-turn fixed-context review on its benchmark in review decision accuracy and downstream revision usefulness.
+
+Research implication:
+
+> MimiSeek should directly test agentic repository exploration against fixed snapshot review on identical cases rather than assume that increasing static context alone is optimal.
+
+### 4.7 SWE-Explore
+
+Source:
+
+- `https://arxiv.org/abs/2606.07297`
+
+SWE-Explore isolates repository exploration quality and evaluates coverage, ranking and context efficiency. Its results report modern agentic explorers above classical retrieval, with line-level coverage/ranking remaining important differentiators.
+
+Research implications:
+
+- repository exploration should be evaluated as its own reviewer capability;
+- finding recall alone cannot diagnose whether a failure came from poor localization or poor semantic reasoning;
+- context efficiency/ranking should be measured, not treated only as implementation cost.
+
+### 4.8 CR-Bench / CR-Evaluator
+
+Source:
+
+- `https://arxiv.org/abs/2603.11078`
+
+CR-Bench emphasizes the real cost of spurious review findings and reports a resolution-versus-noise trade-off when agents are driven to identify all hidden issues.
+
+Research implication:
+
+> MimiSeek should optimize high-signal defect discovery, not maximum emitted issue count. Its existing falsification discipline and rejected-finding corpus are core reviewer features, not reporting polish.
+
+## 5. Current research thesis
+
+The strongest current hypothesis is:
+
+> **MimiSeek should be an agentic semantic reviewer that independently explores an immutable repository state through bounded read-only capabilities. CAP may provide the execution/sandbox/transport layer, but CAP should not preselect the semantic evidence that is sufficient for MimiSeek's conclusions.**
+
+This is a **hypothesis to test**, not a production decision.
+
+A fixed whole-repository snapshot remains a serious candidate and a valuable control. It may prove sufficient or even preferable for some repository sizes/languages. The experiments below must decide.
+
+## 6. Candidate reviewer capability model
+
+The research should evaluate reviewer capability as layers rather than as one opaque prompt.
+
+### 6.1 Identity and authority layer
+
+Required inputs/capabilities:
+
+- repository/provider identity;
+- PR identity when applicable;
+- exact BASE and HEAD commits/trees;
+- accepted governing review-policy ref;
+- applicable target/project skills/instructions under explicit precedence;
+- current/stale determination before and immediately after review;
+- explicit evidence completeness state.
+
+A reviewer that cannot prove its review identity must not emit authoritative PASS.
+
+### 6.2 Intent model
+
+Before line-level defect search, the reviewer should reconstruct:
+
+- issue/PR stated goal where available;
+- architecture/current-state intent;
+- expected invariants/compatibility contract;
+- what the diff claims to change and what it explicitly leaves unchanged.
+
+This permits mismatch findings such as “implementation does not achieve the stated migration/recovery/compatibility goal” rather than only local syntax/logic comments.
+
+### 6.3 Core immutable context
+
+Every compared architecture should expose a minimal stable context envelope such as:
+
+```text
+REVIEW_CONTEXT_CORE_V1
+repository/provider
+PR
+BASE/HEAD commit + tree identity
+governing policy identity
+applicable project/reviewer instructions
+changed-file inventory
+exact diff
+relevant CI/check identity
+context/tool-session identity and completeness declarations
+```
+
+The core envelope is not expected to contain all source code.
+
+### 6.4 Read-only repository exploration candidate
+
+Candidate capability families:
+
+```text
+list_tree(ref, path)
+read_file(ref, path/range)
+search_text(ref, query/path scope)
+show_diff(base, head, path)
+show_history(path/symbol/range)
+```
+
+No arbitrary repository mutation is needed for semantic review.
+
+The reviewer decides which unchanged paths to inspect.
+
+### 6.5 Structural navigation candidate
+
+Optional higher-level tools:
+
+```text
+find_symbol
+find_definition
+find_references
+find_implementations
+find_callers
+find_importers/dependents
+```
+
+Results must declare whether they are precise/index-derived, parser-derived or search/heuristic so MimiSeek can reason about possible omissions.
+
+### 6.6 Bounded validation/execution candidate
+
+Potential read/validation-only operations:
+
+- run repository-governed focused tests;
+- run predefined static analyzers/lints/type checks;
+- inspect already-produced CI logs/artifacts;
+- execute a bounded reproduction harness when governing policy explicitly permits it.
+
+The reviewer does not need general deployment/write authority to validate many correctness hypotheses.
+
+A test failure is evidence; a test pass is not proof that an untested invariant is correct.
+
+### 6.7 Candidate finding + falsification layer
+
+For each candidate finding, MimiSeek should try to answer:
+
+1. What exact introduced path causes the problem?
+2. Which invariant/contract is violated?
+3. Which unchanged callers/config/schema/recovery paths could falsify or support it?
+4. Is the behavior intentional under governing policy?
+5. Does a test/static/runtime artifact reproduce or disprove it?
+6. Is the finding current for exact HEAD?
+7. Is severity justified by concrete consequence?
+
+Only surviving candidates enter final output.
+
+### 6.8 Sparse final result
+
+Final review quality should reward:
+
+- real, actionable defects;
+- complete source/line/identity evidence;
+- calibrated severity;
+- explicit uncertainty/ABSTAIN where evidence is insufficient;
+- few/no speculative nitpicks.
+
+## 7. CAP/MimiSeek execution contract hypothesis
+
+A possible future relationship, intentionally implementation-neutral:
+
+```text
+CAP resolves/locks exact review operation
+        |
+        v
+CAP creates immutable read-only repository session
+        |
+        v
+CAP launches fresh bounded reviewer context
+        |
+        v
+MimiSeek receives REVIEW_CONTEXT_CORE_V1
+        |
+        v
+MimiSeek independently explores repository through read-only capabilities
+        |
+        v
+MimiSeek generates + falsifies candidate findings
+        |
+        v
+optional bounded validation evidence
+        |
+        v
+MimiSeek returns structured exact-identity result
+        |
+        v
+CAP durably correlates/returns that result to the consumer workflow
+```
+
+CAP owns lifecycle and capability enforcement. MimiSeek owns semantic search strategy and review decision.
+
+This contract must not require CAP to predict all relevant unchanged files before MimiSeek begins reasoning.
+
+## 8. Controlled architecture experiment matrix
+
+Do not choose the production context architecture from documentation/intuition alone. Compare architectures on **the same hidden cases** with the same reviewer model/policy where technically possible.
+
+### A — Public provider reconstruction baseline
+
+Reviewer gets exact request and independently uses available public Git/provider evidence.
+
+Purpose:
+
+- establish current ordinary fresh-review performance;
+- measure real public-tool variability;
+- retain a baseline close to today's manual workflow.
+
+### B — Fixed deterministic whole-repository snapshot
+
+Reviewer receives exact Git-object-derived core + diff + complete supported source shards within explicit bounds.
+
+Purpose:
+
+- test whether deterministic static full context is sufficient;
+- remove provider navigation variability;
+- quantify oversize/context-pressure behavior.
+
+### C — Agentic read-only repository session
+
+Reviewer gets core context plus primitive read/search/history tools over immutable BASE/HEAD repository state.
+
+Purpose:
+
+- let semantic reasoning choose its own unchanged context;
+- test SWE-Review/SWE-Explore-style exploration benefit;
+- measure exploration efficiency and missed-context failures.
+
+### D — Structural/graph-assisted exploration
+
+C plus definitions/references/callers/implementations/dependency hints.
+
+Purpose:
+
+- measure improvement in cross-file/impact recall;
+- measure false confidence/false positives from incomplete graph/index data;
+- compare precise versus heuristic navigation where available.
+
+### E — Exploration plus bounded validation
+
+D plus governed tests/static analysis/reproduction capabilities.
+
+Purpose:
+
+- test whether active validation improves precision/severity calibration;
+- measure cases where execution evidence prevents a false positive or confirms a subtle defect.
+
+### F — Multi-pass/specialist/judge variants
+
+Only after A-E establish a strong single-reviewer baseline.
+
+Possible variants:
+
+- independent general correctness + security/authority + persistence/concurrency passes;
+- separate candidate generator and verifier/judge;
+- repeated independent samples under a fixed compute budget.
+
+Purpose:
+
+- measure whether additional passes improve precision/recall enough to justify complexity;
+- avoid introducing multi-agent machinery merely because other products use it.
+
+## 9. Evaluation corpus design
+
+Architecture experiments should use cases whose ground truth is independently governed.
+
+### Required case classes
+
+- confirmed BUGGY cases;
+- corresponding FIXED cases;
+- confirmed rejected/false-positive historical findings;
+- exact stale-identity cases;
+- unchanged-caller/cross-file cases;
+- compatibility/schema migration cases;
+- persistence/recovery/crash cases;
+- concurrency/transaction/locking cases;
+- authority/security boundary cases;
+- documentation/current-authority cases where documentation is actually acceptance-significant;
+- large-repository/context-boundary cases;
+- configuration/runtime-registration/dynamic-dispatch cases that may defeat a simple graph.
+
+CAP/UV historical evidence is useful, but a case becomes MimiSeek evaluation ground truth only through normal provenance/adjudication rules.
+
+### Leakage controls
+
+For each evaluation case:
+
+- expected finding text/category/count is stored outside reviewer-visible context;
+- later fix/disposition must not be visible to the BUGGY review unless intentionally part of the test;
+- reviewer must not receive a developer-written list of “relevant files” derived from ground truth;
+- public-search experiments must record whether historical review comments/fixes were accessible and whether that invalidates the case for blind evaluation;
+- when evaluating context architectures, the same allowed public/private evidence policy should be enforced across variants where possible.
+
+## 10. Metrics
+
+A context architecture is not better merely because it emits more findings.
 
 Measure at least:
 
-- recall of adjudicated known defects;
-- cross-file recall where required evidence is in unchanged code;
-- false-positive rate / rejected candidates;
-- stale/exact-identity behavior;
-- silent omission detection;
-- repository bytes/files supplied;
-- model turns and elapsed review time;
-- behavior when repository exceeds transport/context limits;
-- public/private evidence separation and leakage risk;
-- reproducibility of the exact evidence identity used by the reviewer.
+### Semantic quality
 
-## 9. What this handoff does not decide
+- target defect recall;
+- finding precision / confirmed-findings ratio;
+- false-positive/rejected-finding rate;
+- FIXED-case old-defect persistence;
+- severity calibration;
+- review decision correctness (`PASS/FINDINGS/ABSTAIN/STALE`).
 
-This document does **not** decide:
+### Context/exploration quality
 
-- that Temporary Chat is the permanent MimiSeek execution environment;
-- that snapshots beat a read-only context engine;
-- that code graphs are mandatory;
-- that TXT shards are the final transport;
-- that ZIP is supported;
-- that CAP should stop owning generic multi-chat worker transport;
-- that MimiSeek should orchestrate consumer PR/fix loops;
-- that historical CAP experiment outcomes are automatically canonical MimiSeek ground truth.
+- relevant-file/region coverage where ground truth can support it;
+- unchanged-file/caller recall;
+- exploration ranking/context efficiency;
+- number of source reads/searches/tool calls;
+- bytes/tokens delivered/read;
+- silent omission rate (must normally be zero by contract);
+- correct behavior when context exceeds limits.
 
-All promotion, learning, regression import and consumer-installation authority remains governed by MimiSeek's existing lifecycle, evaluation policy and roadmap.
+### Reliability
 
-## 10. Stage placement
+- exact identity/stale behavior;
+- reproducibility of repository/context identity;
+- malformed/partial tool response handling;
+- crash/restart/result-correlation behavior supplied by CAP;
+- public/private leakage-policy compliance.
 
-Do not merge this research into current Stage 1 claims as if implementation exists.
+### Cost/latency
 
-Current Stage 1 should continue historical-data/provenance reconciliation and baseline-seed work. The material here is expected to become relevant when MimiSeek defines/evaluates actual reviewer candidate capabilities and protected/regression coverage (primarily later candidate/evaluation stages), and when consumer integration needs an explicit reviewer execution/context contract.
+- model turns;
+- wall time;
+- test/static-analysis runtime;
+- context bytes/tokens;
+- external compute/tool usage.
 
-Until then this file is a durable research input only.
+Do not optimize cost before establishing a minimally acceptable semantic-quality region; then compare efficiency among architectures that meet quality requirements.
+
+## 11. Research controls that should be built next
+
+The next research work should target discriminating cases rather than more transport mechanics.
+
+### 11.1 Unchanged caller control
+
+A changed producer/API function changes semantic return/contract while an unchanged caller continues to rely on the old behavior.
+
+Goal: distinguish diff-only/static-local review from real repository impact exploration.
+
+### 11.2 Similar-name false-reference control
+
+Repository contains multiple same/similar symbol names. Search-based navigation can return plausible but wrong references.
+
+Goal: compare heuristic search versus precise/index-assisted navigation and verify that MimiSeek does not treat approximate results as complete.
+
+### 11.3 Dynamic registration/configuration control
+
+Behavior is connected through registry/config/plugin string rather than an obvious static call graph.
+
+Goal: falsify graph-only completeness assumptions.
+
+### 11.4 Large repository / shard pressure control
+
+Relevant unchanged evidence lands outside the most obvious shard/ranking boundary.
+
+Goal: compare snapshot packing/ranking with agentic search and explicit oversize behavior.
+
+### 11.5 Validation-value control
+
+Static reading produces a plausible candidate issue that a focused test/reproduction either confirms or disproves.
+
+Goal: measure precision gain from bounded execution.
+
+### 11.6 FIXED false-positive control
+
+Reviewer sees the materially fixed version without being told it is fixed.
+
+Goal: ensure a “stronger” architecture does not simply learn to repeat historical findings.
+
+### 11.7 Governance self-change control
+
+PR changes reviewer/governance instructions in HEAD.
+
+Goal: prove MimiSeek preserves accepted BASE-derived authority rather than letting the proposed review policy grade itself.
+
+## 12. Experiment fairness
+
+When comparing A-F:
+
+- freeze repository/BASE/HEAD/policy identities;
+- freeze model/version/reasoning budget where possible;
+- keep expected findings hidden;
+- run enough repeated trials to detect stochastic instability where cost allows;
+- log tool calls/context consumed without exposing chain-of-thought;
+- evaluate findings through governed adjudication, not majority vote;
+- compare the same BUGGY and FIXED pairs;
+- preserve raw result artifacts so later evaluator improvements can re-score them.
+
+Where an architecture intrinsically exposes different evidence (for example public web versus private frozen repository), classify that as part of the experiment rather than pretending the comparison is perfectly controlled.
+
+## 13. Research decision gates
+
+### Gate R1 — static snapshot sufficiency
+
+Question:
+
+> Does deterministic whole-repository snapshot B match or exceed agentic repository session C on recall/precision across cross-file and normal cases within acceptable size limits?
+
+If yes, a simpler snapshot architecture remains viable.
+
+If no, MimiSeek requires agentic read-only exploration or an equivalent mechanism.
+
+### Gate R2 — structural navigation value
+
+Question:
+
+> Does D materially improve quality/efficiency over primitive C without creating unacceptable false confidence from index incompleteness?
+
+If yes, structural navigation becomes a strong capability candidate.
+
+### Gate R3 — validation value
+
+Question:
+
+> Does E materially improve precision/severity/recall enough to justify sandbox/test complexity?
+
+If yes, bounded validation becomes a reviewer capability requirement/candidate.
+
+### Gate R4 — multi-pass value
+
+Question:
+
+> After a strong E baseline exists, does F materially improve review quality per unit cost/latency?
+
+Only then consider specialist/judge/multi-review production complexity.
+
+## 14. What is already a strong candidate principle versus still open
+
+### Strong candidate principles supported by current internal/external evidence
+
+- exact immutable repository/review identity;
+- explicit governing-policy identity;
+- repository-wide evidence must be reachable somehow;
+- unchanged code can be semantically required review evidence;
+- silent context truncation is unacceptable for PASS authority;
+- graphs/search/indexes are retrieval mechanisms, not repository truth;
+- candidate findings should be actively falsified;
+- false positives are first-class quality failures;
+- validation evidence can be used to confirm/disprove candidates;
+- reviewer semantic authority should remain read-only/least-privileged;
+- reviewer quality and launch/handoff reliability must be measured separately.
+
+### Open questions
+
+- static full snapshot versus agentic repository session;
+- exact primitive tool set;
+- need/value of symbol graph/index;
+- need/value of runnable tests/static tools;
+- optimal context/ranking strategy;
+- Temporary Chat versus another fresh reviewer execution environment;
+- direct file transport versus capability-based repository session;
+- single reviewer versus specialist/judge/multi-pass architecture;
+- private repository context transport and retention details;
+- acceptable latency/compute after semantic-quality baselines exist.
+
+## 15. Relationship to MimiSeek stages
+
+This research does **not** replace current Stage 1 bootstrap/provenance work and should not be used to claim Stage 1 implementation exists.
+
+However it is not merely “future CAP handoff” material. It directly informs what MimiSeek must eventually generate, evaluate and distribute as a reviewer.
+
+Expected later use:
+
+- Stage 1 historical corpus provides initial real BUGGY/FIXED/false-positive cases;
+- Stage 2 consumer contract should preserve enough exact identity/evidence to support reviewer runs;
+- Stage 3 collection preserves outcomes needed to score experiments;
+- Stage 4 learning events identify missing/overbroad reviewer mechanics;
+- before Stage 5 candidate creation, the repository should decide which reviewer capability architecture has sufficient experimental evidence;
+- Stage 5 candidates then encode reviewer methodology/tool-use behavior rather than only a larger prompt;
+- Stage 6 regression/protected-capability evaluation should include context/exploration capabilities demonstrated by this research.
+
+No research result here authorizes a candidate, stable reviewer or consumer installation.
+
+## 16. Immediate next research sequence
+
+After the current Stage 1 data-integrity issue is corrected, research can proceed independently without selecting production architecture:
+
+1. turn the unchanged-caller control into a governed MimiSeek research/evaluation case without leaking its answer;
+2. select a small representative subset of reconciled CAP/UV BUGGY→FIXED + false-positive cases;
+3. define a common `REVIEW_CONTEXT_CORE_V1` identity envelope for experiments only;
+4. implement/compose experiment A and B from existing public/snapshot mechanics;
+5. implement the smallest read-only repository session C sufficient for `list/read/search/diff/history` over frozen Git objects;
+6. run A/B/C on identical hidden cases and score semantic quality plus exploration behavior;
+7. only if C shows value, add D structural navigation and repeat;
+8. only if candidate findings show validation ambiguity, add E bounded tests/static validation;
+9. consider F only after a strong single-reviewer baseline exists.
+
+The goal is not to copy Codex, Copilot, CodeRabbit, Greptile or Sourcegraph. The goal is to isolate which reviewer capabilities measurably improve MimiSeek on governed real defects while preserving exact identity, independence, low false-positive rate and least privilege.
