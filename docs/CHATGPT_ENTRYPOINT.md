@@ -22,20 +22,23 @@ The run skill does not self-promote a reviewer candidate when the lifecycle requ
 
 ## 2. «Обнови Мимисик» — `mimiseek-review-update`
 
-This workflow is invoked in a **new independent ChatGPT chat** when repository state contains an eligible candidate/update package or a previously promoted stable has deferred consumer distributions to reconcile.
+Every real invocation of this workflow occurs in a **new independent ChatGPT chat** when repository state contains an eligible candidate/update package or a previously promoted stable has deferred consumer distributions to reconcile.
 
 The update chat:
 
 1. independently reconstructs the exact MimiSeek state from GitHub;
 2. evaluates candidate promotion under the fixed governing evaluation policy when a candidate is pending;
-3. returns `PROMOTE`, `REJECT`, or `ABSTAIN` as governed;
-4. only after valid promotion, evaluates each registered consumer's live safe-update window independently;
-5. changes only consumers proven safe to update now;
-6. leaves unsafe/unproven consumers pinned and records their deferred distribution state.
+3. returns `PROMOTE`, `REJECT`, or `ABSTAIN` as governed for that candidate;
+4. resolves a rollout target only when durable state proves that exact reviewer is the current authoritatively promoted stable — either promoted in this invocation or promoted earlier with persisted deferred-distribution state;
+5. independently evaluates each target consumer's live safe-update window;
+6. changes only consumers proven safe to update now;
+7. leaves unsafe/unproven consumers pinned and records their deferred distribution state.
+
+A distribution-only retry never invents or repeats promotion: it revalidates the already-promoted stable identity and durable pending-distribution authority before touching a consumer.
 
 ## Why two chats
 
-The split preserves independent promotion judgment without requiring the run chat to create another ChatGPT context automatically.
+The split keeps all consequence-bearing update authority out of the run/development conversation and preserves independent promotion judgment without requiring the run chat to create another ChatGPT context automatically.
 
 ```text
 Chat A: «Запусти Мимисик»
@@ -52,17 +55,19 @@ NEW CHAT
 
 Chat B: «Обнови Мимисик»
         ↓
-independent candidate evaluation / deferred rollout reconciliation
+independent candidate evaluation or deferred-rollout reconciliation
         ↓
-PROMOTE / REJECT / ABSTAIN
+if candidate exists: PROMOTE / REJECT / ABSTAIN
         ↓
-PROMOTE only: new MimiSeek stable
+authoritatively promoted stable only
         ↓
 per-consumer live safety check
         ↓
 SAFE_TO_UPDATE → auditable update change
 DEFER_*       → consumer unchanged
 ```
+
+A later deferred retry is another **NEW CHAT** invoking the same update role against durable pending-distribution state.
 
 ## Invocation and non-invocation
 
