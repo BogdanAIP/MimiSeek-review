@@ -17,13 +17,6 @@ On ChatGPT surfaces where native skills cannot be installed, `docs/CHATGPT_PROJE
 
 ## Start here
 
-A new development chat must read, in order:
+A new development chat must read `AGENTS.md` and follow its **Bootstrap for every new chat** section. `AGENTS.md` is the canonical owner of the bootstrap sequence; this README intentionally does not duplicate that checklist.
 
-1. `AGENTS.md`
-2. `docs/PRODUCT.md`
-3. `docs/CURRENT_STATE.md`
-4. `docs/ROADMAP.md`
-5. the relevant sections of `docs/ARCHITECTURE.md`
-6. applicable records under `docs/decisions/`
-
-Do not use chat history as project authority. Git, GitHub, and the document owners above are the durable source of truth.
+Do not use chat history as project authority. Git, GitHub, and the repository-owned documents selected by `AGENTS.md` are the durable source of truth.
