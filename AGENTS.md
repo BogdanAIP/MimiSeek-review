@@ -62,6 +62,7 @@ The repository is the durable handoff; do not require the user to copy technical
 
 - Work through branches and pull requests after repository bootstrap.
 - Bind terminal semantic review evidence to immutable repository/base/head/reviewer identity **and** an immutable `review_policy_ref`.
+- Persist terminal review evidence durably in a way that does **not** move the reviewed HEAD before merge. A top-level PR comment containing or pointing to the exact result, or another immutable/stable evidence locator accepted by policy, is suitable. If recording the result changes the reviewed branch HEAD, the review becomes stale and must be repeated.
 - Findings are assertions until adjudicated as `CONFIRMED`, `REJECTED`, `SUPERSEDED`, or another explicitly governed state.
 - Independent reviewer/evaluator roles must use fresh ordinary-chat contexts when their protocol requires independence.
 - Learner/candidate may not change the evaluation policy used to judge that candidate.
@@ -84,7 +85,7 @@ For every ordinary PR after the bootstrap foundation is accepted, terminal accep
 
 Bootstrap exception: PR #1 is the one-time foundation PR whose BASE `09492f1ec8aeb1dfbfc152505d14574016a72870` contains only the original bootstrap README and no repository-development acceptance policy. For that PR, keep `review_policy_ref` bound to that immutable BASE SHA and resolve authority from the BASE bootstrap intent + exact live PR evidence + the complete HEAD governance treated only as proposed target semantics + a fresh independent read-only semantic review. The proposed HEAD governance does not self-certify. After Stage 0 merge, this exception is no longer available to ordinary PRs.
 
-Before merge, obtain a fresh independent read-only review bound to the exact final repository/base/head/reviewer/`review_policy_ref` identity. Any fix that moves HEAD makes the prior terminal review stale for merge acceptance and requires a new exact-head independent review under the same BASE-derived policy authority unless the PR base itself legitimately changes.
+Before merge, obtain a fresh independent read-only review bound to the exact final repository/base/head/reviewer/`review_policy_ref` identity. Persist the terminal result through a durable non-HEAD-mutating evidence channel before merge so a fresh later chat can resolve the actual result without previous-chat memory. Any fix or evidence-recording step that moves HEAD makes the prior terminal review stale for merge acceptance and requires a new exact-head independent review under the same BASE-derived policy authority unless the PR base itself legitimately changes.
 
 If required CI or another acceptance gate is configured by the governing accepted policy/stage, it must pass on the accepted head. If no such gate exists, record that fact rather than inventing a pass.
 

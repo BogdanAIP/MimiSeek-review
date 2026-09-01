@@ -2,7 +2,7 @@
 
 The roadmap is ordered. A stage is not complete merely because implementation exists; acceptance conditions must be satisfied.
 
-## Stage 0 — Continuous-development foundation — IN REVIEW
+## Stage 0 — Continuous-development foundation — DONE
 
 Goal: make the repository self-describing so any fresh development chat can continue without previous-chat memory and establish the correct product boundary.
 
@@ -23,7 +23,7 @@ Acceptance:
 - the repository is the durable handoff between chats;
 - branch/PR workflow and fresh exact-head acceptance review are established.
 
-Stage 0 is not DONE until an independent read-only review returns PASS for the exact final PR head under the explicit bootstrap `review_policy_ref` authority and that accepted head is merged.
+Stage 0 acceptance and merge evidence are owned by `docs/EVIDENCE_INDEX.md`; this roadmap records only stage status, sequencing, and acceptance conditions.
 
 ## Stage 1 — Bootstrap data + reviewer baseline seed — NEXT
 
