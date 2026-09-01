@@ -10,7 +10,7 @@ Treating promotion as permission to update every consumer immediately would ther
 
 Separate global MimiSeek promotion from per-consumer installation.
 
-After `PROMOTE`, `mimiseek-update` evaluates each registered consumer's live project state independently.
+After `PROMOTE`, native update role `mimiseek-review-update` independently evaluates each registered consumer's live project state under `.agents/skills/mimiseek-update/SKILL.md` and the consumer's own governing policy.
 
 Only a proven `SAFE_TO_UPDATE` state permits a reviewer-version update change for that consumer.
 
@@ -24,4 +24,4 @@ Already-running agent/reviewer/procedure runs remain bound to the reviewer versi
 - CAP, UV, and future projects may adopt the same stable reviewer at different safe times.
 - Silence or lack of visible GitHub activity is never enough to infer safety.
 - Consumer integration must eventually expose reliable machine-readable update-safety state or equivalent governed evidence.
-- Deferred distributions are retried by later `mimiseek-update` runs rather than by unsafe immediate mutation.
+- Deferred distributions are retried by later `mimiseek-review-update` runs rather than by unsafe immediate mutation.
