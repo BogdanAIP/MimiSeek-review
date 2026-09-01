@@ -76,7 +76,12 @@ Track at least:
 
 ## Consumer safe-update gate
 
-Before creating or applying a reviewer update in a consumer repository, native role `mimiseek-review-update` must independently resolve whether the current project state permits that change.
+Every real consumer rollout or deferred-distribution reconciliation is performed by `mimiseek-review-update` in a new independent ChatGPT chat.
+
+Before creating or applying a reviewer update in a consumer repository, the update role must independently prove both:
+
+1. the exact rollout target is the current authoritatively promoted MimiSeek stable, with durable valid promotion evidence; and
+2. the consumer's current live project state permits that change.
 
 Its canonical repository workflow is `.agents/skills/mimiseek-update/SKILL.md`.
 
@@ -103,8 +108,10 @@ For a consumer not safe to update:
 
 - do not modify its reviewer pin;
 - preserve its currently installed reviewer;
-- record the target new stable and defer reason as `PENDING_DISTRIBUTION`;
-- retry safety evaluation on a later `mimiseek-review-update` invocation.
+- record the exact current promoted stable as target and the defer reason as `PENDING_DISTRIBUTION`;
+- retry safety evaluation only in a later fresh `mimiseek-review-update` invocation that revalidates the target stable/promotion authority from durable state.
+
+A later retry does not create or re-promote a candidate merely to resume distribution.
 
 This allows different projects to adopt the same MimiSeek stable at different times without blocking global reviewer evolution.
 
@@ -117,6 +124,7 @@ Fail closed on:
 - incompatible policy/reviewer versions;
 - stale exact-head result presented as current evidence;
 - ambiguous finding disposition;
-- attempted consumer update without authoritative MimiSeek promotion;
+- attempted consumer update without authoritative MimiSeek promotion/current-stable identity;
+- attempted consumer update without the required fresh independent update context;
 - attempted consumer update without a proven current safe-update window;
 - any attempt to change reviewer semantics for an already-running run.
