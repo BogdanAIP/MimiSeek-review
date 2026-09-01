@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "One JSONL line is a positional array. x-columns defines the stable column order.",
+  "maxItems": 21,
+  "minItems": 21,
+  "prefixItems": [
+    {"type":"string"},{"type":"string"},{"type":"integer"},{"pattern":"^[0-9a-f]{40}$","type":"string"},{"pattern":"^[0-9a-f]{40}$","type":"string"},{"type":"string"},{"type":["string","null"]},{"type":"string"},{"type":["boolean","null"]},{"type":"integer"},{"type":"integer"},{"type":"integer"},{"type":"integer"},{"type":"integer"},{"type":"integer"},{"type":"integer"},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":"integer"}
+  ],
+  "title": "MimiSeek bootstrap review-run tuple v1",
+  "type": "array",
+  "x-bootstrap-source": {"manifest_ref":"data/bootstrap-source.json","sheet_row_column":"source_row"},
+  "x-columns": ["run_id","repository","pr","base_sha","head_sha","reviewer","review_context","status","valid_run","findings","p1","p2","p3","rejected_candidates","confirmed_findings","rejected_findings","availability","comparison_id","source_url","evidence_confidence","source_row"]
+}
