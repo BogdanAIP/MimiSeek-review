@@ -5,8 +5,9 @@ This file preserves the terminal independent review result that authorized Stage
 ## Durable reviewer/evidence identity
 
 - evidence kind: `REVIEW_RESULT_V1`
+- source provenance: verbatim terminal output supplied from the completed fresh independent ordinary-ChatGPT review into the development workflow for durable repository recording
 - repository-assigned reviewer instance identity: `ordinary_chat_fresh:pr1:1588e196051917bf35483ba05b5f7f36fd00c468:2026-09-01T13:59:11+03:00`
-- reviewer class/context reported by the result: `ordinary_chat_fresh`
+- reviewer identity/class reported by the result: `ordinary_chat_fresh`
 - review mode reported by the result: `read_only`
 - reviewed repository: `BogdanAIP/MimiSeek-review`
 - reviewed PR: `1`
@@ -17,7 +18,7 @@ This file preserves the terminal independent review result that authorized Stage
 - review validity at final re-resolution: `CURRENT`
 - reviewed at: `2026-09-01T13:59:11+03:00`
 
-The repository-assigned reviewer instance identity above is a durable identifier for this exact already-completed review result. It is derived only from fields reported by that result and does not claim a platform conversation ID that the result did not expose. The terminal result itself is preserved verbatim below so a fresh chat can reconstruct the acceptance evidence without previous-chat memory.
+The repository-assigned reviewer instance identity above is a durable identifier for this exact already-completed review result. It is derived only from fields reported by that result and does not claim a platform conversation ID that the result did not expose. The terminal result itself is preserved verbatim below so a fresh chat can reconstruct the acceptance evidence without previous-chat memory. This record preserves the received review evidence; it does not claim cryptographic attestation of the external chat beyond the identity and independence assertions contained in the result itself.
 
 ## Verbatim terminal result
 
