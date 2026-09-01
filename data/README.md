@@ -20,6 +20,8 @@ Stage 1 imports the authenticated workbook into deterministic JSON Lines dataset
 
 Their positional field contracts are versioned under `data/schemas/`. `data/bootstrap-import-report.json` records source authentication, counts, hashes, internal reconciliation, and explicitly unfinished provenance work. It is derived verification evidence, not a competing source-identity owner.
 
+For numeric review-run metrics, `null` means the authenticated workbook cell was blank/unknown. Literal `0` means the source explicitly recorded zero. Bootstrap import must not convert a blank metric into numerical evidence.
+
 `learning-events.jsonl` does not exist yet. Learning events belong to Stage 4 and must not be fabricated during bootstrap.
 
 ## Continuous GitHub evidence intake

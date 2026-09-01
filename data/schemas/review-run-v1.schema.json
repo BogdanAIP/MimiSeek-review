@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "One JSONL line is a positional array. x-columns defines the stable column order.",
+  "description": "One JSONL line is a positional array. x-columns defines the stable column order. Numeric review metrics preserve source blanks as null; zero means the source explicitly recorded zero.",
   "maxItems": 21,
   "minItems": 21,
   "prefixItems": [
-    {"type":"string"},{"type":"string"},{"type":"integer"},{"pattern":"^[0-9a-f]{40}$","type":"string"},{"pattern":"^[0-9a-f]{40}$","type":"string"},{"type":"string"},{"type":["string","null"]},{"type":"string"},{"type":["boolean","null"]},{"type":"integer"},{"type":"integer"},{"type":"integer"},{"type":"integer"},{"type":"integer"},{"type":"integer"},{"type":"integer"},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":"integer"}
+    {"type":"string"},{"type":"string"},{"type":"integer"},{"pattern":"^[0-9a-f]{40}$","type":"string"},{"pattern":"^[0-9a-f]{40}$","type":"string"},{"type":"string"},{"type":["string","null"]},{"type":"string"},{"type":["boolean","null"]},{"type":["integer","null"]},{"type":["integer","null"]},{"type":["integer","null"]},{"type":["integer","null"]},{"type":["integer","null"]},{"type":["integer","null"]},{"type":["integer","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":"integer"}
   ],
   "title": "MimiSeek bootstrap review-run tuple v1",
   "type": "array",

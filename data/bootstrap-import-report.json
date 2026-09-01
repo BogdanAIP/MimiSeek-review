@@ -27,10 +27,10 @@
       "sha256": "7065aab04e1a83c344607e8047b399c35f12e6aff600c4bca168600b0c925bbf"
     },
     "review-runs.jsonl": {
-      "bytes": 24742,
+      "bytes": 25018,
       "encoding": "tuple-jsonl-v1",
       "records": 92,
-      "sha256": "b58476c9c7827639f8ddb8d2695d38ac0017a672050eb5101621d4198a069f0e"
+      "sha256": "f841cac53f6fbd676b7128e4ecfc7684599eabfcc4409439654506a88d77e143"
     }
   },
   "github_provenance": {
@@ -74,6 +74,7 @@
     "declared_buggy_fixed_target": 84,
     "review_run_confirmed_rejected_severity_totals_match_findings_table": true,
     "review_run_finding_totals_match_findings_table": true,
+    "review_run_source_unknown_metrics_preserved_as_null": true,
     "target_count_matches": true,
     "unique_case_ids": true,
     "unique_finding_ids": true,

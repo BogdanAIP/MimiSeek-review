@@ -26,14 +26,16 @@ def load_jsonl(path: Path, columns: list[str]) -> list[dict[str, object]]:
 
 
 class BootstrapDataIntegrityTests(unittest.TestCase):
-    def test_regression_cases_resolve_to_the_same_semantic_finding(self) -> None:
+    def test_regression_cases_resolve_to_the_same_source_finding(self) -> None:
         finding_columns = load_columns("finding-v1.schema.json")
         regression_columns = load_columns("regression-case-v1.schema.json")
         findings = load_jsonl(DATA / "findings.jsonl", finding_columns)
         cases = load_jsonl(DATA / "regression-cases.jsonl", regression_columns)
         findings_by_id = {str(row["finding_id"]): row for row in findings}
+        case_ids = [str(row["case_id"]) for row in cases]
 
         self.assertEqual(len(findings), len(findings_by_id), "finding ids must be unique")
+        self.assertEqual(len(case_ids), len(set(case_ids)), "regression case ids must be unique")
 
         for case in cases:
             case_id = str(case["case_id"])
@@ -47,6 +49,8 @@ class BootstrapDataIntegrityTests(unittest.TestCase):
                 self.assertEqual(case["category"], finding["category"])
                 self.assertEqual(case["known_defect"], finding["finding"])
                 self.assertEqual(case["source_url"], finding["source_url"])
+                self.assertEqual(case["historical_source_reviewer"], finding["reviewer"])
+                self.assertEqual(case["buggy_head"], finding["head_sha"])
                 self.assertEqual("CONFIRMED", finding["confirmed"])
 
                 basis = case["codex_basis"]
@@ -56,6 +60,52 @@ class BootstrapDataIntegrityTests(unittest.TestCase):
                         basis,
                         "direct-finding prose must agree with the canonical finding id",
                     )
+
+    def test_review_run_source_blanks_remain_unknown(self) -> None:
+        columns = load_columns("review-run-v1.schema.json")
+        runs = load_jsonl(DATA / "review-runs.jsonl", columns)
+        runs_by_id = {str(row["run_id"]): row for row in runs}
+
+        self.assertEqual(len(runs), len(runs_by_id), "review run ids must be unique")
+
+        # These are the only Rejected candidates cells populated in the authenticated
+        # bootstrap workbook. Explicit source zeroes for R009/R010 must remain zero;
+        # all source blanks must remain null rather than being manufactured as zero.
+        expected_recorded_rejected_candidates = {
+            "R001": 3,
+            "R002": 3,
+            "R003": 5,
+            "R004": 4,
+            "R007": 9,
+            "R009": 0,
+            "R010": 0,
+            "R022": 14,
+        }
+        observed_recorded_rejected_candidates = {
+            str(row["run_id"]): row["rejected_candidates"]
+            for row in runs
+            if row["rejected_candidates"] is not None
+        }
+        self.assertEqual(
+            expected_recorded_rejected_candidates,
+            observed_recorded_rejected_candidates,
+        )
+
+        # R025 was not reconstructed in the source workbook, so no review-count
+        # metric is known. R016 likewise has no reconstructed confirmed/rejected
+        # disposition counts. Unknown source cells must stay null.
+        for field in (
+            "findings",
+            "p1",
+            "p2",
+            "p3",
+            "rejected_candidates",
+            "confirmed_findings",
+            "rejected_findings",
+        ):
+            self.assertIsNone(runs_by_id["R025"][field], field)
+        self.assertIsNone(runs_by_id["R016"]["confirmed_findings"])
+        self.assertIsNone(runs_by_id["R016"]["rejected_findings"])
 
     def test_bootstrap_report_dataset_digests_match_canonical_files(self) -> None:
         report = json.loads((DATA / "bootstrap-import-report.json").read_text(encoding="utf-8"))
