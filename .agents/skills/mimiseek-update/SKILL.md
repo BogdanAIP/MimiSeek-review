@@ -36,7 +36,7 @@ Start with:
 9. `docs/EVIDENCE_INDEX.md`
 10. applicable records under `docs/decisions/`
 
-Then independently resolve the live PR/branch/HEAD, candidate/update package identities, stable identity, CI/evaluation evidence, and registered consumer state required by those documents.
+Then independently resolve the live PR/branch/HEAD, candidate/update package identities, stable identity (including the valid bootstrap state `stable = none`), CI/evaluation evidence, and registered consumer state required by those documents.
 
 If repository truth conflicts with this installed copy of the skill on an implementation detail, follow the current repository governance. This installed skill defines the independent-update role and safety boundary; the repository defines the evolving implementation.
 
@@ -46,7 +46,7 @@ Continue the **current governed independent-update workflow** from durable repos
 
 Depending on current state this may mean:
 
-- independently evaluating an eligible pending reviewer candidate;
+- independently evaluating an eligible pending reviewer candidate, including the first candidate when no stable exists yet;
 - applying a valid promotion transaction when the evaluation policy authorizes it;
 - reconciling previously deferred consumer distributions for an already-promoted stable version;
 - doing nothing when no eligible update or deferred distribution exists.
@@ -67,13 +67,17 @@ The learner/candidate cannot redefine the evaluation policy that judges that sam
 
 When an eligible candidate exists, independently evaluate it under the exact governing `EVALUATION_POLICY.md` and repository-owned evidence.
 
-Do not treat reviewer agreement, number of findings, or learner claims as ground truth by themselves.
+Do not treat reviewer agreement, number of findings, learner claims, or a Stage 1 baseline seed as ground truth or promotion authority by themselves.
 
-Only the repository-governed terminal outcomes may control promotion, currently including:
+Only the repository-governed terminal outcomes may control promotion:
 
 - `PROMOTE`
 - `REJECT`
 - `ABSTAIN`
+
+If no stable exists before the decision, authoritative `PROMOTE` establishes the first stable. `REJECT` or `ABSTAIN` leaves stable unset. There is no separate initial-stable admission shortcut.
+
+If a stable already exists, authoritative `PROMOTE` advances it; `REJECT` or `ABSTAIN` leaves it unchanged.
 
 Insufficient, stale, mismatched, or ambiguous evidence must not produce promotion.
 
@@ -86,7 +90,7 @@ Consumer rollout may occur either:
 - in the fresh update invocation that authoritatively promotes a candidate; or
 - in a later fresh update invocation that reconciles durable `PENDING_DISTRIBUTION` state for a reviewer version that was already authoritatively promoted.
 
-Before any consumer rollout, independently prove from durable MimiSeek state that the exact rollout target is the current promoted stable and that its promotion evidence is authoritative. A pending/rejected/abstained candidate is never a distribution target. A distribution-only retry must not invent promotion authority from the absence of a candidate.
+Before any consumer rollout, independently prove from durable MimiSeek state that the exact rollout target is the current promoted stable and that its promotion evidence is authoritative. A baseline seed or pending/rejected/abstained candidate is never a distribution target. A distribution-only retry must not invent promotion authority from the absence of a candidate.
 
 Evaluate each registered consumer independently under its own live governance before changing its reviewer binding.
 
@@ -96,7 +100,7 @@ Potential blockers include active agent/reviewer/procedure work, frozen exact-he
 
 Absence of visible activity is not proof of safety.
 
-Already-running work remains bound to the reviewer version with which it started; an update may affect only future runs after the consumer update becomes effective.
+Already-running work remains bound to the reviewer version/source with which it started; an update may affect only future runs after the consumer update becomes effective.
 
 ## Execution contract
 
@@ -104,7 +108,7 @@ Already-running work remains bound to the reviewer version with which it started
 2. Determine whether there is an eligible pending candidate and/or durable deferred consumer distribution.
 3. Verify exact identities, governing policy, evidence and independence prerequisites.
 4. Evaluate candidate promotion only when an eligible candidate exists.
-5. Apply a promotion transaction only when explicitly authorized by the governing result.
+5. Apply a promotion transaction only when explicitly authorized by the governing result; allow `stable_before = none` only for the genuine pre-first-promotion state.
 6. Resolve a consumer rollout target only when durable state proves that exact reviewer version is already the current promoted stable with authoritative promotion evidence.
 7. Re-resolve each consumer's live state before any rollout change.
 8. Update only consumers proven safe now; defer all others without changing their current binding.
@@ -126,13 +130,14 @@ Never:
 - operate on a different MimiSeek project;
 - perform a real update from a chat that does not satisfy the required fresh independent update-context boundary;
 - promote from incomplete, stale, mismatched, or non-independent evidence;
+- treat the bootstrap baseline seed as stable or as authority to bypass candidate evaluation;
 - weaken the governing evaluation policy to allow a candidate through;
 - distribute a reviewer version whose authoritative prior promotion and current stable identity are not proven;
 - modify a consumer whose safe update window is not proven;
 - switch the reviewer version of already-running work;
 - bypass consumer-specific governance or compatibility requirements.
 
-A failed or interrupted update must leave the previous stable usable and every consumer either unchanged or durably reconciled to a proven-safe transition.
+A failed or interrupted update must leave the previous stable unchanged; if no stable existed, no stable is created. Every consumer remains either unchanged or durably reconciled to a proven-safe transition.
 
 ## Completion
 
@@ -141,6 +146,6 @@ Finish with a concise state-based result. State:
 - exact MimiSeek repository/PR/HEAD identity relevant to the update;
 - candidate/update-package identity if one existed;
 - evaluation result or reason no evaluation was performed;
-- stable before/after;
+- stable before/after, including `none` when applicable;
 - per-consumer rollout result or defer reason;
 - resulting repository state and next canonical action.
