@@ -53,7 +53,7 @@ While `docs/CURRENT_STATE.md` says the product is still in bootstrap or implemen
 
 ### Operating the reviewer-evolution product
 
-Once the corresponding roadmap stages are implemented and accepted, the operational reviewer-evolution workflow is split across two chats:
+Once the corresponding roadmap stages are implemented and accepted, the operational reviewer-evolution workflow is split across two roles/chats:
 
 ```text
 Chat A — mimiseek-review-run
@@ -75,6 +75,8 @@ per-consumer live safe-update evaluation
 SAFE_TO_UPDATE → auditable update change
 DEFER_*       → leave consumer pinned and persist distribution state
 ```
+
+Every real `mimiseek-review-update` invocation uses a new independent ChatGPT chat. A later deferred-distribution reconciliation is a separate fresh update invocation that reconstructs the already-authoritatively-promoted current stable and durable `PENDING_DISTRIBUTION` state; it does not create or re-promote a candidate.
 
 Canonical repository workflow files are `.agents/skills/mimiseek-run/SKILL.md` and `.agents/skills/mimiseek-update/SKILL.md`. Their installed/native ChatGPT identities are documented in `docs/CHATGPT_ENTRYPOINT.md`.
 
