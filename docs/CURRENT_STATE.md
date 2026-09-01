@@ -39,8 +39,8 @@ For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplic
 
 - Canonical product, architecture, current-state, roadmap, development-protocol, lifecycle, evaluation-policy, integration, evidence, and decision owners exist.
 - Stale one-skill `mimiseek-evolve` wording has been removed from the canonical product/development/evidence owners.
-- The two-chat role split and repository-driven bootstrap behavior are now aligned across the primary governance documents.
-- The audited historical workbook needed for Stage 1 has a repository-owned durable locator in `data/bootstrap-source.json`, binding exact ChatGPT File Library `file_id` + `version_id`, byte size and SHA-256. A fresh chat can recover that exact access-controlled version without prior-chat handoff; inability to recover it fails closed.
+- The two-chat role split and repository-driven bootstrap behavior are aligned across the primary governance documents.
+- The audited historical workbook needed for Stage 1 has a repository-owned durable locator in `data/bootstrap-source.json`, binding stable ChatGPT File Library path + exact version, byte size and SHA-256. A fresh authorized chat can recover that exact access-controlled version without prior-chat handoff; inability to recover or authenticate it fails closed.
 - There is currently no configured GitHub Actions workflow providing Stage 0 CI acceptance evidence.
 - Codex review attempts on PR #1 have been blocked by usage limits and are not acceptance evidence.
 - The independent review of the earlier head `cd5090b38e556636bea6c3f6dd4e0e74c2f41dff` returned three findings. Those findings were adjudicated as confirmed and remediated; because the fixes moved HEAD, that review is stale for merge acceptance.
@@ -51,15 +51,15 @@ For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplic
 The audited reviewer-statistics workbook created before this repository is the bootstrap learning/regression source. Its exact source identity is owned by `data/bootstrap-source.json`:
 
 - provider: ChatGPT File Library;
-- file id: `file_00000000b9e082108c0fc8a3bbc82163`;
+- Library path: `/MimiSeek Review/bootstrap/reviewer_statistics_improvement_dataset.xlsx`;
 - version id: `1`;
 - file name: `reviewer_statistics_improvement_dataset.xlsx`;
 - byte size: `92864`;
 - SHA-256: `6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a`.
 
-The manifest records 84 BUGGY→FIXED cases as the expected reconciliation target. Stage 1 must materialize the exact pinned version, verify the digest, and independently reconcile workbook contents/counts and underlying GitHub provenance before converting them to canonical machine-readable datasets.
+The manifest records 84 BUGGY→FIXED cases as the expected reconciliation target. Stage 1 must resolve the exact path/version, materialize the source, verify its size/digest, and independently reconcile workbook contents/counts and underlying GitHub provenance before converting them to canonical machine-readable datasets.
 
-Excel remains a human report/import artifact, not the canonical automation truth after Stage 1 import.
+Excel remains a human bootstrap/report artifact, not the canonical automation truth after Stage 1 import.
 
 ## What is intentionally not done yet
 
@@ -88,7 +88,7 @@ Consumer integration must also define how CAP/UV expose a trustworthy live `SAFE
 
 ## Open risks
 
-- The external bootstrap artifact is access-controlled; loss of access to the exact pinned Library version must halt Stage 1 until an explicitly governed replacement/provenance migration is accepted.
+- The external bootstrap artifact is access-controlled; loss of access to the exact pinned Library path/version must halt Stage 1 until an explicitly governed replacement/provenance migration is accepted.
 - A naive common baseline could silently lose CAP- or UV-specific obligations.
 - Historical outcomes are selection-biased; they are learning/regression evidence, not a neutral leaderboard.
 - Consumer safe-window detection must not infer safety from silence or absence of visible GitHub activity.
