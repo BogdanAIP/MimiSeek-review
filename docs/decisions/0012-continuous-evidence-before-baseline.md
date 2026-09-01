@@ -30,6 +30,8 @@ A GitHub reaction is evidence only. A `+1` must not become PASS unless later gov
 
 This early intake foundation does **not** satisfy Stage 3. Stage 2 must still establish the structured consumer evidence-export/binding contract, including durable export of fresh ordinary-ChatGPT terminal results. Stage 3 must still complete governed normalization, disposition handling, identity reconciliation, and operational collector/outcome-store acceptance.
 
+The Stage 1 reaction guarantee is deliberately bounded to open PRs plus the normal closed-PR watermark/overlap window. Long-after-close reaction-only completeness is not claimed by this foundation; Stage 3 or a later webhook path may extend that evidence surface without changing the non-authoritative rule.
+
 The first Stage 1 baseline seed must not be derived until the historical workbook is reconciled and the registered consumer intake has been brought current to a durable collector watermark.
 
 ## Consequences
