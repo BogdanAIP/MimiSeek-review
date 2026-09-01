@@ -10,15 +10,19 @@ A global MimiSeek stable version and a consumer's currently installed reviewer v
 
 A proposed next version generated from evidence-backed learning. It is not consumer-authoritative merely because it exists or performs well on one case.
 
-## PENDING_UPDATE
+## Independent-update state
 
-A frozen candidate package that passed the first chat's required pre-update checks and is ready for independent evaluation in a new chat through `mimiseek-update`.
+A frozen candidate package/state that passed the run chat's required pre-update checks and is ready for independent evaluation in a new chat through native role `mimiseek-review-update`.
 
-Exactly one unresolved pending candidate is allowed unless future lifecycle policy explicitly defines otherwise.
+The current implementation may call this state `PENDING_UPDATE`. Exactly one unresolved pending candidate is allowed unless future lifecycle policy explicitly defines otherwise.
 
 ## Rejected candidate
 
 A candidate that failed evaluation. Its evidence remains useful; rejection does not rewrite prior results.
+
+## Bootstrap boundary
+
+The lifecycle below is operational product behavior. Until `docs/CURRENT_STATE.md` says the required collector/learner/regression machinery exists, `mimiseek-review-run` continues repository development rather than fabricating lifecycle state.
 
 ## Source learning loop
 
@@ -31,21 +35,21 @@ Consumer projects naturally generate evidence during their own ordinary developm
 - fixes produce BUGGY→FIXED pairs;
 - later failures can reveal post-review escapes.
 
-MimiSeek uses a two-chat loop:
+The operational two-chat loop is:
 
 ```text
 stable reviewer
     ↓
 consumer outcomes
     ↓
-Chat A: mimiseek-run
+Chat A: mimiseek-review-run
 collect + normalize → learning events → learner → candidate → regression
     ↓
-PENDING_UPDATE
+frozen independent-update state
     ↓
 NEW CHAT
     ↓
-Chat B: mimiseek-update
+Chat B: mimiseek-review-update
 independent evaluation
     ↓
 PROMOTE / REJECT / ABSTAIN
@@ -57,6 +61,8 @@ per-consumer live update-safety evaluation
 SAFE_TO_UPDATE → update change
 DEFER_*       → consumer remains pinned / PENDING_DISTRIBUTION
 ```
+
+Canonical repository workflow files are `.agents/skills/mimiseek-run/SKILL.md` and `.agents/skills/mimiseek-update/SKILL.md`.
 
 ## Learning event principles
 
@@ -92,7 +98,7 @@ Demonstrated strengths may become protected evaluation coverage. A candidate mus
 
 ## Promotion authority
 
-`mimiseek-run` proposes and freezes. `mimiseek-update` in a new independent chat judges under `EVALUATION_POLICY.md`.
+`mimiseek-review-run` proposes and freezes once the operational pipeline exists. `mimiseek-review-update` in a new independent chat judges under `EVALUATION_POLICY.md`.
 
 Only authoritative `PROMOTE` can advance the global MimiSeek stable reviewer. `REJECT` and `ABSTAIN` leave stable unchanged.
 
@@ -111,7 +117,7 @@ Typical states:
 - `BLOCKED_COMPATIBILITY` — compatibility is not proven;
 - `UPDATE_IN_PROGRESS` — a governed consumer update change exists and has not yet reached its terminal state.
 
-A later `mimiseek-update` invocation may re-check deferred consumers without creating a new reviewer candidate.
+A later `mimiseek-review-update` invocation may re-check deferred consumers without creating a new reviewer candidate.
 
 ## Running-run immutability
 
