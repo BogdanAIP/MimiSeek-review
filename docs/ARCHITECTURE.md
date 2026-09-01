@@ -12,16 +12,24 @@ CAP, UV, and future repositories are:
 
 MimiSeek Review does **not** own or orchestrate the ordinary PR review loop in those repositories.
 
-## End-to-end architecture
+## Bootstrap versus operational architecture
+
+The architecture below describes the target operational reviewer-evolution system. `docs/CURRENT_STATE.md` and `docs/ROADMAP.md` determine which components actually exist now.
+
+During bootstrap, native skill `mimiseek-review-run` is a repository-driven development entry point: it reconstructs live repository state and continues the next accepted implementation step. It must not simulate missing collector/learner/regression/distribution components.
+
+Once those components are implemented and accepted, the same run role enters the operational flow below.
+
+## End-to-end operational architecture
 
 ```text
 CAP / UV / future projects
-  ordinary development + Codex + MimiSeek reviews
+  ordinary development + external/our reviews
   adjudicated findings / PASS / fixes / exact identities
                     |
                     v
                CHAT A
-        «Запусти Мимисик»
+        mimiseek-review-run
                     |
                     v
               COLLECTOR
@@ -42,13 +50,13 @@ CAP / UV / future projects
        REGRESSION / CAPABILITY GATE
                     |
                     v
-          frozen PENDING_UPDATE
+       frozen independent-update state
                     |
               NEW CHAT
                     |
                     v
                CHAT B
-        «Обнови Мимисик»
+       mimiseek-review-update
                     |
                     v
       INDEPENDENT CANDIDATE EVALUATION
@@ -64,6 +72,11 @@ CAP / UV / future projects
   SAFE_TO_UPDATE ─────→ reviewer-update PR/change
   DEFER_*        ─────→ consumer remains pinned
 ```
+
+Canonical repository workflow files remain:
+
+- `.agents/skills/mimiseek-run/SKILL.md` for native identity `mimiseek-review-run`;
+- `.agents/skills/mimiseek-update/SKILL.md` for native identity `mimiseek-review-update`.
 
 ## Logical components
 
@@ -118,19 +131,19 @@ The existing historical reviewer workbook is the bootstrap source for this corpu
 
 Executes stable and candidate against appropriate historical cases and protected capabilities and records target detection, old-defect persistence on FIXED, regressions, and false positives.
 
-A candidate that passes the required pre-update gate is frozen into a durable `PENDING_UPDATE` package. This package is the only handoff authority between Chat A and Chat B.
+A candidate that passes the required pre-update gate is frozen into durable independent-update state. That state, not previous-chat prose, is the handoff authority between Chat A and Chat B.
 
-### `mimiseek-run`
+### Run role — `mimiseek-review-run`
 
-User-facing skill invoked as **«Запусти Мимисик»** in Chat A.
+During bootstrap, reconstructs live repository state and continues the next canonical repository-development action.
 
-It coordinates collection, normalization, learning-event derivation, learner execution, candidate creation, regression evaluation, and pending-package freeze.
+Once the operational evolution stages exist, it coordinates collection, normalization, learning-event derivation, learner execution, candidate creation, regression evaluation, and independent-update-state freeze.
 
 It cannot promote stable and cannot update consumer reviewer pins.
 
-### `mimiseek-update`
+### Independent update role — `mimiseek-review-update`
 
-User-facing skill invoked as **«Обнови Мимисик»** in a new independent ChatGPT chat.
+Runs in a new independent ChatGPT chat when an eligible candidate/update state or deferred consumer distribution exists.
 
 It has two separate authorities under fixed governing policy:
 
@@ -158,16 +171,16 @@ If active work, exact-head gates, project policy, compatibility, or running-agen
 
 ### Distributor
 
-Distribution is performed only for a consumer that `mimiseek-update` has classified `SAFE_TO_UPDATE` under that consumer's live governing state.
+Distribution is performed only for a consumer that the independent update role has classified `SAFE_TO_UPDATE` under that consumer's live governing state.
 
 Default mechanism is an auditable update PR/change. Running agent/reviewer/procedure runs remain bound to the reviewer version with which they started; repository-level updates affect only future runs after the consumer change becomes effective.
 
 ## Authority separation
 
 - Consumer review processes create source evidence but do not promote MimiSeek versions.
-- `mimiseek-run` may create/freeze a candidate but cannot promote or distribute it.
+- `mimiseek-review-run` may create/freeze a candidate once the operational pipeline exists, but cannot promote or distribute it.
 - Candidate cannot modify the policy or evaluation evidence used to judge itself.
-- `mimiseek-update` must run in a fresh independent chat for promotion authority.
+- `mimiseek-review-update` must run in a fresh independent chat when promotion authority requires independence.
 - Only `PROMOTE` advances global MimiSeek stable.
 - Global promotion does not itself prove any consumer is currently safe to update.
 - Consumer update safety is resolved per repository and fails closed when active-state safety or compatibility cannot be proven.
@@ -188,4 +201,4 @@ Project-specific rules remain in the consumer repository's governing policy/over
 
 ## Durable state principle
 
-Chat contexts are workers, not state stores. Canonical project state, reviewer versions, normalized evidence, learning events, candidate rationale, frozen pending package, evaluation results, consumer distribution state, and promotion history must be recoverable from Git/GitHub and structured persisted data.
+Chat contexts are workers, not state stores. Canonical project state, reviewer versions, normalized evidence, learning events, candidate rationale, frozen independent-update state, evaluation results, consumer distribution state, and promotion history must be recoverable from Git/GitHub and structured persisted data.
