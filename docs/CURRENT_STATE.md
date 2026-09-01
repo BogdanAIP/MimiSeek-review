@@ -15,7 +15,7 @@ Last synchronized: 2026-09-01
 - Registered initial consumers: `BogdanAIP/chat-agent-platform`, `BogdanAIP/uv-studio`
 - Native ChatGPT skill identities: `mimiseek-review-run` and `mimiseek-review-update`
 - Canonical repository workflow files: `.agents/skills/mimiseek-run/SKILL.md` and `.agents/skills/mimiseek-update/SKILL.md`
-- Active implementation focus: Stage 0 repository/governance coherence is prepared for fresh independent exact-head review; no merge acceptance exists yet.
+- Active implementation focus: Stage 0 repository/governance coherence is prepared for another fresh independent exact-head review; no merge acceptance exists yet.
 
 For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplicate a self-referential current commit SHA here during active development.
 
@@ -33,7 +33,9 @@ For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplic
 - Global MimiSeek promotion and consumer installation are separate transactions.
 - A consumer may remain pinned to an older stable while its live project state makes an update unsafe.
 - Already-running agent/reviewer/procedure runs remain bound to the reviewer version with which they started.
-- Repository PR acceptance is exact-head: a development chat cannot self-authorize the head it materially changed; a fresh independent read-only review is required before merge.
+- Repository PR acceptance is exact-head and exact-policy: a development chat cannot self-authorize the head it materially changed; terminal review evidence binds repository/base/head/reviewer/`review_policy_ref`.
+- After Stage 0, an ordinary PR is governed by already-accepted policy at its immutable BASE (or an immutable ref that accepted BASE explicitly delegates to). Proposed HEAD governance is target semantics only for that PR and cannot govern its own acceptance.
+- PR #1 has the one-time bootstrap exception because its BASE contains no repository-development acceptance policy. Its `review_policy_ref` remains the immutable BASE SHA `09492f1ec8aeb1dfbfc152505d14574016a72870`; authority is resolved from BASE bootstrap intent + exact live PR evidence + complete HEAD governance as proposed target semantics + fresh independent read-only review.
 
 ## Stage 0 verification state
 
@@ -43,8 +45,10 @@ For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplic
 - The audited historical workbook needed for Stage 1 has a repository-owned durable locator in `data/bootstrap-source.json`, binding stable ChatGPT File Library path + exact version, byte size and SHA-256. A fresh authorized chat can recover that exact access-controlled version without prior-chat handoff; inability to recover or authenticate it fails closed.
 - There is currently no configured GitHub Actions workflow providing Stage 0 CI acceptance evidence.
 - Codex review attempts on PR #1 have been blocked by usage limits and are not acceptance evidence.
-- The independent review of the earlier head `cd5090b38e556636bea6c3f6dd4e0e74c2f41dff` returned three findings. Those findings were adjudicated as confirmed and remediated; because the fixes moved HEAD, that review is stale for merge acceptance.
-- A fresh independent exact-head semantic review of the final post-fix PR head is still required.
+- The independent review of head `cd5090b38e556636bea6c3f6dd4e0e74c2f41dff` returned three findings; all three were confirmed and remediated, so that result is stale.
+- The next independent review of head `354eab1117e60a426fa3b86109b42abb147ac005` independently verified those three remediations and returned one P1: repository-development acceptance was not bound to an immutable prior policy ref.
+- That P1 was independently confirmed and remediated by binding acceptance to accepted BASE-derived `review_policy_ref`, adding the explicit one-time PR #1 bootstrap exception, and recording ADR 0010. Because remediation moved HEAD, the review of `354eab1...` is stale for merge acceptance.
+- A new fresh independent exact-head semantic review of the final post-fix PR head is required.
 
 ## Historical data role
 
@@ -73,10 +77,16 @@ The existing CAP and UV reviewer policies differ. The first stable baseline must
 
 ## Next canonical action
 
-Run a fresh independent read-only semantic review of PR #1 at its exact live final BASE/HEAD under `AGENTS.md` and `docs/DEVELOPMENT_PROTOCOL.md`.
+Run a fresh independent read-only semantic review of PR #1 at its exact live final BASE/HEAD with:
 
-- If the review returns concrete findings, adjudicate/fix them and repeat review on the resulting new exact head.
-- If the review returns exact-head PASS and no other configured gate is missing, merge the accepted head and record the merged commit in `docs/EVIDENCE_INDEX.md`.
+- `review_policy_ref=09492f1ec8aeb1dfbfc152505d14574016a72870`;
+- the explicit Stage 0 bootstrap exception defined by `AGENTS.md`, `docs/DEVELOPMENT_PROTOCOL.md`, and ADR 0010;
+- HEAD governance treated only as proposed target semantics, not as self-authorizing review policy.
+
+Then:
+
+- If the review returns concrete findings, adjudicate/fix them and repeat review on the resulting new exact head under the same immutable bootstrap policy authority.
+- If the review returns exact-head CURRENT PASS and no other configured gate is missing, merge the accepted head and record the merged commit in `docs/EVIDENCE_INDEX.md`.
 - Only after Stage 0 is accepted and merged does Stage 1 begin.
 
 Stage 1 then performs two bootstrap jobs together:
