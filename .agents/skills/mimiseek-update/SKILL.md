@@ -9,7 +9,7 @@ description: Run the independent MimiSeek Review update workflow only when the u
 
 This is the independent ChatGPT entry point for **evaluating and applying MimiSeek Review updates**.
 
-It is normally invoked in a new chat, separate from the chat that created or developed the candidate being evaluated.
+Every real invocation must run in a **new independent ChatGPT chat**, separate from the run/development chat and from any earlier update invocation whose context could influence the current decision. This requirement also applies when no candidate is pending and the only work is reconciliation of previously deferred consumer distributions.
 
 The exact repository is:
 
@@ -55,9 +55,11 @@ Do not invent a candidate, update package, evaluation result, or safe rollout wi
 
 ## Independence boundary
 
-When candidate promotion requires a fresh independent evaluator, this skill must not be used in the same conversation that created, modified, or advocated for that candidate.
+This skill must not perform a real update in the same conversation as `mimiseek-review-run`, candidate development, or a prior consequence-bearing MimiSeek update decision. Open a new independent ChatGPT chat and reconstruct the state from Git/GitHub instead.
 
-If independence cannot be established under current repository policy, fail closed and leave stable unchanged.
+This prohibition is unconditional for real update invocations: it applies both to candidate promotion and to distribution-only reconciliation of an already-promoted stable.
+
+If fresh-chat independence cannot be established under current repository policy, fail closed and leave stable and consumers unchanged.
 
 The learner/candidate cannot redefine the evaluation policy that judges that same candidate.
 
@@ -114,6 +116,7 @@ Never invent a fake candidate or fake consumer state to demonstrate the skill. A
 Never:
 
 - operate on a different MimiSeek project;
+- perform a real update from a chat that does not satisfy the required fresh independent update-context boundary;
 - promote from incomplete, stale, mismatched, or non-independent evidence;
 - weaken the governing evaluation policy to allow a candidate through;
 - modify a consumer whose safe update window is not proven;
