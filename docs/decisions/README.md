@@ -23,3 +23,4 @@ Current records:
 - `0008-fresh-evaluator-replaces-routine-human-technical-promotion.md`
 - `0009-consumer-safe-update-windows.md`
 - `0010-base-policy-governs-pr-acceptance.md`
+- `0011-no-bootstrap-bypass-for-first-stable-or-install.md`
