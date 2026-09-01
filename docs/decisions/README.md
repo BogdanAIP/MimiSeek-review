@@ -22,3 +22,4 @@ Current records:
 - `0007-two-chat-two-skill-evolution.md`
 - `0008-fresh-evaluator-replaces-routine-human-technical-promotion.md`
 - `0009-consumer-safe-update-windows.md`
+- `0010-base-policy-governs-pr-acceptance.md`
