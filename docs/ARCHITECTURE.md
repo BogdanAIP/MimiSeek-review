@@ -73,6 +73,8 @@ CAP / UV / future projects
   DEFER_*        ─────→ consumer remains pinned
 ```
 
+A later deferred-distribution retry is another fresh `mimiseek-review-update` chat that starts from the already-authoritatively-promoted stable and durable `PENDING_DISTRIBUTION` state; it does not repeat or invent candidate promotion.
+
 Canonical repository workflow files remain:
 
 - `.agents/skills/mimiseek-run/SKILL.md` for native identity `mimiseek-review-run`;
@@ -125,7 +127,7 @@ Authority:
 
 Contains real BUGGY→FIXED cases and protected-capability cases.
 
-The existing historical reviewer workbook is the bootstrap source for this corpus and outcome history. Canonical machine data will live in text formats under `data/`; Excel remains a generated/reporting representation.
+The existing historical reviewer workbook is the Stage 1 bootstrap input for this corpus and outcome history. Its exact access-controlled artifact identity and recovery contract are repository-owned in `data/bootstrap-source.json`. After verified import, canonical machine data live in text formats under `data/`; future Excel views are reports rather than competing automation truth.
 
 ### Regression evaluator
 
@@ -143,14 +145,14 @@ It cannot promote stable and cannot update consumer reviewer pins.
 
 ### Independent update role — `mimiseek-review-update`
 
-Runs in a new independent ChatGPT chat when an eligible candidate/update state or deferred consumer distribution exists.
+Every real invocation runs in a new independent ChatGPT chat when an eligible candidate/update state or deferred consumer distribution exists.
 
 It has two separate authorities under fixed governing policy:
 
-1. independently evaluate the frozen candidate and return `PROMOTE`, `REJECT`, or `ABSTAIN`;
-2. after promotion, independently decide for each consumer whether the current live project state proves a safe update window.
+1. when an eligible frozen candidate exists, independently evaluate it and return `PROMOTE`, `REJECT`, or `ABSTAIN`; only authoritative `PROMOTE` may make that candidate stable;
+2. for an exact reviewer version already proven to be the current authoritatively promoted stable, independently decide for each consumer whether the current live project state proves a safe update window. This may occur immediately after promotion or during a later fresh-chat reconciliation of durable deferred-distribution state.
 
-It must not rely on learner advocacy from Chat A; all required evidence is reconstructed from repository-owned durable state.
+It must not rely on learner advocacy from Chat A; all required promotion/distribution authority and project evidence are reconstructed from durable governed state.
 
 ### Version registry
 
@@ -171,7 +173,7 @@ If active work, exact-head gates, project policy, compatibility, or running-agen
 
 ### Distributor
 
-Distribution is performed only for a consumer that the independent update role has classified `SAFE_TO_UPDATE` under that consumer's live governing state.
+Distribution is performed only for a consumer that the independent update role has classified `SAFE_TO_UPDATE` under that consumer's live governing state and only for an exact rollout target whose authoritative promotion/current-stable identity is proven.
 
 Default mechanism is an auditable update PR/change. Running agent/reviewer/procedure runs remain bound to the reviewer version with which they started; repository-level updates affect only future runs after the consumer change becomes effective.
 
@@ -180,8 +182,9 @@ Default mechanism is an auditable update PR/change. Running agent/reviewer/proce
 - Consumer review processes create source evidence but do not promote MimiSeek versions.
 - `mimiseek-review-run` may create/freeze a candidate once the operational pipeline exists, but cannot promote or distribute it.
 - Candidate cannot modify the policy or evaluation evidence used to judge itself.
-- `mimiseek-review-update` must run in a fresh independent chat when promotion authority requires independence.
+- Every real `mimiseek-review-update` invocation runs in a fresh independent ChatGPT chat, including distribution-only reconciliation.
 - Only `PROMOTE` advances global MimiSeek stable.
+- A consumer rollout target must already be proven as the current authoritatively promoted stable; pending/rejected/abstained candidates cannot be distributed.
 - Global promotion does not itself prove any consumer is currently safe to update.
 - Consumer update safety is resolved per repository and fails closed when active-state safety or compatibility cannot be proven.
 
@@ -202,3 +205,5 @@ Project-specific rules remain in the consumer repository's governing policy/over
 ## Durable state principle
 
 Chat contexts are workers, not state stores. Canonical project state, reviewer versions, normalized evidence, learning events, candidate rationale, frozen independent-update state, evaluation results, consumer distribution state, and promotion history must be recoverable from Git/GitHub and structured persisted data.
+
+When a bootstrap/source artifact itself is access-controlled external evidence rather than repository state, its exact locator, version identity, digest, recovery contract, and fail-closed behavior must be owned by the repository so a fresh authorized chat can recover and authenticate it without prior-chat memory.
