@@ -33,7 +33,7 @@ Canonical repository workflow: `.agents/skills/mimiseek-update/SKILL.md`.
 
 When the user invokes the update role:
 
-1. If candidate promotion requires fresh-chat independence, this must be a new ChatGPT conversation that did not create or modify that candidate.
+1. This must be a new independent ChatGPT conversation, separate from the run/development chat and from any earlier consequence-bearing MimiSeek update decision. This also applies when the only work is deferred-distribution reconciliation.
 2. Open `BogdanAIP/MimiSeek-review`.
 3. Resolve the live governing branch/state according to `AGENTS.md` and `docs/CURRENT_STATE.md`.
 4. Read `.agents/skills/mimiseek-update/SKILL.md` from the authoritative ref.
@@ -42,7 +42,7 @@ When the user invokes the update role:
 
 ## Independence rule
 
-Never treat two messages in the same conversation as the required two-chat promotion workflow when repository policy requires a fresh evaluator. Repository state is the handoff between the chats.
+Never treat two messages in the same conversation as the required two-chat workflow. Every real `mimiseek-review-update` invocation uses a new independent ChatGPT conversation; repository state is the durable handoff.
 
 ## Consumer safety rule
 
