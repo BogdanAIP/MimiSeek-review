@@ -31,13 +31,19 @@ Allow CAP, UV, and future repositories to consume one standalone stable MimiSeek
 
 ## Consumer binding
 
-A consumer must identify the exact MimiSeek stable reviewer it uses. The machine-readable binding must include at least:
+The binding schema may exist before MimiSeek has a stable reviewer or before a consumer has installed one.
+
+Before first installation, the binding must be able to represent `consumer_installed = none` / `NOT_INSTALLED` without inventing a reviewer identity. Defining or validating that schema is not itself a reviewer installation.
+
+Once a consumer installs MimiSeek, it must identify the exact stable reviewer it uses. The machine-readable binding must include at least:
 
 - reviewer version;
 - immutable MimiSeek commit/content identity;
 - compatibility/policy version where required.
 
-Each individual agent/review/procedure run must also bind the reviewer version it started with. Updating the repository-level reviewer pin must never mutate reviewer semantics for a run already in progress.
+Each individual agent/review/procedure run must also bind the reviewer version/source it started with. Updating the repository-level reviewer pin must never mutate reviewer semantics for a run already in progress.
+
+Stage 2 may establish the binding/evidence contract but must not create a CAP/UV MimiSeek pin merely to satisfy schema acceptance. The first real installation is governed by the same safe-distribution authority as all later updates.
 
 ## Evidence export
 
@@ -51,7 +57,7 @@ Consumers must eventually expose structured evidence sufficient for MimiSeek to 
 - fix and verified head;
 - terminal PASS/currentness evidence.
 
-Missing or ambiguous evidence must remain unknown; MimiSeek may not manufacture a HIT/MISS from absence alone.
+Evidence produced before first MimiSeek installation may still be imported when its actual reviewer source/version and provenance are explicit. Missing or ambiguous evidence must remain unknown; MimiSeek may not manufacture a HIT/MISS from absence alone.
 
 ## Project overlays
 
@@ -63,22 +69,24 @@ A stricter project-local rule remains authoritative for that project unless the 
 
 MimiSeek promotion and consumer installation are separate transactions.
 
-A new MimiSeek stable may exist while a consumer remains intentionally pinned to the previous stable because the consumer is not in a safe update window.
+Before the first promotion, `mimiseek_stable = none` is valid. Before a consumer's first rollout, `consumer_installed = none` is valid.
+
+A new MimiSeek stable may exist while a consumer remains intentionally uninstalled or pinned to a previous stable because the consumer is not in a safe update window.
 
 This is normal, not an error.
 
 Track at least:
 
-- `mimiseek_stable` — current globally promoted reviewer;
-- `consumer_installed` — exact reviewer currently installed in each consumer;
-- `consumer_target` — stable version MimiSeek wants the consumer to receive;
-- `distribution_state` — installed, pending, blocked, or incompatible with reason.
+- `mimiseek_stable` — current globally promoted reviewer or `none` before first promotion;
+- `consumer_installed` — exact MimiSeek reviewer currently installed in each consumer, or `none` before first installation;
+- `consumer_target` — promoted stable version MimiSeek wants the consumer to receive, or `none` when no promoted stable exists;
+- `distribution_state` — not-installed, installed, pending, blocked, or incompatible with reason.
 
 ## Consumer safe-update gate
 
 Every real consumer rollout or deferred-distribution reconciliation is performed by `mimiseek-review-update` in a new independent ChatGPT chat.
 
-Before creating or applying a reviewer update in a consumer repository, the update role must independently prove both:
+Before creating or applying a reviewer installation/update in a consumer repository, the update role must independently prove both:
 
 1. the exact rollout target is the current authoritatively promoted MimiSeek stable, with durable valid promotion evidence; and
 2. the consumer's current live project state permits that change.
@@ -100,14 +108,14 @@ If no trustworthy project-local signal can prove the absence of such blockers, d
 
 ## Safe distribution
 
-For a consumer proven `SAFE_TO_UPDATE`, MimiSeek prepares an auditable reviewer-version update according to that repository's governing workflow.
+For a consumer proven `SAFE_TO_UPDATE`, MimiSeek prepares an auditable first-install or reviewer-version update according to that repository's governing workflow.
 
 Default behavior is an update PR rather than a silent write to the stable branch.
 
 For a consumer not safe to update:
 
 - do not modify its reviewer pin;
-- preserve its currently installed reviewer;
+- preserve its currently installed reviewer, including `none` before first installation;
 - record the exact current promoted stable as target and the defer reason as `PENDING_DISTRIBUTION`;
 - retry safety evaluation only in a later fresh `mimiseek-review-update` invocation that revalidates the target stable/promotion authority from durable state.
 
@@ -124,7 +132,7 @@ Fail closed on:
 - incompatible policy/reviewer versions;
 - stale exact-head result presented as current evidence;
 - ambiguous finding disposition;
-- attempted consumer update without authoritative MimiSeek promotion/current-stable identity;
-- attempted consumer update without the required fresh independent update context;
-- attempted consumer update without a proven current safe-update window;
+- attempted consumer installation/update without authoritative MimiSeek promotion/current-stable identity;
+- attempted consumer installation/update without the required fresh independent update context;
+- attempted consumer installation/update without a proven current safe-update window;
 - any attempt to change reviewer semantics for an already-running run.
