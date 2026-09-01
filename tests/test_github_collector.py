@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import sys
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -8,7 +9,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("collector", REPO_ROOT / "tools" / "collect_github_evidence.py")
 collector = importlib.util.module_from_spec(SPEC)
-import sys
 sys.modules[SPEC.name] = collector
 SPEC.loader.exec_module(collector)
 
@@ -36,17 +36,21 @@ def pr(number=7, updated_at="2026-09-01T12:00:00Z"):
 
 class FakeClient:
     api_url = "https://api.github.test"
+
     def __init__(self):
         self.listed = [pr()]
         self.calls = []
+
     def pulls_updated_since(self, repository, since):
         self.calls.append(("list", repository, collector.to_z(since)))
         return list(self.listed)
+
     def get(self, path, params=None):
         self.calls.append(("get", path))
         if path.endswith("/pulls/7"):
             return pr()
         raise AssertionError(path)
+
     def paged(self, path, params=None):
         self.calls.append(("paged", path))
         if path.endswith("/issues/7/comments"):
@@ -54,10 +58,18 @@ class FakeClient:
                 "id": 20, "node_id": "IC_20",
                 "user": {"id": 1, "login": "BogdanAIP", "type": "User"},
                 "body": "CONFIRMED and fixed on head " + "c"*40,
+                "reactions": {"+1": 1, "-1": 0, "total_count": 1},
                 "created_at": "2026-09-01T12:10:00Z",
                 "updated_at": "2026-09-01T12:10:00Z",
                 "html_url": "https://example/comment/20",
                 "author_association": "OWNER",
+            }]
+        if path.endswith("/issues/7/reactions"):
+            return [{
+                "id": 25, "node_id": "REACTION_25",
+                "user": {"id": 2, "login": "chatgpt-codex-connector[bot]", "type": "Bot"},
+                "content": "+1",
+                "created_at": "2026-09-01T12:06:00Z",
             }]
         if path.endswith("/pulls/7/reviews"):
             return [{
@@ -71,7 +83,9 @@ class FakeClient:
             return [{
                 "id": 40, "node_id": "RC_40", "pull_request_review_id": 30, "in_reply_to_id": None,
                 "user": {"id": 2, "login": "chatgpt-codex-connector[bot]", "type": "Bot"},
-                "body": "P1 concrete defect", "commit_id": "b"*40, "original_commit_id": "b"*40,
+                "body": "P1 concrete defect",
+                "reactions": {"+1": 2, "-1": 0, "total_count": 2},
+                "commit_id": "b"*40, "original_commit_id": "b"*40,
                 "path": "x.py", "line": 10, "side": "RIGHT", "start_line": None, "start_side": None,
                 "original_line": 10, "diff_hunk": "@@",
                 "created_at": "2026-09-01T12:05:00Z", "updated_at": "2026-09-01T12:05:00Z",
@@ -80,7 +94,11 @@ class FakeClient:
         if path.endswith("/pulls/7/commits"):
             return [{
                 "sha": "b"*40, "parents": [{"sha": "a"*40}],
-                "commit": {"author": {"date": "2026-09-01T11:00:00Z"}, "committer": {"date": "2026-09-01T11:00:00Z"}, "message": "change"},
+                "commit": {
+                    "author": {"date": "2026-09-01T11:00:00Z"},
+                    "committer": {"date": "2026-09-01T11:00:00Z"},
+                    "message": "change",
+                },
                 "html_url": "https://example/commit",
             }]
         raise AssertionError(path)
@@ -92,7 +110,9 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual(snap["authority"]["role"], "non_authoritative_source_snapshot")
         self.assertEqual(snap["reviews"][0]["commit_id"], "b"*40)
         self.assertEqual(snap["review_comments"][0]["body"], "P1 concrete defect")
+        self.assertEqual(snap["review_comments"][0]["reactions"]["+1"], 2)
         self.assertIn("CONFIRMED", snap["issue_comments"][0]["body"])
+        self.assertEqual(snap["issue_reactions"][0]["content"], "+1")
         self.assertNotIn("disposition", snap["review_comments"][0])
 
     def test_collect_is_byte_idempotent_for_unchanged_source(self):
