@@ -14,6 +14,7 @@ Implementation and acceptance identity:
 - bootstrap `review_policy_ref`: `09492f1ec8aeb1dfbfc152505d14574016a72870`
 - terminal review artifact: `docs/evidence/stage0-pr1-terminal-review.md`
 - terminal review artifact Git blob: `2a6a7d72561e5be67e88cd36fbf81251abf71761`
+- durable GitHub PR #1 evidence comment id: `5493224928`
 - repository-assigned reviewer instance identity: `ordinary_chat_fresh:pr1:1588e196051917bf35483ba05b5f7f36fd00c468:2026-09-01T13:59:11+03:00`
 - reviewer identity/class reported by the terminal result: `ordinary_chat_fresh`
 - review mode reported by the terminal result: `read_only`
@@ -26,7 +27,7 @@ Implementation and acceptance identity:
 - accepted-head Git tree: `d2c5ff390312ace75770b626ef62e4343977d8c3`
 - merged-commit Git tree: `d2c5ff390312ace75770b626ef62e4343977d8c3`
 
-The terminal review artifact preserves the complete independent `REVIEW_RESULT_V1` verbatim and records the provenance available from the received result. Its repository-assigned reviewer-instance identifier is derived only from fields emitted by that result and does not invent a platform conversation identifier. A fresh chat can resolve the artifact by repository path and immutable Git blob, then reconstruct the exact repository/base/head/reviewer-context/`review_policy_ref`/status/timestamp binding without previous-chat memory. The artifact does not claim cryptographic attestation of the external chat beyond the identity and independence assertions in the terminal result itself.
+The terminal review artifact preserves the complete independent `REVIEW_RESULT_V1` verbatim and records the provenance available from the received result. Its repository-assigned reviewer-instance identifier is derived only from fields emitted by that result and does not invent a platform conversation identifier. A fresh chat can resolve the immutable Git blob directly and can also resolve PR #1 comment `5493224928`, which records the same exact review binding and points to that blob. The artifact does not claim cryptographic attestation of the external chat beyond the identity and independence assertions in the terminal result itself.
 
 The accepted exact HEAD and squash-merge commit have the same Git tree, proving that the merged repository contents are the exact contents independently accepted by the terminal review.
 
@@ -68,7 +69,8 @@ Stage 0 established:
    - result became STALE when HEAD moved.
 
 4. Exact head `1588e196051917bf35483ba05b5f7f36fd00c468`
-   - durable source result: `docs/evidence/stage0-pr1-terminal-review.md` at Git blob `2a6a7d72561e5be67e88cd36fbf81251abf71761`;
+   - durable source result: Git blob `2a6a7d72561e5be67e88cd36fbf81251abf71761`, path `docs/evidence/stage0-pr1-terminal-review.md` in PR #2;
+   - durable GitHub pointer: PR #1 comment `5493224928`;
    - reviewer instance identity: `ordinary_chat_fresh:pr1:1588e196051917bf35483ba05b5f7f36fd00c468:2026-09-01T13:59:11+03:00`;
    - fresh independent review: `PASS`;
    - review validity: `CURRENT` at final live re-resolution;
