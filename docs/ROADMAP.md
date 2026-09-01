@@ -8,12 +8,17 @@ Goal: make the repository self-describing so any fresh development chat can cont
 
 Acceptance:
 
-- canonical product/current-state/roadmap/architecture/protocol owners exist;
+- canonical product/current-state/roadmap/architecture/protocol owners exist and are mutually coherent;
 - MimiSeek is explicitly a reviewer-improvement/release system, not the owner of consumer PR review loops;
 - standalone multi-project ownership is recorded;
-- the two ChatGPT user-facing skill contracts exist: `mimiseek-run` and `mimiseek-update`;
-- the repository is the durable handoff between the two chats;
-- branch/PR workflow is established.
+- the two ChatGPT workflow contracts exist in `.agents/skills/mimiseek-run/SKILL.md` and `.agents/skills/mimiseek-update/SKILL.md`;
+- the run workflow is repository-driven and continues bootstrap/development until later operational stages actually exist;
+- the update workflow preserves fresh-chat independent promotion authority;
+- global promotion and per-consumer installation are separate, with fail-closed safe-update semantics;
+- the repository is the durable handoff between chats;
+- branch/PR workflow and fresh exact-head acceptance review are established.
+
+Stage 0 is not DONE until an independent read-only review returns PASS for the exact final PR head and that accepted head is merged.
 
 ## Stage 1 — Bootstrap data + first stable reviewer baseline — NEXT
 
@@ -51,7 +56,7 @@ Acceptance:
 
 ## Stage 3 — Collector + normalized outcome store
 
-Goal: let `mimiseek-run` automatically gather new accepted review evidence from all registered consumers.
+Goal: let the run workflow automatically gather new accepted review evidence from all registered consumers.
 
 Acceptance:
 
@@ -83,7 +88,7 @@ Acceptance:
 
 ## Stage 6 — Automated regression / protected-capability evaluation
 
-Goal: let `mimiseek-run` evaluate stable versus candidate on historical and accumulated real cases before independent update evaluation.
+Goal: let the run workflow evaluate stable versus candidate on historical and accumulated real cases before independent update evaluation.
 
 Acceptance:
 
@@ -92,13 +97,13 @@ Acceptance:
 - false-positive/regression behavior is measured;
 - protected capabilities are checked;
 - candidate cannot modify the evaluation policy governing the run;
-- passing candidate is frozen into exactly one durable `PENDING_UPDATE` package.
+- passing candidate is frozen into exactly one durable independent-update package/state.
 
-## Stage 7 — Independent `mimiseek-update`
+## Stage 7 — Independent update workflow
 
-Goal: make the second user-facing skill fully functional in a new ChatGPT chat.
+Goal: make `mimiseek-review-update` fully functional in a new ChatGPT chat.
 
-The user opens a new chat and says **«Обнови Мимисик»**. No technical prompt is copied from the first chat.
+The user opens a new chat and invokes the update workflow. No technical prompt is copied from the run chat.
 
 Acceptance:
 
@@ -116,35 +121,35 @@ Goal: after a MimiSeek promotion, update each registered consumer only when its 
 Acceptance:
 
 - global MimiSeek promotion and consumer installation are separate transactions;
-- `mimiseek-update` resolves each consumer independently;
+- the update workflow resolves each consumer independently;
 - active runs/gates/stages remain on their existing reviewer identity;
 - `SAFE_TO_UPDATE` permits an auditable update PR/change;
 - `DEFER_*` leaves the consumer unchanged and records `PENDING_DISTRIBUTION`;
-- deferred consumers can be re-checked by a later `mimiseek-update` invocation without creating a new reviewer candidate.
+- deferred consumers can be re-checked by a later update invocation without creating a new reviewer candidate.
 
-## Stage 9 — Complete two-skill workflow
+## Stage 9 — Complete two-chat workflow
 
 Goal: the practical user workflow is fully operational:
 
 ```text
-Chat A: «Запусти Мимисик»
-collect → learn → candidate → regression → PENDING_UPDATE
+Chat A: run workflow
+collect → learn → candidate → regression → independent-update state
 
-new Chat B: «Обнови Мимисик»
+new Chat B: update workflow
 independent evaluation → PROMOTE/REJECT/ABSTAIN → safe distribution
 ```
 
 Acceptance:
 
 - no manual technical sequencing or prompt copying is required;
-- both skills resume idempotently after interruption;
-- unchanged evidence produces safe `NO_CHANGE`;
+- both workflows resume idempotently after interruption;
+- unchanged evidence produces safe `NO_CHANGE` or equivalent governed no-op state;
 - every mutation is traceable to an exact pipeline/update run;
 - failures leave current stable and unsafe consumers unchanged.
 
 ## Stage 10 — Optional automatic fresh-chat handoff
 
-Goal: later remove even the user's manual action of opening the second chat by adding a proven executor that launches `mimiseek-update` in a genuinely fresh ChatGPT context.
+Goal: later remove even the user's manual action of opening the second chat by adding a proven executor that launches the update role in a genuinely fresh ChatGPT context.
 
 This is an optimization, not a prerequisite for a working self-improvement system.
 
