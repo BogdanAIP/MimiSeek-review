@@ -23,7 +23,7 @@ Acceptance:
 - the repository is the durable handoff between chats;
 - branch/PR workflow and fresh exact-head acceptance review are established.
 
-Stage 0 was accepted by a fresh independent CURRENT PASS on exact PR head `1588e196051917bf35483ba05b5f7f36fd00c468` under `review_policy_ref=09492f1ec8aeb1dfbfc152505d14574016a72870`, then squash-merged as `3e482964daaae5aefad2eeaf832836cd340ac5f5`. The accepted head and merged commit have the same Git tree `d2c5ff390312ace75770b626ef62e4343977d8c3`. Detailed evidence is owned by `docs/EVIDENCE_INDEX.md`.
+Stage 0 acceptance and merge evidence are owned by `docs/EVIDENCE_INDEX.md`; this roadmap records only stage status, sequencing, and acceptance conditions.
 
 ## Stage 1 — Bootstrap data + reviewer baseline seed — NEXT
 
