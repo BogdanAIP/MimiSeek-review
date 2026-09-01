@@ -62,6 +62,8 @@ SAFE_TO_UPDATE → update change
 DEFER_*       → consumer remains pinned / PENDING_DISTRIBUTION
 ```
 
+A later retry of `PENDING_DISTRIBUTION` is another **new independent update chat**. It starts from durable evidence that the target reviewer was already authoritatively promoted and is still the current stable; it does not create or re-promote a candidate.
+
 Canonical repository workflow files are `.agents/skills/mimiseek-run/SKILL.md` and `.agents/skills/mimiseek-update/SKILL.md`.
 
 ## Learning event principles
@@ -117,7 +119,7 @@ Typical states:
 - `BLOCKED_COMPATIBILITY` — compatibility is not proven;
 - `UPDATE_IN_PROGRESS` — a governed consumer update change exists and has not yet reached its terminal state.
 
-A later `mimiseek-review-update` invocation may re-check deferred consumers without creating a new reviewer candidate.
+A later fresh `mimiseek-review-update` invocation may re-check deferred consumers without creating a new reviewer candidate, but only after durable state proves that the exact rollout target is the current authoritatively promoted stable and that its prior promotion evidence remains valid.
 
 ## Running-run immutability
 
