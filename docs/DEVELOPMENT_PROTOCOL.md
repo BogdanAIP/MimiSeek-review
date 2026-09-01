@@ -26,20 +26,20 @@ development-chat verification
     ↓
 tests / CI when configured or required
     ↓
-fresh independent exact-head review
+fresh independent exact-head review under immutable review_policy_ref
     ↓
 adjudicate + fix confirmed findings
     ↓
 repeat review on the new exact head when fixes move HEAD
     ↓
-CURRENT exact-head acceptance evidence
+CURRENT exact-head + exact-policy acceptance evidence
     ↓
 merge
     ↓
 update CURRENT_STATE / ROADMAP / EVIDENCE_INDEX as applicable
 ```
 
-A review result is current only for the exact repository/base/head identity it evaluated. Any consequence-bearing fix that moves HEAD makes the earlier terminal review stale for merge acceptance.
+A terminal review result is current only for the exact repository/base/head/reviewer/`review_policy_ref` identity it evaluated. Any consequence-bearing fix that moves HEAD makes the earlier terminal review stale for merge acceptance.
 
 Consumer repositories may use different local review sequences. MimiSeek only consumes their accepted structured outcomes through the integration contract.
 
@@ -82,6 +82,33 @@ Canonical repository workflow files are `.agents/skills/mimiseek-run/SKILL.md` a
 
 The repository is the handoff between chats. Do not require the user to copy technical evaluator prompts or unpublished chat reasoning.
 
+## Repository-development review policy identity
+
+Repository-development acceptance must not be judged by policy introduced by the same PR.
+
+For an ordinary PR after Stage 0:
+
+1. resolve the PR's immutable `BASE_SHA` and `HEAD_SHA`;
+2. read the already-accepted repository-development acceptance policy from `BASE_SHA`;
+3. set `review_policy_ref=BASE_SHA` unless that accepted BASE policy itself explicitly delegates acceptance to another immutable ref;
+4. if such an accepted delegation exists, resolve and record that delegated immutable `review_policy_ref`;
+5. treat any acceptance/review/governance changes in HEAD only as proposed target semantics for the PR under review;
+6. fail closed if the governing policy ref cannot be determined from accepted BASE state.
+
+A HEAD change cannot weaken fresh-review, CI, evidence, identity, or authority requirements for its own acceptance. It becomes governing policy only after that HEAD is accepted under prior authority and merged into the stable branch.
+
+### One-time Stage 0 bootstrap exception
+
+PR #1 has BASE `09492f1ec8aeb1dfbfc152505d14574016a72870`, whose tree contains only the original bootstrap README and no repository-development acceptance policy.
+
+For this one foundation PR:
+
+- `review_policy_ref` remains the immutable BASE SHA above;
+- BASE bootstrap intent, exact live PR identity/evidence, and the complete proposed HEAD governance jointly define the bootstrap review scope;
+- HEAD governance is evaluated only as proposed target semantics and does not certify itself;
+- terminal acceptance still requires a fresh independent read-only exact-head semantic review and fail-closed handling of unresolved authority/evidence;
+- once Stage 0 is merged, this bootstrap exception is unavailable to ordinary future PRs.
+
 ## Independent acceptance
 
 The chat that materially changes a PR head is not the independent acceptance reviewer for that same head.
@@ -89,13 +116,14 @@ The chat that materially changes a PR head is not the independent acceptance rev
 Before merge, use a new ordinary ChatGPT context that is read-only with respect to the PR and independently resolves:
 
 - live PR identity;
-- governing repository instructions from the applicable base/current policy;
-- exact base and head under review;
-- changed files and semantic effects;
+- immutable `BASE_SHA` and `HEAD_SHA`;
+- the governing `review_policy_ref` from already-accepted BASE authority using the rule above;
+- governing repository instructions from that exact accepted policy ref;
+- changed files and semantic effects, including proposed HEAD governance changes as target semantics;
 - internal document/authority coherence;
-- required tests/CI or the explicit fact that no such CI is configured for the stage.
+- required tests/CI under the governing accepted policy, or the explicit fact that no such gate is configured for the stage.
 
-The independent reviewer must report concrete actionable findings or an exact-head PASS. If it cannot establish identity, scope, or required evidence, acceptance fails closed rather than becoming an optimistic PASS.
+The independent reviewer must bind its result to repository/base/head/reviewer/`review_policy_ref` and report concrete actionable findings or an exact-head PASS. If it cannot establish identity, policy authority, scope, or required evidence, acceptance fails closed rather than becoming an optimistic PASS.
 
 ## Cross-chat continuity
 
@@ -118,4 +146,4 @@ A learner-generated reviewer candidate is a product artifact, not an accepted ch
 
 The learner may create candidate changes, but evaluation-policy authority and promotion evidence remain separate. A failure to obtain required fresh independent evaluation leaves the current stable reviewer unchanged.
 
-The same fail-closed principle applies to repository development: incomplete or stale acceptance evidence leaves the PR unmerged.
+The same fail-closed principle applies to repository development: incomplete, stale, wrong-policy, or ambiguously governed acceptance evidence leaves the PR unmerged.
