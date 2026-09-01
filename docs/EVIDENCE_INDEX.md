@@ -18,10 +18,10 @@ Stage 0 scope now includes:
 - repository-owned cross-chat development state;
 - standalone multi-project reviewer-improvement boundary;
 - consumer/evidence/distribution responsibility split;
-- an identity-bound, repository-owned locator for the access-controlled historical Stage 1 bootstrap workbook;
+- an identity-bound, repository-owned stable locator for the access-controlled historical Stage 1 bootstrap workbook;
 - two user-facing ChatGPT roles with repository-owned workflow contracts;
 - repository-driven run behavior that continues bootstrap/development until the operational learning pipeline exists;
-- fresh independent update/evaluator authority for every real update invocation, including deferred-distribution reconciliation;
+- a new independent update chat for every real update invocation, including deferred-distribution reconciliation;
 - separation of global reviewer promotion from per-consumer installation;
 - fail-closed consumer safe-update semantics and running-run reviewer immutability;
 - fail-closed rule when required independent evaluation, identity, source artifact, or evidence cannot be established.
@@ -32,6 +32,7 @@ Current verification state:
 - repeated Codex review attempts on PR #1 returned usage-limit notices, not current semantic acceptance evidence;
 - a fresh independent read-only semantic review of exact head `cd5090b38e556636bea6c3f6dd4e0e74c2f41dff` returned `FINDINGS` with three concrete findings;
 - all three findings were independently adjudicated as confirmed by the development chat and remediated: bootstrap-source recoverability, unconditional fresh-chat update-role separation, and README bootstrap single-ownership;
+- adjacent canonical documents were also synchronized so deferred distribution cannot bypass fresh-chat or prior-promotion authority;
 - those remediations moved HEAD, so the review of `cd5090b...` is now STALE for merge acceptance;
 - therefore no earlier review or CI result is being treated as acceptance evidence for the final post-fix head.
 
@@ -52,7 +53,7 @@ Pinned bootstrap source identity:
 
 - manifest: `data/bootstrap-source.json`
 - provider: ChatGPT File Library
-- file id: `file_00000000b9e082108c0fc8a3bbc82163`
+- Library path: `/MimiSeek Review/bootstrap/reviewer_statistics_improvement_dataset.xlsx`
 - version id: `1`
 - file name: `reviewer_statistics_improvement_dataset.xlsx`
 - byte size: `92864`
@@ -60,7 +61,7 @@ Pinned bootstrap source identity:
 - expected reconciliation target: 84 historical BUGGY→FIXED pairs
 - source repositories: `BogdanAIP/chat-agent-platform`, `BogdanAIP/uv-studio`
 
-Stage 1 must resolve and materialize the exact pinned Library version, verify the workbook digest, and independently reconcile its counts/records and underlying GitHub provenance before creating canonical machine-readable datasets. If the exact artifact is inaccessible or mismatched, Stage 1 fails closed. The expected pair count is not independent ground truth.
+Stage 1 must resolve the exact pinned Library path/version, materialize the source, verify its size/digest, and independently reconcile its counts/records and underlying GitHub provenance before creating canonical machine-readable datasets. If the exact artifact is inaccessible or mismatched, Stage 1 fails closed. The expected pair count is not independent ground truth.
 
 Also resolve exact accepted CAP/UV reviewer-policy refs at implementation time.
 
