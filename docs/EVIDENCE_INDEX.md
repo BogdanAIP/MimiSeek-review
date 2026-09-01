@@ -11,6 +11,7 @@ Implementation PR:
 - PR #1 — `Bootstrap continuous development foundation`
 - Base: `09492f1ec8aeb1dfbfc152505d14574016a72870`
 - Development branch: `bootstrap/continuous-development-docs`
+- Exact active HEAD: resolve live from GitHub; do not duplicate a self-referential moving branch SHA here.
 
 Stage 0 scope now includes:
 
@@ -18,14 +19,24 @@ Stage 0 scope now includes:
 - standalone multi-project reviewer-improvement boundary;
 - consumer/evidence/distribution responsibility split;
 - historical-dataset bootstrap role;
-- one ChatGPT entry-point skill contract (`mimiseek-evolve`);
-- separate fresh ChatGPT evaluator skill/authority contract;
-- fail-closed rule when fresh-context evaluation cannot be obtained.
+- two user-facing ChatGPT roles with repository-owned workflow contracts;
+- repository-driven run behavior that continues bootstrap/development until the operational learning pipeline exists;
+- fresh independent update/evaluator authority for candidate promotion;
+- separation of global reviewer promotion from per-consumer installation;
+- fail-closed consumer safe-update semantics and running-run reviewer immutability;
+- fail-closed rule when required independent evaluation, identity, or evidence cannot be established.
+
+Current verification state:
+
+- no GitHub Actions workflow is present for the current Stage 0 branch, and the most recent explicit Actions query before this coherence pass returned zero workflow runs for the then-current head;
+- repeated Codex review attempts on PR #1 returned usage-limit notices, not semantic review findings or PASS evidence;
+- therefore no Codex review or CI result is being treated as Stage 0 acceptance evidence.
 
 Evidence still required before DONE:
 
-- review of the exact final PR head according to the repository's governing acceptance policy;
-- required CI once CI exists;
+- a fresh independent read-only semantic review of the exact final PR head under the repository's governing development/acceptance protocol;
+- if that review reports findings, fixes plus a new independent review of the resulting exact head;
+- merge of the accepted exact head;
 - merged commit recorded here after acceptance.
 
 Accepted head: not yet established.
