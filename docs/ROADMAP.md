@@ -16,10 +16,13 @@ Acceptance:
 - every real update workflow invocation uses a new independent ChatGPT chat, including deferred-distribution reconciliation;
 - global promotion and per-consumer installation are separate, with fail-closed safe-update semantics;
 - the historical Stage 1 bootstrap source has a repository-owned stable locator, exact version, byte size/digest, and fail-closed recovery contract;
+- repository-development terminal review evidence is bound to repository/base/head/reviewer/immutable `review_policy_ref`;
+- after bootstrap, accepted BASE policy governs a PR's terminal acceptance while proposed HEAD governance is target semantics only and cannot govern its own acceptance;
+- the one-time PR #1 no-policy bootstrap exception is explicit and cannot be reused by ordinary later PRs;
 - the repository is the durable handoff between chats;
 - branch/PR workflow and fresh exact-head acceptance review are established.
 
-Stage 0 is not DONE until an independent read-only review returns PASS for the exact final PR head and that accepted head is merged.
+Stage 0 is not DONE until an independent read-only review returns PASS for the exact final PR head under the explicit bootstrap `review_policy_ref` authority and that accepted head is merged.
 
 ## Stage 1 — Bootstrap data + first stable reviewer baseline — NEXT
 
