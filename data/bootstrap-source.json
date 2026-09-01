@@ -1,7 +1,13 @@
 {
   "schema_version": 1,
   "source_kind": "historical_reviewer_statistics_workbook",
-  "repository_path": "reports/bootstrap/reviewer_statistics_improvement_dataset.xlsx",
+  "locator": {
+    "provider": "chatgpt_file_library",
+    "file_id": "file_00000000b9e082108c0fc8a3bbc82163",
+    "version_id": "1",
+    "name": "reviewer_statistics_improvement_dataset.xlsx",
+    "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  },
   "sha256": "6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a",
   "size_bytes": 92864,
   "source_repositories": [
@@ -10,10 +16,15 @@
   ],
   "declared_buggy_fixed_pairs": 84,
   "role": "Stage 1 bootstrap import and regression source",
-  "verification": {
+  "recovery_contract": {
+    "resolve_exact_file_id_and_version": true,
+    "materialize_raw_file": true,
     "digest_required_before_import": true,
+    "fail_closed_if_exact_version_is_unavailable": true
+  },
+  "verification": {
     "counts_must_be_reconciled_from_source": true,
     "underlying_github_provenance_must_remain_traceable": true
   },
-  "notes": "This manifest identifies the immutable workbook snapshot committed with Stage 0. The declared pair count is a reconciliation target, not independent ground truth."
+  "notes": "This repository-owned manifest is the durable locator for the access-controlled immutable Library version used by Stage 1. The declared pair count is a reconciliation target, not independent ground truth."
 }
