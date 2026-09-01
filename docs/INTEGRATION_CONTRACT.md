@@ -76,7 +76,9 @@ Track at least:
 
 ## Consumer safe-update gate
 
-Before creating or applying a reviewer update in a consumer repository, `mimiseek-update` must independently resolve whether the current project state permits that change.
+Before creating or applying a reviewer update in a consumer repository, native role `mimiseek-review-update` must independently resolve whether the current project state permits that change.
+
+Its canonical repository workflow is `.agents/skills/mimiseek-update/SKILL.md`.
 
 A consumer is not safe to update merely because MimiSeek has promoted a new stable.
 
@@ -102,7 +104,7 @@ For a consumer not safe to update:
 - do not modify its reviewer pin;
 - preserve its currently installed reviewer;
 - record the target new stable and defer reason as `PENDING_DISTRIBUTION`;
-- retry safety evaluation on a later `mimiseek-update` invocation.
+- retry safety evaluation on a later `mimiseek-review-update` invocation.
 
 This allows different projects to adopt the same MimiSeek stable at different times without blocking global reviewer evolution.
 
