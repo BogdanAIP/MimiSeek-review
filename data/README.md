@@ -22,6 +22,8 @@ Their positional field contracts are versioned under `data/schemas/`. `data/boot
 
 For numeric review-run metrics, `null` means the authenticated workbook cell was blank/unknown. Literal `0` means the source explicitly recorded zero. Bootstrap import must not convert a blank metric into numerical evidence.
 
+The Stage-1 bootstrap-v1 prefixes are additionally pinned by fixed source-reconciliation digests in `tests/test_bootstrap_data_integrity.py`. Those anchors are intentionally independent of the mutable import report. Changing an anchored bootstrap prefix or its fixed digest requires an explicit new authenticated source reconciliation/version and fresh semantic acceptance; it must not be updated merely to make altered canonical data pass CI. Later operational records may be appended beyond the anchored bootstrap prefixes without rewriting the historical anchor.
+
 `learning-events.jsonl` does not exist yet. Learning events belong to Stage 4 and must not be fabricated during bootstrap.
 
 ## Continuous GitHub evidence intake
