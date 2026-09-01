@@ -92,6 +92,12 @@ jobs:
         run: |
           python tools/collect_github_evidence.py --config config/consumers.json --output-root "${MIMISEEK_EVIDENCE_WORKTREE}/evidence/github" --state-file "${MIMISEEK_EVIDENCE_WORKTREE}/evidence/github/collector-state.json"
 
+      - name: Collect pull request reactions
+        env:
+          MIMISEEK_GITHUB_TOKEN: ${{ steps.source-token.outputs.token }}
+        run: |
+          python tools/collect_github_pr_reactions.py --output-root "${MIMISEEK_EVIDENCE_WORKTREE}/evidence/github"
+
       - name: Commit evidence intake
         shell: bash
         run: |
