@@ -7,9 +7,8 @@ Last synchronized: 2026-09-01
 - Project: MimiSeek Review
 - Repository: `BogdanAIP/MimiSeek-review`
 - Stable branch: `main`
-- Development status: Stage 0 accepted and merged; post-merge synchronization is under review before Stage 1 begins
-- Stage 0 implementation PR: #1 — merged
-- Active synchronization PR: #2 — `Record Stage 0 acceptance and Stage 1 readiness`
+- Development status: Stage 0 complete; Stage 1 is the next canonical development stage
+- Stage 0 implementation foundation: accepted and merged
 - Stable reviewer version: **not established yet**
 - Bootstrap baseline seed: none
 - Candidate reviewer version: none
@@ -29,6 +28,7 @@ Stage 0 is accepted and merged. The accepted foundation establishes:
 - accepted BASE policy governing ordinary future PR acceptance, with proposed HEAD governance treated only as target semantics for the PR that introduces it;
 - the one-time no-policy bootstrap exception as exhausted by PR #1 and unavailable to ordinary later PRs;
 - separate run and fresh independent update ChatGPT roles;
+- durable terminal-review evidence persisted through a channel that does not move the reviewed HEAD before merge;
 - stable, baseline-seed and candidate identities as distinct states;
 - `stable = none` as valid before first authoritative promotion;
 - no bootstrap shortcut for first stable: Stage 1 baseline seed is non-authoritative/non-distributable, Stage 5 creates the first candidate, Stage 7 may create the first stable only on authoritative `PROMOTE`;
@@ -37,7 +37,7 @@ Stage 0 is accepted and merged. The accepted foundation establishes:
 - running work remains bound to the reviewer version/source with which it started;
 - the historical Stage 1 workbook has an identity-bound recoverable locator owned by `data/bootstrap-source.json`.
 
-For exact Stage 0 acceptance evidence, including the terminal review artifact and merge proof, read `docs/EVIDENCE_INDEX.md`.
+For exact Stage 0 acceptance evidence, terminal-review evidence, and merge proof, read `docs/EVIDENCE_INDEX.md` and the GitHub PR evidence it references.
 
 ## Current implementation reality
 
@@ -48,7 +48,7 @@ The operational reviewer-evolution machinery is still intentionally not implemen
 - no CAP/UV repository is pinned to MimiSeek;
 - no collector, normalized outcome store, learning-event builder, learner, regression runner, promotion registry, or consumer safe-window detector/distributor exists yet.
 
-Therefore `mimiseek-review-run` continues repository development rather than pretending later operational stages already exist.
+Therefore `mimiseek-review-run` continues repository development from Stage 1 rather than pretending later operational stages already exist.
 
 ## Stage 1 source
 
@@ -58,11 +58,7 @@ The declared historical BUGGY→FIXED count remains a reconciliation target rath
 
 ## Next canonical action
 
-Obtain a fresh independent exact-head review of PR #2 under the ordinary post-bootstrap accepted-BASE policy.
-
-- If PR #2 returns concrete findings, adjudicate/fix them and repeat fresh review on the resulting exact head.
-- If PR #2 returns CURRENT PASS and no configured gate is missing, merge it.
-- After PR #2 merges, begin Stage 1 — **Bootstrap data + reviewer baseline seed**.
+Begin Stage 1 — **Bootstrap data + reviewer baseline seed**.
 
 Stage 1 must:
 
