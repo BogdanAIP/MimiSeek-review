@@ -51,7 +51,7 @@ Depending on current state this may mean:
 - reconciling previously deferred consumer distributions for an already-promoted stable version;
 - doing nothing when no eligible update or deferred distribution exists.
 
-Do not invent a candidate, update package, evaluation result, or safe rollout window.
+Do not invent a candidate, update package, evaluation result, promotion, pending distribution, or safe rollout window.
 
 ## Independence boundary
 
@@ -81,7 +81,14 @@ Insufficient, stale, mismatched, or ambiguous evidence must not produce promotio
 
 A reviewer may become MimiSeek Review stable without every consumer updating immediately.
 
-After any valid promotion, evaluate each registered consumer independently under its own live governance before changing its reviewer binding.
+Consumer rollout may occur either:
+
+- in the fresh update invocation that authoritatively promotes a candidate; or
+- in a later fresh update invocation that reconciles durable `PENDING_DISTRIBUTION` state for a reviewer version that was already authoritatively promoted.
+
+Before any consumer rollout, independently prove from durable MimiSeek state that the exact rollout target is the current promoted stable and that its promotion evidence is authoritative. A pending/rejected/abstained candidate is never a distribution target. A distribution-only retry must not invent promotion authority from the absence of a candidate.
+
+Evaluate each registered consumer independently under its own live governance before changing its reviewer binding.
 
 An update is permitted only when the current repository/integration contract proves a safe update window.
 
@@ -94,14 +101,15 @@ Already-running work remains bound to the reviewer version with which it started
 ## Execution contract
 
 1. Reconstruct exact live MimiSeek Review state.
-2. Determine whether there is an eligible pending candidate and/or deferred consumer distribution.
+2. Determine whether there is an eligible pending candidate and/or durable deferred consumer distribution.
 3. Verify exact identities, governing policy, evidence and independence prerequisites.
-4. Evaluate candidate promotion only when eligible.
-5. Apply the promotion transaction only when explicitly authorized by the governing result.
-6. Re-resolve each consumer's live state before any rollout change.
-7. Update only consumers proven safe now; defer all others without changing their current binding.
-8. Record immutable promotion/distribution evidence and update canonical owner documents whose truth changed.
-9. Leave all repository state resumable for a completely fresh next chat.
+4. Evaluate candidate promotion only when an eligible candidate exists.
+5. Apply a promotion transaction only when explicitly authorized by the governing result.
+6. Resolve a consumer rollout target only when durable state proves that exact reviewer version is already the current promoted stable with authoritative promotion evidence.
+7. Re-resolve each consumer's live state before any rollout change.
+8. Update only consumers proven safe now; defer all others without changing their current binding.
+9. Record immutable promotion/distribution evidence and update canonical owner documents whose truth changed.
+10. Leave all repository state resumable for a completely fresh next chat.
 
 ## Activation behavior
 
@@ -119,6 +127,7 @@ Never:
 - perform a real update from a chat that does not satisfy the required fresh independent update-context boundary;
 - promote from incomplete, stale, mismatched, or non-independent evidence;
 - weaken the governing evaluation policy to allow a candidate through;
+- distribute a reviewer version whose authoritative prior promotion and current stable identity are not proven;
 - modify a consumer whose safe update window is not proven;
 - switch the reviewer version of already-running work;
 - bypass consumer-specific governance or compatibility requirements.
