@@ -87,18 +87,22 @@ Acceptance:
 - different-head fixes are not mislabeled as reviewer misses;
 - events link back to source evidence.
 
-## Stage 5 — Learner + candidate generation
+## Stage 5 — Fixed evaluation gate + learner + candidate generation
 
-Goal: convert accumulated evidence into the first or next transferable reviewer candidate.
+Goal: fix the candidate's exam first, then convert accumulated evidence into the first or next transferable reviewer candidate.
 
-Before any stable exists, the Stage 1 baseline seed plus governed learning evidence may be used to create the **first candidate**. After a stable exists, later candidates evolve from accepted stable/evidence according to lifecycle policy.
+Before candidate creation, the quantitative/absolute evaluation policy that will govern that candidate must already be accepted as a separate repository-development change under `docs/EVALUATION_POLICY.md`. The candidate identity binds that immutable evaluation-policy identity; learner/candidate work cannot alter it for the same promotion attempt.
+
+Before any stable exists, the Stage 1 baseline seed plus governed learning evidence may then be used to create the **first candidate**. After a stable exists, later candidates evolve from accepted stable/evidence according to lifecycle policy.
 
 Acceptance:
 
+- governing evaluation-policy identity was accepted before candidate creation;
 - proposals are generic mechanics, not SHA/file memorization;
 - each proposal cites learning events;
 - candidate identity is immutable and distinct from both baseline seed and stable;
-- learner creates candidate but cannot promote it;
+- candidate identity binds the preaccepted evaluation-policy identity;
+- learner creates candidate but cannot promote it or change its governing evaluation policy;
 - potentially affected protected capabilities are declared.
 
 ## Stage 6 — Automated regression / protected-capability evaluation
@@ -112,6 +116,7 @@ Acceptance:
 - false-positive/regression behavior is measured;
 - protected capabilities are checked;
 - candidate cannot modify the evaluation policy governing the run;
+- candidate evaluation uses the immutable policy identity bound before candidate creation;
 - when a stable exists, stable-versus-candidate comparison is included where required;
 - when no stable exists yet, the first candidate is still evaluated against the fixed corpus/protected capabilities and may use the non-authoritative baseline seed only as comparison evidence, never as promotion authority;
 - a passing candidate is frozen into exactly one durable independent-update package/state.
@@ -126,6 +131,7 @@ Acceptance:
 
 - second chat reconstructs the frozen pending package independently from Git/GitHub;
 - evaluator is separate from learner/candidate development context;
+- candidate/policy identities match the immutable package created before evaluation;
 - insufficient evidence yields `ABSTAIN`;
 - failed independence or identity checks fail closed;
 - only authoritative `PROMOTE` may advance global MimiSeek stable;
