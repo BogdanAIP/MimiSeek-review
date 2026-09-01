@@ -25,9 +25,9 @@ Acceptance:
 
 Stage 0 acceptance and merge evidence are owned by `docs/EVIDENCE_INDEX.md`; this roadmap records only stage status, sequencing, and acceptance conditions.
 
-## Stage 1 — Bootstrap data + reviewer baseline seed — NEXT
+## Stage 1 — Bootstrap data + reviewer baseline seed — IN PROGRESS
 
-Goal: reconstruct MimiSeek's historical learning memory and derive a reusable **unreleased baseline seed** for later candidate generation without inventing a stable version.
+Goal: reconstruct MimiSeek's historical learning memory, prevent new review evidence from being lost while bootstrap continues, and derive a reusable **unreleased baseline seed** for later candidate generation without inventing a stable version.
 
 Work:
 
@@ -35,6 +35,9 @@ Work:
 - import the reviewer statistics workbook into canonical text-based normalized data;
 - preserve supported historical BUGGY→FIXED cases as regression/bootstrap evidence after reconciliation;
 - retain Excel as a bootstrap/report artifact, not the canonical automation source of truth;
+- establish a bounded **non-authoritative GitHub evidence-intake foundation** so CAP/UV reviews produced during Stage 1 are automatically preserved instead of waiting for a later manual workbook rebuild;
+- backfill intake with deliberate overlap against the bootstrap workbook and preserve immutable GitHub identities so later normalization can deduplicate safely;
+- keep the early intake foundation separate from Stage 3 acceptance: it stores source snapshots only and cannot infer adjudication, create learning events, or become promotion authority;
 - resolve exact accepted CAP and UV review-policy refs;
 - classify rules as generic or project-specific;
 - derive a reusable reviewer baseline seed without weakening either consumer;
@@ -47,9 +50,13 @@ Acceptance:
 - source path/version/size/digest are verified before import;
 - imported counts/identities reconcile with the audited source workbook and underlying provenance;
 - regression cases are machine-readable and traceable to evidence;
+- registered-consumer GitHub intake is brought current to a durable collector watermark before the baseline seed is derived;
+- raw intake remains explicitly non-authoritative and missing adjudication remains unknown;
 - baseline-seed identity is immutable and reproducible;
 - baseline seed is explicitly non-stable/non-distributable;
 - project-specific rules remain project-local.
+
+The early collector foundation is authorized only to stop evidence loss during bootstrap. It does **not** mean Stage 3 is complete.
 
 ## Stage 2 — Consumer binding schema + evidence export contract
 
@@ -59,15 +66,16 @@ Acceptance:
 
 - both repositories have or can consume an explicit machine-readable binding schema that can represent `consumer_installed = none` before first rollout;
 - both can export/import structured review runs and finding dispositions without pretending they already use MimiSeek stable;
+- fresh ordinary-ChatGPT terminal results can be durably exported with exact repository/base/head/reviewer/policy identity so collection no longer depends on chat history;
 - future reviewer updates are defined as explicit and auditable;
 - project-local policy remains authoritative;
 - stale/mismatched reviewer identity fails closed when a binding exists;
 - already-running runs will remain bound to the reviewer version with which they started once MimiSeek is installed;
-- Stage 2 does not create or modify a CAP/UV reviewer pin merely to satisfy its acceptance criteria.
+- Stage 2 does not create or modify a CAP/UV MimiSeek pin merely to satisfy its acceptance criteria.
 
 ## Stage 3 — Collector + normalized outcome store
 
-Goal: let the run workflow automatically gather new accepted review evidence from all registered consumers/evidence producers, including evidence created before their first MimiSeek installation when provenance is sufficient.
+Goal: turn the Stage 1 intake foundation plus Stage 2 structured exports into the complete operational collector/outcome store used by the run workflow.
 
 Acceptance:
 
@@ -75,7 +83,9 @@ Acceptance:
 - exact identities and provenance are preserved;
 - missing adjudication stays unknown;
 - a closed PR can be reconstructed into normalized review outcomes without chat history;
-- reviewer source/version remains explicit rather than assuming every imported run used MimiSeek.
+- reviewer source/version remains explicit rather than assuming every imported run used MimiSeek;
+- bootstrap workbook records, overlapping raw GitHub intake, and structured consumer exports deduplicate without collapsing different exact HEADs;
+- the operational normalized outcome store, not the raw intake branch, is the canonical learning input.
 
 ## Stage 4 — Learning events
 

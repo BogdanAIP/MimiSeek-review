@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BogdanAIP/MimiSeek-review/data/schemas/github-evidence-collector-state-v1.schema.json",
+  "title": "MimiSeek GitHub evidence collector state v1",
+  "type": "object",
+  "required": ["schema_version", "repositories"],
+  "properties": {
+    "schema_version": {"const": "github_evidence_collector_state_v1"},
+    "last_successful_scan_started_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "repositories": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["watermark", "backfill_from", "last_selected_pr_count"],
+        "properties": {
+          "watermark": {"type": "string"},
+          "backfill_from": {"type": "string"},
+          "last_selected_pr_count": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
