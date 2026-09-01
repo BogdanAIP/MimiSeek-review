@@ -32,14 +32,20 @@ adjudicate + fix confirmed findings
     ↓
 repeat review on the new exact head when fixes move HEAD
     ↓
-CURRENT exact-head + exact-policy acceptance evidence
+CURRENT exact-head + exact-policy terminal result
+    ↓
+persist terminal result through non-HEAD-mutating durable evidence channel
     ↓
 merge
     ↓
-update CURRENT_STATE / ROADMAP / EVIDENCE_INDEX as applicable
+index accepted evidence / update current state as applicable
 ```
 
 A terminal review result is current only for the exact repository/base/head/reviewer/`review_policy_ref` identity it evaluated. Any consequence-bearing fix that moves HEAD makes the earlier terminal review stale for merge acceptance.
+
+The terminal result itself must also be durable and independently resolvable. Persist it before merge through a channel that does **not** change the reviewed HEAD, for example a top-level PR comment containing or stably pointing to the exact result, or another immutable/stable evidence locator accepted by governing policy. Record enough identity to reconstruct repository, BASE, HEAD, reviewer identity/context, `review_policy_ref`, terminal status, validity and evidence location. Do not commit a result into the reviewed branch after PASS unless you intend to invalidate that PASS and run a new exact-head review.
+
+After merge, `docs/EVIDENCE_INDEX.md` may index the accepted result, merge identity and other evidence without pretending that the post-merge index update retroactively created the independent review.
 
 Consumer repositories may use different local review sequences. MimiSeek only consumes their accepted structured outcomes through the integration contract.
 
@@ -125,6 +131,8 @@ Before merge, use a new ordinary ChatGPT context that is read-only with respect 
 
 The independent reviewer must bind its result to repository/base/head/reviewer/`review_policy_ref` and report concrete actionable findings or an exact-head PASS. If it cannot establish identity, policy authority, scope, or required evidence, acceptance fails closed rather than becoming an optimistic PASS.
 
+After a terminal result is obtained and before merge, the development workflow must preserve that exact result durably without moving HEAD. The durable record may be created by the development workflow because it is evidence preservation, not semantic self-acceptance; however, it must preserve the independent result faithfully and must not manufacture reviewer identity, findings, PASS state, or independence claims absent from the result.
+
 ## Cross-chat continuity
 
 Do not create `HANDOFF-<date>.md`, chat transcripts, daily logs, or duplicate current-state files.
@@ -146,4 +154,4 @@ A learner-generated reviewer candidate is a product artifact, not an accepted ch
 
 The learner may create candidate changes, but evaluation-policy authority and promotion evidence remain separate. A failure to obtain required fresh independent evaluation leaves the current stable reviewer unchanged.
 
-The same fail-closed principle applies to repository development: incomplete, stale, wrong-policy, or ambiguously governed acceptance evidence leaves the PR unmerged.
+The same fail-closed principle applies to repository development: incomplete, stale, wrong-policy, non-durable, or ambiguously governed acceptance evidence leaves the PR unmerged.
