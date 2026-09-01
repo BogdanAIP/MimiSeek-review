@@ -145,15 +145,25 @@ class GitHubClient:
                 return result
             page += 1
 
-    def pulls_updated_since(self, repository: str, since: datetime) -> list[dict[str, Any]]:
+    def pulls_to_refresh(self, repository: str, since: datetime) -> list[dict[str, Any]]:
         owner, name = split_repository(repository)
+        path = f"/repos/{owner}/{name}/pulls"
+
+        # Re-read every open PR because GitHub reactions do not reliably advance
+        # the PR/issue updated_at timestamp. A clean Codex review may exist only
+        # as a PR +1 reaction, so an updated_at-only poll can silently miss it.
+        open_prs = self.paged(
+            path,
+            {"state": "open", "sort": "updated", "direction": "desc"},
+        )
+
+        recent_closed: list[dict[str, Any]] = []
         page = 1
-        result: list[dict[str, Any]] = []
         while True:
             payload = self.get(
-                f"/repos/{owner}/{name}/pulls",
+                path,
                 {
-                    "state": "all",
+                    "state": "closed",
                     "sort": "updated",
                     "direction": "desc",
                     "per_page": 100,
@@ -166,15 +176,18 @@ class GitHubClient:
                 break
             stop = False
             for pr in payload:
-                updated_at = parse_z(pr["updated_at"])
-                if updated_at < since:
+                if parse_z(pr["updated_at"]) < since:
                     stop = True
                     break
-                result.append(pr)
+                recent_closed.append(pr)
             if stop or len(payload) < 100:
                 break
             page += 1
-        return result
+
+        by_number = {int(pr["number"]): pr for pr in recent_closed}
+        for pr in open_prs:
+            by_number[int(pr["number"])] = pr
+        return [by_number[number] for number in sorted(by_number)]
 
 
 def compact_user(raw: Any) -> dict[str, Any] | None:
@@ -388,7 +401,7 @@ def collect(
             continue
         repo_state = state["repositories"].setdefault(consumer.repository, {})
         since = calculate_since(consumer, repo_state, overlap_minutes)
-        prs = client.pulls_updated_since(consumer.repository, since)
+        prs = client.pulls_to_refresh(consumer.repository, since)
 
         repo_changed = 0
         for listed_pr in sorted(prs, key=lambda item: int(item["number"])):
