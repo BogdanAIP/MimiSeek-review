@@ -10,30 +10,80 @@
     "pr_number",
     "pull_request",
     "issue_comments",
+    "issue_reactions",
     "reviews",
     "review_comments",
     "commits",
     "source"
   ],
   "properties": {
-    "schema_version": {"const": "github_pr_evidence_snapshot_v1"},
+    "schema_version": {
+      "const": "github_pr_evidence_snapshot_v1"
+    },
     "authority": {
       "type": "object",
-      "required": ["role", "rules"],
+      "required": [
+        "role",
+        "rules"
+      ],
       "properties": {
-        "role": {"const": "non_authoritative_source_snapshot"},
-        "rules": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+        "role": {
+          "const": "non_authoritative_source_snapshot"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
       },
       "additionalProperties": false
     },
-    "repository": {"type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$"},
-    "pr_number": {"type": "integer", "minimum": 1},
-    "pull_request": {"type": "object"},
-    "issue_comments": {"type": "array", "items": {"type": "object"}},
-    "reviews": {"type": "array", "items": {"type": "object"}},
-    "review_comments": {"type": "array", "items": {"type": "object"}},
-    "commits": {"type": "array", "items": {"type": "object"}},
-    "source": {"type": "object"}
+    "repository": {
+      "type": "string",
+      "pattern": "^[^/\\s]+/[^/\\s]+$"
+    },
+    "pr_number": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "pull_request": {
+      "type": "object"
+    },
+    "issue_comments": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "issue_reactions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "reviews": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "review_comments": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "commits": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "source": {
+      "type": "object"
+    }
   },
   "additionalProperties": false
 }
