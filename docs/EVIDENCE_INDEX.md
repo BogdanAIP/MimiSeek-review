@@ -12,6 +12,11 @@ Implementation and acceptance identity:
 - BASE: `09492f1ec8aeb1dfbfc152505d14574016a72870`
 - accepted exact PR HEAD: `1588e196051917bf35483ba05b5f7f36fd00c468`
 - bootstrap `review_policy_ref`: `09492f1ec8aeb1dfbfc152505d14574016a72870`
+- terminal review artifact: `docs/evidence/stage0-pr1-terminal-review.md`
+- terminal review artifact Git blob: `a83072fce696e0805189d7b21f61152e2207a246`
+- repository-assigned reviewer instance identity: `ordinary_chat_fresh:pr1:1588e196051917bf35483ba05b5f7f36fd00c468:2026-09-01T13:59:11+03:00`
+- reviewer class/context reported by the terminal result: `ordinary_chat_fresh`
+- review mode reported by the terminal result: `read_only`
 - final independent review: `CURRENT PASS`
 - reported findings: `0`
 - rejected candidates: `15`
@@ -20,6 +25,8 @@ Implementation and acceptance identity:
 - squash-merge commit on `main`: `3e482964daaae5aefad2eeaf832836cd340ac5f5`
 - accepted-head Git tree: `d2c5ff390312ace75770b626ef62e4343977d8c3`
 - merged-commit Git tree: `d2c5ff390312ace75770b626ef62e4343977d8c3`
+
+The terminal review artifact preserves the complete independent `REVIEW_RESULT_V1` verbatim and records a durable reviewer-instance identifier derived only from fields emitted by that review result. It does not invent a platform conversation identifier that the result did not expose. A fresh chat can resolve the artifact by repository path and immutable Git blob, then reconstruct the exact repository/base/head/reviewer-context/`review_policy_ref`/status/timestamp binding without previous-chat memory.
 
 The accepted exact HEAD and squash-merge commit have the same Git tree, proving that the merged repository contents are the exact contents independently accepted by the terminal review.
 
@@ -37,7 +44,7 @@ Stage 0 established:
 - accepted BASE policy governing ordinary future PR acceptance, with HEAD governance target-only for the PR that introduces it;
 - the explicit one-time PR #1 bootstrap exception, now exhausted by the accepted merge;
 - no bootstrap shortcut for first stable admission or first consumer installation;
-- one canonical owner for review chronology: this evidence index.
+- one canonical owner for review chronology and exact Stage 0 acceptance evidence: this evidence index, with source review content stored in the terminal-review artifact above.
 
 ### Review/remediation chronology
 
@@ -61,6 +68,8 @@ Stage 0 established:
    - result became STALE when HEAD moved.
 
 4. Exact head `1588e196051917bf35483ba05b5f7f36fd00c468`
+   - durable source result: `docs/evidence/stage0-pr1-terminal-review.md` at Git blob `a83072fce696e0805189d7b21f61152e2207a246`;
+   - reviewer instance identity: `ordinary_chat_fresh:pr1:1588e196051917bf35483ba05b5f7f36fd00c468:2026-09-01T13:59:11+03:00`;
    - fresh independent review: `PASS`;
    - review validity: `CURRENT` at final live re-resolution;
    - reported findings: `0`;
