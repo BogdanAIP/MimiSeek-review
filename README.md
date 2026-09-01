@@ -6,12 +6,14 @@ The repository owns the generic reviewer lifecycle, versioning, learning history
 
 ## ChatGPT usage
 
-Canonical workflows live in:
+MimiSeek Review exposes two ChatGPT roles:
 
-- `.agents/skills/mimiseek-run/SKILL.md` — user command: **«Запусти Мимисик»**;
-- `.agents/skills/mimiseek-update/SKILL.md` — in a new independent chat: **«Обнови Мимисик»**.
+- native skill `mimiseek-review-run`, with canonical repository workflow `.agents/skills/mimiseek-run/SKILL.md`;
+- native skill `mimiseek-review-update`, with canonical repository workflow `.agents/skills/mimiseek-update/SKILL.md`, used in a new independent chat for promotion/distribution authority.
 
-On ChatGPT surfaces where Personal Skills cannot be installed, use a dedicated ChatGPT Project with `docs/CHATGPT_PROJECT_INSTRUCTIONS.md` as its Project Instructions. The Project is only a launcher/router; the repository `SKILL.md` files remain authoritative.
+The installed skill is an entry point; the repository is the evolving source of truth. During bootstrap, the run role continues the next canonical repository-development action rather than pretending the later learning pipeline already exists.
+
+On ChatGPT surfaces where native skills cannot be installed, `docs/CHATGPT_PROJECT_INSTRUCTIONS.md` may be used only as an equivalent routing/bootstrap layer.
 
 ## Start here
 
