@@ -42,7 +42,52 @@ The following concerns are reviewer-specific and belong here as research/candida
 - false-positive/recall evaluation of context strategies;
 - reviewer confidentiality risks when private repository content and external web research coexist.
 
-## 2. Durable CAP experiment sources
+## 2. Accepted reviewer-specific lessons already present in CAP
+
+The accepted CAP `main` at the handoff baseline `90a8e16e6a1badecd3315968339ca691634b7ee4` already contains reviewer-specific research that should be treated as MimiSeek input rather than re-invented later.
+
+Relevant durable sources include:
+
+- `project-context/AUTOMATIC_REVIEWER_RESEARCH.md`;
+- `.agents/skills/code-review/SKILL.md`;
+- `project-context/BENCHMARK_EVALUATION_STRATEGY.md`;
+- the accepted automatic-review PR sequence #140, #141 and #142.
+
+Reusable reviewer-methodology lessons include:
+
+- bind review to exact repository / PR / BASE / HEAD / governing-policy identity;
+- use a genuinely fresh independent ordinary-ChatGPT context when independence is required;
+- reconstruct evidence independently rather than trusting development-chat advocacy;
+- treat proposed HEAD governance as target semantics when accepted BASE policy governs the review;
+- falsify candidate findings before reporting them;
+- require structurally complete finding evidence rather than accepting a count or severity label alone;
+- distinguish a current semantic result from stale, malformed, pending, ambiguous or insufficient evidence;
+- treat `ABSTAIN`/insufficient evidence as a safe non-success rather than manufacturing PASS;
+- keep reviewer authority least-privileged and avoid giving the reviewer consequence-bearing repository mutation authority merely for convenience;
+- do not let the reviewer become a second development planner whose own state silently controls the consumer project.
+
+These are methodology/evaluation inputs. CAP-specific lock/checkpoint/`procedure_run` state implementation remains consumer/orchestration infrastructure and should not be copied as generic MimiSeek reviewer semantics.
+
+### Quality-evaluation lessons to preserve
+
+CAP research explicitly separated two planes:
+
+1. **semantic reviewer quality** — does the reviewer actually find real defects with acceptable false positives?;
+2. **review lifecycle reliability** — was the fresh context launched, bound, delivered, captured and reconciled correctly?
+
+A faster or more automatic launch path is not an improvement if semantic review quality regresses.
+
+Reviewer-specific benchmark/research candidates already identified by CAP include:
+
+- Harbor as an evaluation harness only, not reviewer production authority;
+- ReviewBench as a small initial review-quality baseline;
+- SWE-Review-Bench as a broader decision/revision control;
+- CR-Bench / CR-Evaluator as a signal-to-noise / false-positive control;
+- real adjudicated CAP/UV BUGGY→FIXED and known-finding cases as project-derived regression evidence.
+
+The first benchmark run should establish a measured baseline rather than inventing an arbitrary release threshold. MimiSeek's own `EVALUATION_POLICY.md` remains the authority for eventual promotion criteria.
+
+## 3. Durable CAP experiment sources
 
 ### PR #145 — automatic Temporary Chat reviewer experiment
 
@@ -72,10 +117,10 @@ This is evidence that the fresh Temporary Chat approach can perform non-trivial 
 
 Important experiment paths at exact CAP head above include:
 
-- `experiments/chatgpt-temporary-reviewer/`
-- `scripts/launch-temporary-reviewer-probe.ps1`
-- `tests/test_temporary_reviewer_physical_experiment.py`
-- `experiments/chatgpt-snapshot-reviewer/build_snapshot.py`
+- `experiments/chatgpt-temporary-reviewer/`;
+- `scripts/launch-temporary-reviewer-probe.ps1`;
+- `tests/test_temporary_reviewer_physical_experiment.py`;
+- `experiments/chatgpt-snapshot-reviewer/build_snapshot.py`.
 
 The loopback/browser harness is experiment transport, not a MimiSeek production design.
 
@@ -91,7 +136,7 @@ State at handoff: **DEFER**. The earlier attempt to select a bounded private evi
 
 The useful research conclusions to preserve are below.
 
-## 3. Repository source authority
+## 4. Repository source authority
 
 For a final provider-backed PR review, a developer working tree must not be silently trusted as current.
 
@@ -115,7 +160,7 @@ A GitHub-generated source ZIP may be tested as a transport format, but should no
 
 For committed local-only development, a pre-PR review may bind to exact local commits. Dirty/local-only work requires a frozen byte snapshot/digest. If the same work is later pushed, a new provider-backed exact review is required; the local preview must not silently become remote acceptance.
 
-## 4. Whole-repository context hypothesis
+## 5. Whole-repository context hypothesis
 
 Research against professional/repository-aware tools suggests that strong review should not be modeled as `diff + a few manually preselected files`.
 
@@ -135,7 +180,7 @@ The reusable conclusion is not that any one implementation is already selected. 
 
 A graph can miss dynamic calls, reflection, generated code, unusual configuration coupling, runtime registration and unsupported languages. Therefore `not present in graph` must never mean `not relevant`.
 
-## 5. Direct snapshot/attachment candidates
+## 6. Direct snapshot/attachment candidates
 
 For a private repository, one investigated path is a deterministic representation built from exact Git objects and directly attached to a fresh Temporary Chat rather than persisted in ChatGPT Library.
 
@@ -158,7 +203,7 @@ Snapshot semantics considered useful:
 
 This remains a candidate to evaluate, not a selected MimiSeek architecture.
 
-## 6. Cross-file control
+## 7. Cross-file control
 
 CAP experiment PR #148 was created specifically to test whether a reviewer can discover a defect that requires an **unchanged related file**.
 
@@ -174,7 +219,7 @@ Structural property: GitHub reports exactly one changed source file. The semanti
 
 This is a useful future regression/context-recall case. It should be imported only through normal MimiSeek evidence/provenance rules rather than copied as ground truth merely because this document references it.
 
-## 7. Suggested future evaluation ladder
+## 8. Suggested future evaluation ladder
 
 When MimiSeek reaches the stage that owns reviewer candidate/evaluation mechanics, compare context strategies on the **same cases** rather than selecting by convenience:
 
@@ -198,7 +243,7 @@ Measure at least:
 - public/private evidence separation and leakage risk;
 - reproducibility of the exact evidence identity used by the reviewer.
 
-## 8. What this handoff does not decide
+## 9. What this handoff does not decide
 
 This document does **not** decide:
 
@@ -213,7 +258,7 @@ This document does **not** decide:
 
 All promotion, learning, regression import and consumer-installation authority remains governed by MimiSeek's existing lifecycle, evaluation policy and roadmap.
 
-## 9. Stage placement
+## 10. Stage placement
 
 Do not merge this research into current Stage 1 claims as if implementation exists.
 
