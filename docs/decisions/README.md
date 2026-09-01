@@ -18,3 +18,7 @@ Current records:
 - `0003-stable-candidate-separation.md`
 - `0004-fresh-independent-promotion-evaluator.md`
 - `0005-evaluation-policy-separation.md`
+- `0006-evolution-system-not-consumer-review-orchestrator.md`
+- `0007-two-chat-two-skill-evolution.md`
+- `0008-fresh-evaluator-replaces-routine-human-technical-promotion.md`
+- `0009-consumer-safe-update-windows.md`
