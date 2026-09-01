@@ -40,22 +40,30 @@ For exact active HEAD, resolve the live PR/branch ref from GitHub. Do not duplic
 - Canonical product, architecture, current-state, roadmap, development-protocol, lifecycle, evaluation-policy, integration, evidence, and decision owners exist.
 - Stale one-skill `mimiseek-evolve` wording has been removed from the canonical product/development/evidence owners.
 - The two-chat role split and repository-driven bootstrap behavior are now aligned across the primary governance documents.
-- The audited historical workbook needed for Stage 1 is pinned in-repository at `reports/bootstrap/reviewer_statistics_improvement_dataset.xlsx`; its digest/provenance manifest is `data/bootstrap-source.json`.
+- The audited historical workbook needed for Stage 1 has a repository-owned durable locator in `data/bootstrap-source.json`, binding exact ChatGPT File Library `file_id` + `version_id`, byte size and SHA-256. A fresh chat can recover that exact access-controlled version without prior-chat handoff; inability to recover it fails closed.
 - There is currently no configured GitHub Actions workflow providing Stage 0 CI acceptance evidence.
 - Codex review attempts on PR #1 have been blocked by usage limits and are not acceptance evidence.
-- A fresh independent exact-head semantic review of the final PR head is still required.
+- The independent review of the earlier head `cd5090b38e556636bea6c3f6dd4e0e74c2f41dff` returned three findings. Those findings were adjudicated as confirmed and remediated; because the fixes moved HEAD, that review is stale for merge acceptance.
+- A fresh independent exact-head semantic review of the final post-fix PR head is still required.
 
 ## Historical data role
 
-The audited reviewer-statistics workbook created before this repository is the bootstrap learning/regression source. Its Stage 0 snapshot is committed at `reports/bootstrap/reviewer_statistics_improvement_dataset.xlsx` and identified by `data/bootstrap-source.json` with SHA-256 `6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a`.
+The audited reviewer-statistics workbook created before this repository is the bootstrap learning/regression source. Its exact source identity is owned by `data/bootstrap-source.json`:
 
-The manifest records 84 BUGGY→FIXED cases as the expected reconciliation target. Stage 1 must verify the digest and independently reconcile the workbook contents/counts and underlying GitHub provenance before converting them to canonical machine-readable datasets.
+- provider: ChatGPT File Library;
+- file id: `file_00000000b9e082108c0fc8a3bbc82163`;
+- version id: `1`;
+- file name: `reviewer_statistics_improvement_dataset.xlsx`;
+- byte size: `92864`;
+- SHA-256: `6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a`.
 
-Excel remains a human report/import artifact, not the only source of truth after Stage 1 import.
+The manifest records 84 BUGGY→FIXED cases as the expected reconciliation target. Stage 1 must materialize the exact pinned version, verify the digest, and independently reconcile workbook contents/counts and underlying GitHub provenance before converting them to canonical machine-readable datasets.
+
+Excel remains a human report/import artifact, not the canonical automation truth after Stage 1 import.
 
 ## What is intentionally not done yet
 
-- Historical workbook data are not yet imported into canonical MimiSeek datasets; only the immutable bootstrap source snapshot and its identity are now repository-owned.
+- Historical workbook data are not yet imported into canonical MimiSeek datasets; Stage 0 only makes the exact bootstrap input recoverable and identity-bound.
 - No CAP/UV `code-review` skill has yet been selected or derived as first MimiSeek stable.
 - No collector, outcome store, learner, regression runner, promotion registry, or consumer safe-window detector/distributor implementation exists yet.
 - Therefore the run workflow today continues the current repository-development work rather than pretending the later operational learning pipeline already exists.
@@ -73,13 +81,14 @@ Run a fresh independent read-only semantic review of PR #1 at its exact live fin
 
 Stage 1 then performs two bootstrap jobs together:
 
-1. verify and import/reconcile the pinned historical reviewer workbook into canonical MimiSeek data, preserving the supported BUGGY→FIXED cases and provenance;
+1. recover, authenticate, import and reconcile the exact pinned historical reviewer workbook into canonical MimiSeek data, preserving supported BUGGY→FIXED cases and provenance;
 2. inventory accepted CAP/UV review policies at exact refs and derive the first reusable stable MimiSeek reviewer while retaining project-specific overlays.
 
 Consumer integration must also define how CAP/UV expose a trustworthy live `SAFE_TO_UPDATE` / defer state so MimiSeek never changes reviewer policy while an agent, frozen exact-head gate, or protected project stage is in progress.
 
 ## Open risks
 
+- The external bootstrap artifact is access-controlled; loss of access to the exact pinned Library version must halt Stage 1 until an explicitly governed replacement/provenance migration is accepted.
 - A naive common baseline could silently lose CAP- or UV-specific obligations.
 - Historical outcomes are selection-biased; they are learning/regression evidence, not a neutral leaderboard.
 - Consumer safe-window detection must not infer safety from silence or absence of visible GitHub activity.
