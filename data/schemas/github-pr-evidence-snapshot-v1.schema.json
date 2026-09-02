@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BogdanAIP/MimiSeek-review/data/schemas/github-pr-evidence-snapshot-v1.schema.json",
+  "title": "MimiSeek GitHub PR evidence snapshot v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "authority",
+    "repository",
+    "repository_id",
+    "repository_node_id",
+    "pr_number",
+    "pull_request",
+    "issue_comments",
+    "issue_reactions",
+    "reviews",
+    "review_comments",
+    "commits",
+    "source"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "github_pr_evidence_snapshot_v1"
+    },
+    "authority": {
+      "type": "object",
+      "required": ["role", "rules"],
+      "properties": {
+        "role": {"const": "non_authoritative_source_snapshot"},
+        "rules": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[^/\\s]+/[^/\\s]+$"
+    },
+    "repository_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "repository_node_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pr_number": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "pull_request": {
+      "type": "object",
+      "required": ["id", "node_id", "number", "state", "updated_at", "base", "head"],
+      "properties": {
+        "id": {"type": "integer", "minimum": 1},
+        "node_id": {"type": "string", "minLength": 1},
+        "number": {"type": "integer", "minimum": 1},
+        "state": {"type": "string", "minLength": 1},
+        "updated_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "base": {
+          "type": "object",
+          "required": ["ref", "sha", "repo", "repo_id", "repo_node_id"],
+          "properties": {
+            "ref": {"type": ["string", "null"]},
+            "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "repo": {"type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$"},
+            "repo_id": {"type": "integer", "minimum": 1},
+            "repo_node_id": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
+        "head": {
+          "type": "object",
+          "required": ["ref", "sha", "repo", "repo_id", "repo_node_id"],
+          "properties": {
+            "ref": {"type": ["string", "null"]},
+            "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "repo": {"type": ["string", "null"]},
+            "repo_id": {"type": ["integer", "null"], "minimum": 1},
+            "repo_node_id": {"type": ["string", "null"]}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "issue_comments": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "issue_reactions": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "reviews": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "review_comments": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "commits": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "source": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,128 @@
+name: Collect review evidence
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mimiseek-github-evidence-collector
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    if: ${{ vars.MIMISEEK_COLLECTOR_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout MimiSeek
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+
+      - name: Verify effective canonical ref boundary
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python tools/collect_github_evidence.py
+          --verify-canonical-ref-boundary
+          --required-ruleset mimiseek-canonical-main
+
+      - name: Resolve source App scope
+        id: source-scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+
+          config = json.loads(Path("config/consumers.json").read_text(encoding="utf-8"))
+          repositories = [
+              item["repository"]
+              for item in config["consumers"]
+              if item.get("evidence", {}).get("enabled", True)
+          ]
+          owners = {repository.split("/", 1)[0] for repository in repositories}
+          if len(owners) != 1:
+              raise SystemExit(
+                  "collector v1 requires all enabled repositories to share one GitHub App installation owner"
+              )
+          owner = next(iter(owners))
+          names = [repository.split("/", 1)[1] for repository in repositories]
+          print(f"owner={owner}")
+          print("repositories<<MIMISEEK_REPOSITORIES")
+          print("\n".join(names))
+          print("MIMISEEK_REPOSITORIES")
+          PY
+
+      - name: Create read-only source token
+        id: source-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ secrets.MIMISEEK_COLLECTOR_CLIENT_ID }}
+          private-key: ${{ secrets.MIMISEEK_COLLECTOR_PRIVATE_KEY }}
+          owner: ${{ steps.source-scope.outputs.owner }}
+          repositories: ${{ steps.source-scope.outputs.repositories }}
+          permission-contents: read
+          permission-issues: read
+          permission-pull-requests: read
+
+      - name: Prepare non-authoritative evidence worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="evidence/github-intake"
+          worktree="${RUNNER_TEMP}/mimiseek-evidence"
+          if git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1; then
+            git fetch origin "${branch}:${branch}"
+          else
+            git branch "${branch}" "${GITHUB_SHA}"
+          fi
+          git worktree add "${worktree}" "${branch}"
+          mkdir -p "${worktree}/evidence/github"
+          {
+            echo "MIMISEEK_EVIDENCE_WORKTREE=${worktree}"
+            echo "MIMISEEK_EVIDENCE_BRANCH=${branch}"
+          } >> "$GITHUB_ENV"
+
+      - name: Collect source snapshots
+        env:
+          MIMISEEK_GITHUB_TOKEN: ${{ steps.source-token.outputs.token }}
+        run: |
+          python tools/collect_github_evidence.py --config config/consumers.json --output-root "${MIMISEEK_EVIDENCE_WORKTREE}/evidence/github" --state-file "${MIMISEEK_EVIDENCE_WORKTREE}/evidence/github/collector-state.json"
+
+      - name: Re-verify effective canonical ref boundary before push
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python tools/collect_github_evidence.py
+          --verify-canonical-ref-boundary
+          --required-ruleset mimiseek-canonical-main
+
+      - name: Commit evidence intake
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${MIMISEEK_EVIDENCE_WORKTREE}"
+          git config user.name "mimiseek-evidence[bot]"
+          git config user.email "mimiseek-evidence[bot]@users.noreply.github.com"
+          git add evidence/github
+          if git diff --cached --quiet; then
+            echo "No evidence changes."
+            exit 0
+          fi
+          git commit -m "evidence: collect GitHub review intake"
+          git push origin "HEAD:${MIMISEEK_EVIDENCE_BRANCH}"

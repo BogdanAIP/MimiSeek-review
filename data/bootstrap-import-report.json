@@ -1,0 +1,104 @@
+{
+  "authority": {
+    "canonical_datasets": [
+      "data/review-runs.jsonl",
+      "data/findings.jsonl",
+      "data/regression-cases.jsonl"
+    ],
+    "report_role": "derived verification evidence; not canonical source identity",
+    "source_manifest": "data/bootstrap-source.json"
+  },
+  "canonical_encoding": {
+    "column_contract": "data/schemas/*-v1.schema.json custom x-columns metadata",
+    "format": "JSON Lines, one positional JSON array per line",
+    "reason": "compact, deterministic, diffable bootstrap representation; schemas define stable positional meaning"
+  },
+  "datasets": {
+    "findings.jsonl": {
+      "bytes": 45323,
+      "encoding": "tuple-jsonl-v1",
+      "records": 139,
+      "sha256": "58d1756caf2c83cd92479577bb2e9e2fe22c884f49f8d08dc680747b32f10bcc"
+    },
+    "regression-cases.jsonl": {
+      "bytes": 51522,
+      "encoding": "tuple-jsonl-v1",
+      "records": 84,
+      "sha256": "7065aab04e1a83c344607e8047b399c35f12e6aff600c4bca168600b0c925bbf"
+    },
+    "review-runs.jsonl": {
+      "bytes": 25018,
+      "encoding": "tuple-jsonl-v1",
+      "records": 92,
+      "sha256": "f841cac53f6fbd676b7128e4ecfc7684599eabfcc4409439654506a88d77e143"
+    }
+  },
+  "github_provenance": {
+    "commit_membership_scope": {
+      "reason": "This import slice intentionally does not claim complete commit-by-commit reconciliation of every BUGGY/FIX/VERIFIED SHA. Stage 1 remains in progress until that provenance and accepted consumer policy inventory are completed.",
+      "status": "PENDING_STAGE1_FOLLOWUP"
+    },
+    "pr_identity_scope": {
+      "records": [
+        {"live_pr_identity_resolved":true,"pr_number":82,"repository":"BogdanAIP/uv-studio","source_url":"https://github.com/BogdanAIP/uv-studio/pull/82","workbook_merged_at":"2026-08-29 11:28:43"},
+        {"live_pr_identity_resolved":true,"pr_number":86,"repository":"BogdanAIP/uv-studio","source_url":"https://github.com/BogdanAIP/uv-studio/pull/86","workbook_merged_at":"2026-08-30 09:01:19"},
+        {"live_pr_identity_resolved":true,"pr_number":126,"repository":"BogdanAIP/chat-agent-platform","source_url":"https://github.com/BogdanAIP/chat-agent-platform/pull/126","workbook_merged_at":"2026-08-30 16:43:31"},
+        {"live_pr_identity_resolved":true,"pr_number":139,"repository":"BogdanAIP/chat-agent-platform","source_url":"https://github.com/BogdanAIP/chat-agent-platform/pull/139","workbook_merged_at":"2026-08-30 18:00:46"},
+        {"live_pr_identity_resolved":true,"pr_number":75,"repository":"BogdanAIP/uv-studio","source_url":"https://github.com/BogdanAIP/uv-studio/pull/75","workbook_merged_at":"2026-08-28 11:37:21"},
+        {"live_pr_identity_resolved":true,"pr_number":124,"repository":"BogdanAIP/chat-agent-platform","source_url":"https://github.com/BogdanAIP/chat-agent-platform/pull/124","workbook_merged_at":"2026-08-28 10:03:36"},
+        {"live_pr_identity_resolved":true,"pr_number":131,"repository":"BogdanAIP/chat-agent-platform","source_url":"https://github.com/BogdanAIP/chat-agent-platform/pull/131","workbook_merged_at":"2026-08-28 17:55:17"},
+        {"live_pr_identity_resolved":true,"pr_number":132,"repository":"BogdanAIP/chat-agent-platform","source_url":"https://github.com/BogdanAIP/chat-agent-platform/pull/132","workbook_merged_at":"2026-08-28 19:10:55"},
+        {"live_pr_identity_resolved":true,"pr_number":118,"repository":"BogdanAIP/chat-agent-platform","source_url":"https://github.com/BogdanAIP/chat-agent-platform/pull/118","workbook_merged_at":"2026-08-27 22:18:31"},
+        {"live_pr_identity_resolved":true,"pr_number":121,"repository":"BogdanAIP/chat-agent-platform","source_url":"https://github.com/BogdanAIP/chat-agent-platform/pull/121","workbook_merged_at":"2026-08-28 05:15:05"},
+        {"live_pr_identity_resolved":true,"pr_number":129,"repository":"BogdanAIP/chat-agent-platform","source_url":"https://github.com/BogdanAIP/chat-agent-platform/pull/129","workbook_merged_at":"2026-08-28 17:32:58"},
+        {"live_pr_identity_resolved":true,"pr_number":71,"repository":"BogdanAIP/uv-studio","source_url":"https://github.com/BogdanAIP/uv-studio/pull/71","workbook_merged_at":"2026-08-27 19:37:20"},
+        {"live_pr_identity_resolved":true,"pr_number":84,"repository":"BogdanAIP/uv-studio","source_url":"https://github.com/BogdanAIP/uv-studio/pull/84","workbook_merged_at":"2026-08-29 11:55:00"},
+        {"live_pr_identity_resolved":true,"pr_number":87,"repository":"BogdanAIP/uv-studio","source_url":"https://github.com/BogdanAIP/uv-studio/pull/87","workbook_merged_at":"2026-08-30 09:50:22"},
+        {"live_pr_identity_resolved":true,"pr_number":68,"repository":"BogdanAIP/uv-studio","source_url":"https://github.com/BogdanAIP/uv-studio/pull/68","workbook_merged_at":"2026-08-26 08:28:33"},
+        {"live_pr_identity_resolved":true,"pr_number":69,"repository":"BogdanAIP/uv-studio","source_url":"https://github.com/BogdanAIP/uv-studio/pull/69","workbook_merged_at":"2026-08-26 10:19:34"},
+        {"live_pr_identity_resolved":true,"pr_number":73,"repository":"BogdanAIP/uv-studio","source_url":"https://github.com/BogdanAIP/uv-studio/pull/73","workbook_merged_at":"2026-08-27 22:55:27"},
+        {"live_pr_identity_resolved":true,"pr_number":77,"repository":"BogdanAIP/uv-studio","source_url":"https://github.com/BogdanAIP/uv-studio/pull/77","workbook_merged_at":"2026-08-28 18:50:33"},
+        {"live_pr_identity_resolved":true,"pr_number":128,"repository":"BogdanAIP/chat-agent-platform","source_url":"https://github.com/BogdanAIP/chat-agent-platform/pull/128","workbook_merged_at":"2026-08-28 17:01:36"},
+        {"live_pr_identity_resolved":true,"pr_number":140,"repository":"BogdanAIP/chat-agent-platform","source_url":"https://github.com/BogdanAIP/chat-agent-platform/pull/140","workbook_merged_at":"2026-08-31 08:34:02"},
+        {"live_pr_identity_resolved":true,"pr_number":70,"repository":"BogdanAIP/uv-studio","source_url":"https://github.com/BogdanAIP/uv-studio/pull/70","workbook_merged_at":"2026-08-27 12:35:16"}
+      ],
+      "resolved_pr_count": 21,
+      "status": "PASS"
+    }
+  },
+  "import_id": "bootstrap-import-v1-6fe79a73a7f10e52",
+  "reconciliation": {
+    "actual_regression_cases": 84,
+    "case_finding_refs_all_resolve": true,
+    "case_finding_refs_semantically_match": true,
+    "declared_buggy_fixed_target": 84,
+    "review_run_confirmed_rejected_severity_totals_match_findings_table": true,
+    "review_run_finding_totals_match_findings_table": true,
+    "review_run_source_unknown_metrics_preserved_as_null": true,
+    "target_count_matches": true,
+    "unique_case_ids": true,
+    "unique_finding_ids": true,
+    "unique_run_ids": true
+  },
+  "schema_version": "bootstrap_import_report_v1",
+  "source_authentication": {
+    "matches_manifest": true,
+    "materialized_library_version_id": "1",
+    "observed_bytes": 92864,
+    "observed_sha256": "6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a"
+  },
+  "stage1_state": {
+    "baseline_seed_created": false,
+    "candidate_created": false,
+    "consumer_installation_changed": false,
+    "learning_events_created": false,
+    "next": "complete commit-level provenance reconciliation; resolve accepted CAP/UV reviewer-policy refs; classify generic vs project-specific rules; only then derive an immutable non-authoritative baseline seed",
+    "stable_reviewer_created": false
+  },
+  "workbook_tables": {
+    "Findings": {"range":"A1:P140","records":139,"unique_ids":139},
+    "Regression Corpus": {"range":"A1:Q89","role":"presentation sheet; not used as canonical machine source because its merged-layout export is not a reliable row table"},
+    "Review Runs": {"range":"A1:V93","records":92,"unique_ids":92},
+    "Reviewer Improvement": {"range":"A1:AC85","records":84,"role":"canonical regression-case bootstrap table","unique_ids":84}
+  }
+}
