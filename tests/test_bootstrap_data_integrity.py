@@ -10,11 +10,10 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 
-# Fixed Stage-1 bootstrap-v1 prefix anchor. These digests were derived from the
+# Fixed Stage-1 bootstrap-v1 datasets. These digests were derived from the
 # authenticated version-1 workbook plus the independently adjudicated UV #70
-# finding-link repair. Later operational records may be appended after these
-# bootstrap prefixes, but changing an anchored prefix requires an explicit new
-# reconciliation/version rather than silently editing the derived import report.
+# finding-link repair. These files are bootstrap-only: operational records must
+# use later governed Stage-3 schemas/stores rather than being appended here.
 BOOTSTRAP_V1_PREFIX_ANCHOR = {
     "review-runs.jsonl": {
         "records": 92,
@@ -98,6 +97,17 @@ class BootstrapDataIntegrityTests(unittest.TestCase):
                 f"{label}: {value!r} does not match {pattern!r}",
             )
 
+        min_length = rule.get("minLength")
+        if min_length is not None and value is not None:
+            self.assertIsInstance(value, str, f"{label}: minLength requires a string")
+            self.assertGreaterEqual(len(value), int(min_length), f"{label}: string is too short")
+
+        minimum = rule.get("minimum")
+        if minimum is not None and value is not None:
+            self.assertIsInstance(value, (int, float), f"{label}: minimum requires a number")
+            self.assertNotIsInstance(value, bool, f"{label}: booleans are not numeric evidence")
+            self.assertGreaterEqual(value, minimum, f"{label}: {value!r} is below minimum {minimum!r}")
+
     def test_canonical_jsonl_rows_match_declared_schemas(self) -> None:
         for filename, schema_name in DATASET_SCHEMAS.items():
             schema = load_schema(schema_name)
@@ -105,6 +115,9 @@ class BootstrapDataIntegrityTests(unittest.TestCase):
             prefix_items = list(schema["prefixItems"])
             minimum = int(schema["minItems"])
             maximum = int(schema["maxItems"])
+
+            self.assertEqual(schema["x-record-scope"], "authenticated_workbook_bootstrap_only")
+            self.assertFalse(schema["items"], f"{schema_name}: tuple must reject trailing fields")
 
             for line_number, line in enumerate(raw_rows, start=1):
                 with self.subTest(filename=filename, line_number=line_number):
@@ -116,14 +129,64 @@ class BootstrapDataIntegrityTests(unittest.TestCase):
                     for index, (value, rule) in enumerate(zip(row, prefix_items, strict=True)):
                         self.assert_schema_value(value, rule, f"{filename}:{line_number}[{index}]")
 
-    def test_bootstrap_v1_prefix_matches_fixed_reconciliation_anchor(self) -> None:
+    def test_bootstrap_v1_datasets_match_fixed_reconciliation_anchor_exactly(self) -> None:
         for filename, expected in BOOTSTRAP_V1_PREFIX_ANCHOR.items():
             with self.subTest(filename=filename):
                 lines = (DATA / filename).read_bytes().splitlines(keepends=True)
-                self.assertGreaterEqual(len(lines), expected["records"])
-                anchored = b"".join(lines[: expected["records"]])
+                self.assertEqual(
+                    len(lines),
+                    expected["records"],
+                    "bootstrap-only dataset must not accept operational append records",
+                )
+                anchored = b"".join(lines)
                 self.assertEqual(len(anchored), expected["bytes"])
                 self.assertEqual(hashlib.sha256(anchored).hexdigest(), expected["sha256"])
+
+    def test_schema_semantic_identity_constraints_reject_malformed_values(self) -> None:
+        invalid_values = [
+            ("review-run-v1.schema.json", "run_id", "run-1"),
+            ("review-run-v1.schema.json", "repository", "not-a-repository"),
+            ("review-run-v1.schema.json", "pr", 0),
+            ("review-run-v1.schema.json", "status", "NOT_A_GOVERNED_STATUS"),
+            ("review-run-v1.schema.json", "findings", -1),
+            ("review-run-v1.schema.json", "source_row", -1),
+            ("finding-v1.schema.json", "finding_id", "finding-51"),
+            ("finding-v1.schema.json", "repository", "not-a-repository"),
+            ("finding-v1.schema.json", "pr", 0),
+            ("finding-v1.schema.json", "source_row", -1),
+            ("regression-case-v1.schema.json", "case_id", "case 1"),
+            ("regression-case-v1.schema.json", "finding_id", "not-finding-id"),
+            ("regression-case-v1.schema.json", "repository", "not-a-repository"),
+            ("regression-case-v1.schema.json", "pr", 0),
+            ("regression-case-v1.schema.json", "source_row", -1),
+        ]
+        for schema_name, column, invalid in invalid_values:
+            schema = load_schema(schema_name)
+            columns = list(schema["x-columns"])
+            rule = list(schema["prefixItems"])[columns.index(column)]
+            with self.subTest(schema=schema_name, column=column, invalid=invalid):
+                with self.assertRaises(AssertionError):
+                    self.assert_schema_value(invalid, rule, f"{schema_name}:{column}")
+
+    def test_selective_source_projection_is_explicit_and_recoverable(self) -> None:
+        review_projection = load_schema("review-run-v1.schema.json")["x-source-projection"]
+        finding_projection = load_schema("finding-v1.schema.json")["x-source-projection"]
+
+        self.assertTrue(review_projection["not_column_lossless"])
+        self.assertEqual(
+            [item["name"] for item in review_projection["omitted_columns"]],
+            ["PR title", "Notes"],
+        )
+        self.assertIn("source_row", review_projection["row_recovery"])
+        self.assertIn("provenance", review_projection["omitted_columns"][1]["recovery"])
+
+        self.assertTrue(finding_projection["not_column_lossless"])
+        self.assertEqual(
+            [item["name"] for item in finding_projection["omitted_columns"]],
+            ["Notes"],
+        )
+        self.assertIn("source_row", finding_projection["row_recovery"])
+        self.assertIn("provenance", finding_projection["omitted_columns"][0]["recovery"])
 
     def test_regression_cases_resolve_to_the_same_source_finding(self) -> None:
         finding_columns = load_columns("finding-v1.schema.json")
