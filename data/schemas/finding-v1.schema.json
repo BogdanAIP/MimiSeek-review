@@ -1,13 +1,38 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "One JSONL line is a positional array. x-columns defines the stable column order.",
+  "description": "Bootstrap-only normalized projection of one authenticated Findings workbook row. x-columns defines the stable positional order.",
   "maxItems": 16,
   "minItems": 16,
   "prefixItems": [
-    {"type":"string"},{"type":"string"},{"type":"integer"},{"pattern":"^[0-9a-f]{40}$","type":"string"},{"type":"string"},{"enum":["P1","P2","P3"]},{"enum":["CONFIRMED","REJECTED","UNKNOWN"]},{"type":["boolean","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["boolean","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":["string","null"]},{"type":"integer"}
+    {"pattern":"^F[0-9]{3}$","type":"string"},
+    {"pattern":"^[^/\\s]+/[^/\\s]+$","type":"string"},
+    {"minimum":1,"type":"integer"},
+    {"pattern":"^[0-9a-f]{40}$","type":"string"},
+    {"minLength":1,"type":"string"},
+    {"enum":["P1","P2","P3"]},
+    {"enum":["CONFIRMED","REJECTED","UNKNOWN"]},
+    {"type":["boolean","null"]},
+    {"minLength":1,"type":["string","null"]},
+    {"minLength":1,"type":["string","null"]},
+    {"minLength":1,"type":["string","null"]},
+    {"type":["boolean","null"]},
+    {"minLength":1,"type":["string","null"]},
+    {"pattern":"^https://github\\.com/[^/\\s]+/[^/\\s]+/pull/[0-9]+$","type":["string","null"]},
+    {"minLength":1,"type":["string","null"]},
+    {"minimum":2,"type":"integer"}
   ],
+  "items": false,
   "title": "MimiSeek bootstrap finding tuple v1",
   "type": "array",
-  "x-bootstrap-source": {"manifest_ref":"data/bootstrap-source.json","sheet_row_column":"source_row"},
+  "x-bootstrap-source": {"manifest_ref":"data/bootstrap-source.json","sheet":"Findings","sheet_row_column":"source_row"},
+  "x-record-scope": "authenticated_workbook_bootstrap_only",
+  "x-source-projection": {
+    "kind": "normalized_semantic_projection",
+    "not_column_lossless": true,
+    "row_recovery": "data/bootstrap-source.json + source_row identifies the exact authenticated workbook row",
+    "omitted_columns": [
+      {"name":"Notes","classification":"non_authoritative_source_commentary","recovery":"recover the authenticated workbook row; reconcile any material fix/adjudication assertion into governed GitHub provenance before baseline derivation"}
+    ]
+  },
   "x-columns": ["finding_id","repository","pr","head_sha","reviewer","severity","confirmed","scored","defect_group","category","finding","same_head_match","other_reviewer","source_url","evidence_confidence","source_row"]
 }
