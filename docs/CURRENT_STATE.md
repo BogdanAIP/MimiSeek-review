@@ -16,7 +16,7 @@ Last synchronized: 2026-09-02
 - Consumer MimiSeek installation: none yet; first installation is governed by Stage 8 safe distribution
 - Native ChatGPT skill identities: `mimiseek-review-run` and `mimiseek-review-update`
 
-Exact accepted-stage review/merge identities and chronology belong only in `docs/EVIDENCE_INDEX.md`. This file owns current position and next action.
+Exact accepted-stage review/merge identities and chronology belong only in `docs/EVIDENCE_INDEX.md`. Non-terminal PR review attempts/remediations belong to the PR history. This file owns current position and next action, not per-review chronology that becomes stale whenever remediation moves HEAD.
 
 ## Stage 1 implementation reality
 
@@ -28,6 +28,9 @@ The Stage 1 implementation now has a proposed canonical bootstrap projection and
 - the bootstrap-v1 datasets are exact anchored sets of 92 review runs, 139 findings, and 84 regression cases; they are not operational append targets;
 - the import reconciles those records internally, while complete commit-level BUGGY/FIXED/VERIFIED provenance reconciliation remains unfinished;
 - `tools/collect_github_evidence.py` provides deterministic read-only GitHub evidence polling for registered consumers;
+- each PR snapshot now preserves immutable GitHub repository/PR IDs alongside human-readable names and exact BASE/HEAD SHAs;
+- snapshot construction re-reads the PR after all dependent evidence calls and fails the scan if repository identity, PR identity, BASE/HEAD, state/update identity or declared commit count moved, preventing a byte-valid mixed-head snapshot from advancing the durable watermark;
+- consumer `evidence.enabled` is fail-closed and must be an actual JSON boolean when present;
 - `.github/workflows/collect-review-evidence.yml` schedules hourly collection once the dedicated read-only GitHub App credentials are configured and the required server-side canonical-ref boundary remains active;
 - source snapshots are intended to be written only to `evidence/github-intake`, which is **non-authoritative intake evidence** and is not the normalized outcome store;
 - the intake backfill deliberately overlaps the bootstrap workbook so later normalization can deduplicate by immutable source identity rather than rely on an assumed perfect cutoff;
@@ -39,20 +42,19 @@ The full Stage 3 collector/outcome-store stage is **not** claimed complete. The 
 
 ## Canonical ref boundary
 
-The live repository now has active ruleset `mimiseek-canonical-main` (GitHub ruleset id `22076488`) targeting the default branch. Live GitHub reports:
+The live repository has ruleset `mimiseek-canonical-main` (GitHub ruleset id `22076488`) protecting the default branch. The minimum Stage-1 invariant is:
 
-- enforcement `active`;
-- include `~DEFAULT_BRANCH`, exclude none;
-- rules `pull_request`, `deletion`, and `non_fast_forward`;
-- required approving reviews `0`;
-- bypass actors empty and `current_user_can_bypass=never`;
-- `main` reports `protected=true`.
+- the named repository ruleset is active and targets branches;
+- GitHub reports `current_user_can_bypass=never` for the actual workflow caller;
+- a visible non-empty privileged bypass list fails closed;
+- GitHub's effective-rules-for-branch API proves that this exact ruleset currently contributes `pull_request`, `deletion`, and `non_fast_forward` to the actual default branch;
+- the default branch reports `protected=true`.
 
-This is the server-enforced boundary required because the intake workflow's MimiSeek `GITHUB_TOKEN` has repository-scoped `contents: write` rather than a branch-scoped credential. Workflow shell intent alone is not authority. CI and the collector preflight fail closed if the required live ruleset is absent, inactive, no longer covers the default branch, or loses the required rule types; terminal semantic review must independently re-resolve the full live rule.
+The effective-rules API is intentional. Ruleset include/exclude criteria support GitHub `fnmatch` patterns, so workflow code must not infer applicability by literal string comparison. This is the server-enforced boundary required because the intake workflow's MimiSeek `GITHUB_TOKEN` has repository-scoped `contents: write` rather than a branch-scoped credential. The collector checks the boundary before collection and again immediately before push; the server ruleset remains the real enforcement boundary between those checks.
 
-The optional GitHub setting `require_extra_approval_for_unattributed_changes=true` is also currently present in the pull-request rule. It is not relied upon by MimiSeek acceptance and is not part of the minimum canonical-ref invariant.
+The optional GitHub setting `require_extra_approval_for_unattributed_changes=true` is currently present in the pull-request rule. It is not relied upon by MimiSeek acceptance and is not part of the minimum canonical-ref invariant.
 
-The prior fresh semantic review was bound to HEAD `3fc18bcc4edc47cf2bca341dc092f1f80bb2fa1b` and returned three findings. All three findings were remediated, which moved the PR HEAD and made that result historical remediation evidence only. A new fresh exact-head independent review is required for terminal acceptance.
+Any remediation that changes the PR HEAD invalidates an earlier terminal review for acceptance. The current remediation HEAD must therefore have green exact-head CI and a new fresh independent exact-head review before merge. This file intentionally does not duplicate the SHA/finding history of those attempts.
 
 ## Evidence gaps that remain
 
@@ -81,6 +83,8 @@ All work uses normal post-bootstrap branch/PR acceptance. PR #1's bootstrap exce
 - Loss of access to the exact pinned Library artifact must halt historical-source reconciliation until a governed replacement/provenance migration is accepted.
 - Missing or weakened canonical-ref protection must leave the write-capable intake workflow disabled/fail-closed.
 - Missing collector GitHub App credentials leave automatic intake unconfigured; do not pretend collection is active until a successful authenticated run records a watermark.
+- A PR changing during sequential evidence collection must fail the scan rather than publish a mixed-head snapshot; later retry/backfill is preferred to ambiguous provenance.
+- Repository rename/transfer and deleted-fork cases must preserve immutable IDs/explicit unknowns rather than rely only on mutable owner/name strings.
 - Chat-only review evidence cannot be inferred from GitHub absence.
 - Source workbook commentary may contain useful fix/adjudication hints, but those hints are not canonical truth until reconciled against governed provenance.
 - A naive common baseline could silently lose CAP- or UV-specific obligations.
