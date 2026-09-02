@@ -89,15 +89,56 @@ Stage 0 CI remains accurately recorded as `NOT_CONFIGURED`, not PASS.
 
 ## Stage 1 — Bootstrap data + reviewer baseline seed
 
-Status: NOT STARTED
+Status: IN PROGRESS
 
 Canonical bootstrap source identity and recovery contract: `data/bootstrap-source.json`.
 
-This index intentionally does not duplicate the manifest's exact Library path/version/size/digest or declared reconciliation target. Stage 1 must resolve that canonical manifest, authenticate the exact source, independently reconcile the source contents/counts and underlying GitHub provenance, then create canonical machine-readable datasets.
+### Accepted foundation slice — PR #5
 
-Stage 1 also resolves exact accepted CAP/UV reviewer-policy refs and derives an immutable reviewer **baseline seed**. That seed is not stable, not a promotion result, and not distributable. Do not pre-fill final imported counts or later candidate/stable identities before those governed stages execute.
+PR #5 — `Stage 1: bootstrap review data and continuous evidence intake` established the accepted bootstrap-data projection and bounded non-authoritative GitHub evidence-intake foundation.
 
-Post-bootstrap Stage 1 changes use the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available.
+Acceptance identity:
+
+- BASE: `05342285d23260c069f13fd123e5dc872648d6ce`
+- accepted exact PR HEAD: `fb4449dedc69671b277d8ef3c4ceb6b09fb088e9`
+- `review_policy_ref`: `05342285d23260c069f13fd123e5dc872648d6ce`
+- changed files: `20`
+- reviewer identity/class reported by the terminal result: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- rejected candidates: `22`
+- review timestamp: `2026-09-02T12:36:46Z`
+- durable GitHub terminal-result comment id: `5510158690`
+- exact-head CI run: `33628956383`
+- CI state: `PASS`
+- accepted live canonical ruleset: `mimiseek-canonical-main`, ruleset id `22076488`
+- merge commit on `main`: `bda75c6d1c0b5b56a48728e4ab04aee84c77188b`
+
+The durable PR #5 comment contains the terminal `REVIEW_RESULT_V1` itself rather than merely summarizing it. The result binds repository, PR, BASE, HEAD, reviewer context, read-only mode, immutable `review_policy_ref`, exact-head CI, live ruleset state, bootstrap authentication, and terminal PASS. The comment was persisted before merge without moving the reviewed HEAD.
+
+The merge used `expected_head_sha=fb4449dedc69671b277d8ef3c4ceb6b09fb088e9`, so GitHub would have rejected the operation had the accepted head moved. PR #5 then merged as commit `bda75c6d1c0b5b56a48728e4ab04aee84c77188b`.
+
+Accepted PR #5 foundation includes:
+
+- authenticated workbook-backed bootstrap projections;
+- fixed bootstrap-v1 sets of 92 review runs, 139 findings, and 84 regression cases;
+- source blank-versus-zero preservation;
+- corrected `RC-UV70-*` finding identity mapping with semantic/source-identity validation;
+- bootstrap-only schema/provenance contracts and immutable count/byte/SHA anchors;
+- explicit workbook-source versus normalized-projection authority boundary;
+- bounded read-only CAP/UV evidence polling with immutable GitHub repository/PR identities;
+- mixed-head snapshot rejection and fail-closed watermark semantics;
+- dedicated non-authoritative `evidence/github-intake` publication design;
+- server-enforced canonical-main write boundary validated through effective rules for the actual default branch;
+- CI unit coverage plus live canonical-ref-boundary verification.
+
+The accepted foundation does **not** complete Stage 1. At acceptance, complete commit-level BUGGY/FIXED/VERIFIED provenance remained explicitly pending, no durable CAP/UV collector watermark had yet been demonstrated, exact accepted CAP/UV reviewer-policy refs had not yet been resolved into the Stage-1 baseline work, generic-versus-project-specific rule classification remained pending, and no baseline seed existed.
+
+A live post-merge check found no `evidence/github-intake` branch, so the next evidence-intake step remains the first authenticated backfill and durable-watermark verification. Branch absence is not used to infer which external credential or enablement item is missing.
+
+Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available.
 
 ## Later stages
 
