@@ -28,24 +28,35 @@ The Stage 1 implementation now has a proposed canonical bootstrap projection and
 - the bootstrap-v1 datasets are exact anchored sets of 92 review runs, 139 findings, and 84 regression cases; they are not operational append targets;
 - the import reconciles those records internally, while complete commit-level BUGGY/FIXED/VERIFIED provenance reconciliation remains unfinished;
 - `tools/collect_github_evidence.py` provides deterministic read-only GitHub evidence polling for registered consumers;
-- `.github/workflows/collect-review-evidence.yml` schedules hourly collection once the dedicated read-only GitHub App credentials are configured **and** MimiSeek's canonical `main` ref is protected by the required server-side ruleset;
+- `.github/workflows/collect-review-evidence.yml` schedules hourly collection once the dedicated read-only GitHub App credentials are configured and the required server-side canonical-ref boundary remains active;
 - source snapshots are intended to be written only to `evidence/github-intake`, which is **non-authoritative intake evidence** and is not the normalized outcome store;
 - the intake backfill deliberately overlaps the bootstrap workbook so later normalization can deduplicate by immutable source identity rather than rely on an assumed perfect cutoff;
-- `.github/workflows/ci.yml` provides repository unit-test CI for collector/data contract code.
+- `.github/workflows/ci.yml` provides repository unit-test CI plus a live canonical-ref boundary check.
 
 These changes do not create a baseline seed, candidate, stable reviewer, consumer installation, learning events, or promotion authority.
 
 The full Stage 3 collector/outcome-store stage is **not** claimed complete. The early collector exists only to stop new evidence from being lost while Stage 1 and Stage 2 are implemented.
 
-## Current acceptance blocker
+## Canonical ref boundary
 
-The intake workflow necessarily uses a repository-scoped MimiSeek `GITHUB_TOKEN` for its own evidence-branch push. Workflow shell intent cannot constrain that credential to one branch. Therefore durable collector activation and acceptance of this write path require a live server-enforced repository ruleset named `mimiseek-canonical-main` that protects the default branch, has no bypass actor, requires pull requests, and blocks deletion/non-fast-forward updates. The workflow must fail closed when that rule is absent or weakened, and terminal review must independently re-resolve the live rule.
+The live repository now has active ruleset `mimiseek-canonical-main` (GitHub ruleset id `22076488`) targeting the default branch. Live GitHub reports:
 
-The fresh semantic review that identified this boundary also identified bootstrap projection/schema defects. Remediation moves the PR HEAD, so that review is no longer terminal acceptance evidence for the remediated head. A new fresh exact-head independent review is required after remediation and required live GitHub protection are complete.
+- enforcement `active`;
+- include `~DEFAULT_BRANCH`, exclude none;
+- rules `pull_request`, `deletion`, and `non_fast_forward`;
+- required approving reviews `0`;
+- bypass actors empty and `current_user_can_bypass=never`;
+- `main` reports `protected=true`.
+
+This is the server-enforced boundary required because the intake workflow's MimiSeek `GITHUB_TOKEN` has repository-scoped `contents: write` rather than a branch-scoped credential. Workflow shell intent alone is not authority. CI and the collector preflight fail closed if the required live ruleset is absent, inactive, no longer covers the default branch, or loses the required rule types; terminal semantic review must independently re-resolve the full live rule.
+
+The optional GitHub setting `require_extra_approval_for_unattributed_changes=true` is also currently present in the pull-request rule. It is not relied upon by MimiSeek acceptance and is not part of the minimum canonical-ref invariant.
+
+The prior fresh semantic review was bound to HEAD `3fc18bcc4edc47cf2bca341dc092f1f80bb2fa1b` and returned three findings. All three findings were remediated, which moved the PR HEAD and made that result historical remediation evidence only. A new fresh exact-head independent review is required for terminal acceptance.
 
 ## Evidence gaps that remain
 
-GitHub-native Codex reviews, PR comments, review comments, commits, and owner adjudication replies can be preserved automatically once the durable intake write boundary is safely enabled.
+GitHub-native Codex reviews, PR comments, review comments, commits, and owner adjudication replies can be preserved automatically once the collector source credentials are configured and a successful authenticated intake run records its watermark.
 
 Fresh ordinary-ChatGPT terminal reviews that existed only inside ChatGPT and were never durably exported into the consumer PR cannot be reconstructed from GitHub alone. Stage 2 must define/implement structured consumer evidence export so future fresh terminal results are also captured automatically. Historical chat-only gaps must remain explicit rather than being inferred from absence.
 
@@ -53,8 +64,8 @@ Fresh ordinary-ChatGPT terminal reviews that existed only inside ChatGPT and wer
 
 Continue Stage 1, in this order:
 
-1. finish PR #5 remediation and establish the required server-side `mimiseek-canonical-main` protection rule without changing the reviewed branch content merely to record that external setting;
-2. obtain green exact-head CI and a new fresh independent exact-head semantic review under immutable BASE policy; then persist a CURRENT terminal result without moving HEAD and merge the bootstrap-data/evidence-intake foundation;
+1. obtain green exact-head CI for the final PR #5 remediation head with the live canonical-ref rule in force;
+2. obtain a new fresh independent exact-head semantic review under immutable BASE policy; persist a CURRENT terminal result without moving HEAD and merge the bootstrap-data/evidence-intake foundation only on CURRENT PASS;
 3. run authenticated backfill for CAP/UV and verify the durable collector watermark/intake snapshots;
 4. complete commit-level provenance reconciliation for imported BUGGY/FIXED/VERIFIED identities, including material assertions currently present only in authenticated source commentary;
 5. resolve exact accepted CAP/UV reviewer-policy refs;
