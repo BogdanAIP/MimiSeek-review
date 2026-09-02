@@ -20,8 +20,10 @@ STATE_SCHEMA_VERSION = "github_evidence_collector_state_v1"
 DEFAULT_OVERLAP_MINUTES = 180
 DEFAULT_TIMEOUT_SECONDS = 30
 USER_AGENT = "MimiSeek-Review-Collector/1"
+REQUIRED_CANONICAL_RULE_TYPES = frozenset({"pull_request", "deletion", "non_fast_forward"})
 
 ISO_Z_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 def utc_now() -> datetime:
@@ -74,10 +76,16 @@ class Consumer:
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "Consumer":
-        repository = raw["repository"]
+        if not isinstance(raw, dict):
+            raise ValueError("consumer entry must be an object")
+        repository = raw.get("repository")
         split_repository(repository)
         evidence = raw.get("evidence", {})
-        enabled = bool(evidence.get("enabled", True))
+        if not isinstance(evidence, dict):
+            raise ValueError(f"consumer {repository}: evidence must be an object")
+        if "enabled" in evidence and type(evidence["enabled"]) is not bool:
+            raise ValueError(f"consumer {repository}: evidence.enabled must be a JSON boolean")
+        enabled = evidence.get("enabled", True)
         backfill_from = evidence.get("backfill_from", "1970-01-01T00:00:00Z")
         parse_z(backfill_from)
         return cls(repository=repository, evidence_enabled=enabled, backfill_from=backfill_from)
@@ -190,6 +198,84 @@ class GitHubClient:
         return [by_number[number] for number in sorted(by_number)]
 
 
+def verify_canonical_ref_boundary(
+    client: GitHubClient,
+    repository: str,
+    required_ruleset: str = "mimiseek-canonical-main",
+) -> dict[str, Any]:
+    """Fail closed unless the named ruleset effectively protects the default branch.
+
+    GitHub ruleset ref include/exclude values use fnmatch semantics. We therefore
+    do not attempt to reproduce pattern matching locally. Instead, GitHub's
+    effective-rules endpoint is authoritative for whether each required rule from
+    this exact ruleset currently applies to the actual default branch.
+    """
+
+    owner, name = split_repository(repository)
+    prefix = f"/repos/{owner}/{name}"
+    repository_payload = client.get(prefix)
+    if not isinstance(repository_payload, dict):
+        raise GitHubApiError("expected repository object while verifying canonical ref boundary")
+    default_branch = repository_payload.get("default_branch")
+    if not isinstance(default_branch, str) or not default_branch:
+        raise GitHubApiError("repository default_branch is missing")
+
+    rulesets = client.paged(f"{prefix}/rulesets")
+    matches = [
+        item
+        for item in rulesets
+        if item.get("name") == required_ruleset
+        and item.get("enforcement") == "active"
+        and item.get("target") == "branch"
+        and item.get("source_type") == "Repository"
+        and str(item.get("source", "")).casefold() == repository.casefold()
+    ]
+    if len(matches) != 1:
+        raise GitHubApiError(
+            f"required active repository ruleset {required_ruleset!r} not uniquely present: matches={len(matches)}"
+        )
+
+    detail = client.get(f"{prefix}/rulesets/{matches[0]['id']}")
+    if not isinstance(detail, dict) or detail.get("target") != "branch":
+        raise GitHubApiError("canonical ruleset must target branches")
+    if detail.get("current_user_can_bypass") != "never":
+        raise GitHubApiError(
+            "canonical ruleset bypass capability is not provably 'never' for this workflow caller"
+        )
+    if "bypass_actors" in detail and detail["bypass_actors"]:
+        raise GitHubApiError("canonical ruleset has bypass actors")
+
+    ruleset_id = detail.get("id")
+    if not isinstance(ruleset_id, int) or isinstance(ruleset_id, bool):
+        raise GitHubApiError("canonical ruleset id is missing")
+
+    encoded_branch = urllib.parse.quote(default_branch, safe="")
+    effective_rules = client.paged(f"{prefix}/rules/branches/{encoded_branch}")
+    effective_types = {
+        rule.get("type")
+        for rule in effective_rules
+        if isinstance(rule, dict) and rule.get("ruleset_id") == ruleset_id
+    }
+    missing = sorted(REQUIRED_CANONICAL_RULE_TYPES - effective_types)
+    if missing:
+        raise GitHubApiError(
+            f"canonical ruleset does not effectively apply required rules to {default_branch!r}: missing={missing}"
+        )
+
+    branch = client.get(f"{prefix}/branches/{encoded_branch}")
+    if not isinstance(branch, dict) or not branch.get("protected"):
+        raise GitHubApiError(f"default branch {default_branch!r} is not reported protected")
+
+    return {
+        "ruleset_id": ruleset_id,
+        "ruleset_name": detail.get("name"),
+        "default_branch": default_branch,
+        "protected": True,
+        "current_user_can_bypass": detail.get("current_user_can_bypass"),
+        "effective_required_rule_types": sorted(REQUIRED_CANONICAL_RULE_TYPES),
+    }
+
+
 def compact_user(raw: Any) -> dict[str, Any] | None:
     if not isinstance(raw, dict):
         return None
@@ -206,8 +292,20 @@ def compact_reaction(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _repo_fields(raw: Any) -> tuple[Any, Any, Any]:
+    if not isinstance(raw, dict):
+        return None, None, None
+    return raw.get("full_name"), raw.get("id"), raw.get("node_id")
+
+
 def compact_pr(raw: dict[str, Any]) -> dict[str, Any]:
+    base = raw.get("base") or {}
+    head = raw.get("head") or {}
+    base_name, base_id, base_node_id = _repo_fields(base.get("repo"))
+    head_name, head_id, head_node_id = _repo_fields(head.get("repo"))
     return {
+        "id": raw.get("id"),
+        "node_id": raw.get("node_id"),
         "number": raw.get("number"),
         "state": raw.get("state"),
         "draft": raw.get("draft"),
@@ -220,14 +318,18 @@ def compact_pr(raw: dict[str, Any]) -> dict[str, Any]:
         "merged_at": raw.get("merged_at"),
         "merge_commit_sha": raw.get("merge_commit_sha"),
         "base": {
-            "ref": (raw.get("base") or {}).get("ref"),
-            "sha": (raw.get("base") or {}).get("sha"),
-            "repo": ((raw.get("base") or {}).get("repo") or {}).get("full_name"),
+            "ref": base.get("ref"),
+            "sha": base.get("sha"),
+            "repo": base_name,
+            "repo_id": base_id,
+            "repo_node_id": base_node_id,
         },
         "head": {
-            "ref": (raw.get("head") or {}).get("ref"),
-            "sha": (raw.get("head") or {}).get("sha"),
-            "repo": ((raw.get("head") or {}).get("repo") or {}).get("full_name"),
+            "ref": head.get("ref"),
+            "sha": head.get("sha"),
+            "repo": head_name,
+            "repo_id": head_id,
+            "repo_node_id": head_node_id,
         },
         "user": compact_user(raw.get("user")),
         "html_url": raw.get("html_url"),
@@ -303,22 +405,128 @@ def sort_by_id(items: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(items, key=lambda item: (item.get("id") is None, item.get("id") or 0))
 
 
+def _require_positive_int(value: Any, label: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        raise GitHubApiError(f"{label} must be a positive integer, got {value!r}")
+    return value
+
+
+def _require_nonempty_string(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise GitHubApiError(f"{label} must be a non-empty string, got {value!r}")
+    return value
+
+
+def _validate_pr_source_identity(raw: Any, repository: str, pr_number: int) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        raise GitHubApiError(f"expected pull request object for {repository}#{pr_number}")
+    if raw.get("number") != pr_number:
+        raise GitHubApiError(f"pull request number mismatch for {repository}#{pr_number}")
+
+    _require_positive_int(raw.get("id"), "pull request id")
+    _require_nonempty_string(raw.get("node_id"), "pull request node_id")
+    parse_z(raw.get("updated_at"))
+
+    base = raw.get("base")
+    head = raw.get("head")
+    if not isinstance(base, dict) or not isinstance(head, dict):
+        raise GitHubApiError(f"pull request refs are incomplete for {repository}#{pr_number}")
+    base_sha = base.get("sha")
+    head_sha = head.get("sha")
+    if not isinstance(base_sha, str) or not SHA40_RE.fullmatch(base_sha):
+        raise GitHubApiError(f"invalid base SHA for {repository}#{pr_number}: {base_sha!r}")
+    if not isinstance(head_sha, str) or not SHA40_RE.fullmatch(head_sha):
+        raise GitHubApiError(f"invalid head SHA for {repository}#{pr_number}: {head_sha!r}")
+
+    base_repo = base.get("repo")
+    if not isinstance(base_repo, dict):
+        raise GitHubApiError(f"base repository identity is missing for {repository}#{pr_number}")
+    base_full_name = _require_nonempty_string(base_repo.get("full_name"), "base repository full_name")
+    if base_full_name.casefold() != repository.casefold():
+        raise GitHubApiError(
+            f"consumer repository name no longer matches pull request base repository: "
+            f"configured={repository!r} live={base_full_name!r}"
+        )
+    _require_positive_int(base_repo.get("id"), "base repository id")
+    _require_nonempty_string(base_repo.get("node_id"), "base repository node_id")
+
+    head_repo = head.get("repo")
+    if head_repo is not None:
+        if not isinstance(head_repo, dict):
+            raise GitHubApiError(f"invalid head repository identity for {repository}#{pr_number}")
+        _require_nonempty_string(head_repo.get("full_name"), "head repository full_name")
+        _require_positive_int(head_repo.get("id"), "head repository id")
+        _require_nonempty_string(head_repo.get("node_id"), "head repository node_id")
+
+    commit_count = raw.get("commits")
+    if not isinstance(commit_count, int) or isinstance(commit_count, bool) or commit_count < 0:
+        raise GitHubApiError(f"invalid declared commit count for {repository}#{pr_number}: {commit_count!r}")
+    _require_nonempty_string(raw.get("state"), "pull request state")
+    return raw
+
+
+def _pr_identity_fence(raw: dict[str, Any]) -> dict[str, Any]:
+    base = raw.get("base") or {}
+    head = raw.get("head") or {}
+    base_repo = base.get("repo") or {}
+    head_repo = head.get("repo")
+    return {
+        "id": raw.get("id"),
+        "node_id": raw.get("node_id"),
+        "number": raw.get("number"),
+        "state": raw.get("state"),
+        "draft": raw.get("draft"),
+        "updated_at": raw.get("updated_at"),
+        "closed_at": raw.get("closed_at"),
+        "merged_at": raw.get("merged_at"),
+        "merge_commit_sha": raw.get("merge_commit_sha"),
+        "commits": raw.get("commits"),
+        "base_sha": base.get("sha"),
+        "base_repo_full_name": base_repo.get("full_name"),
+        "base_repo_id": base_repo.get("id"),
+        "base_repo_node_id": base_repo.get("node_id"),
+        "head_sha": head.get("sha"),
+        "head_repo_full_name": head_repo.get("full_name") if isinstance(head_repo, dict) else None,
+        "head_repo_id": head_repo.get("id") if isinstance(head_repo, dict) else None,
+        "head_repo_node_id": head_repo.get("node_id") if isinstance(head_repo, dict) else None,
+    }
+
+
 def build_snapshot(client: GitHubClient, repository: str, pr_number: int) -> dict[str, Any]:
     owner, name = split_repository(repository)
     prefix = f"/repos/{owner}/{name}"
-    pr = client.get(f"{prefix}/pulls/{pr_number}")
+    pr_before = _validate_pr_source_identity(
+        client.get(f"{prefix}/pulls/{pr_number}"), repository, pr_number
+    )
     issue_comments = client.paged(f"{prefix}/issues/{pr_number}/comments")
     issue_reactions = client.paged(f"{prefix}/issues/{pr_number}/reactions")
     reviews = client.paged(f"{prefix}/pulls/{pr_number}/reviews")
     review_comments = client.paged(f"{prefix}/pulls/{pr_number}/comments")
     commits = client.paged(f"{prefix}/pulls/{pr_number}/commits")
-    declared_commit_count = pr.get("commits")
-    if isinstance(declared_commit_count, int) and declared_commit_count > len(commits):
+
+    declared_commit_count = pr_before["commits"]
+    if declared_commit_count != len(commits):
         raise GitHubApiError(
-            f"pull request commit list is incomplete for {repository}#{pr_number}: "
+            f"pull request commit list is inconsistent for {repository}#{pr_number}: "
             f"declared={declared_commit_count} collected={len(commits)}"
         )
 
+    # Re-read the PR after every dependent evidence call. A changed HEAD, BASE,
+    # repository identity, state/update identity, or commit count means the
+    # sequential API responses cannot be proven to describe one immutable PR
+    # state. Fail the scan rather than publishing a mixed-head snapshot; the
+    # durable watermark is written only after the whole repository scan succeeds.
+    pr_after = _validate_pr_source_identity(
+        client.get(f"{prefix}/pulls/{pr_number}"), repository, pr_number
+    )
+    if _pr_identity_fence(pr_before) != _pr_identity_fence(pr_after):
+        raise GitHubApiError(f"pull request moved during evidence snapshot for {repository}#{pr_number}")
+    if pr_after["commits"] != len(commits):
+        raise GitHubApiError(
+            f"pull request commit count moved during evidence snapshot for {repository}#{pr_number}"
+        )
+
+    base_repo = (pr_after.get("base") or {}).get("repo") or {}
     return {
         "schema_version": SCHEMA_VERSION,
         "authority": {
@@ -329,15 +537,17 @@ def build_snapshot(client: GitHubClient, repository: str, pr_number: int) -> dic
                 "normalization and learning happen under separate governed stages",
             ],
         },
-        "repository": repository,
+        "repository": base_repo.get("full_name"),
+        "repository_id": base_repo.get("id"),
+        "repository_node_id": base_repo.get("node_id"),
         "pr_number": pr_number,
-        "pull_request": compact_pr(pr),
+        "pull_request": compact_pr(pr_after),
         "issue_comments": sort_by_id(compact_issue_comment(item) for item in issue_comments),
         "issue_reactions": sort_by_id(compact_reaction(item) for item in issue_reactions),
         "reviews": sort_by_id(compact_review(item) for item in reviews),
         "review_comments": sort_by_id(compact_review_comment(item) for item in review_comments),
         "commits": sorted((compact_commit(item) for item in commits), key=lambda item: item.get("committer_date") or ""),
-        "source": {"api_base": client.api_url, "pull_request_url": pr.get("html_url")},
+        "source": {"api_base": client.api_url, "pull_request_url": pr_after.get("html_url")},
     }
 
 
@@ -348,6 +558,8 @@ def repository_output_path(output_root: Path, repository: str, pr_number: int) -
 
 def load_consumers(config_path: Path) -> list[Consumer]:
     raw = load_json(config_path, {})
+    if not isinstance(raw, dict):
+        raise ValueError("config/consumers.json must be an object")
     if raw.get("schema_version") not in (1, 2):
         raise ValueError("unsupported config/consumers.json schema_version")
     consumers_raw = raw.get("consumers")
@@ -440,15 +652,31 @@ def collect(
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Collect non-authoritative GitHub review evidence snapshots.")
     parser.add_argument("--config", default="config/consumers.json")
-    parser.add_argument("--output-root", required=True)
-    parser.add_argument("--state-file", required=True)
+    parser.add_argument("--output-root")
+    parser.add_argument("--state-file")
     parser.add_argument("--overlap-minutes", type=int, default=DEFAULT_OVERLAP_MINUTES)
     parser.add_argument("--api-url", default=os.environ.get("GITHUB_API_URL", "https://api.github.com"))
-    return parser.parse_args(argv)
+    parser.add_argument("--verify-canonical-ref-boundary", action="store_true")
+    parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY"))
+    parser.add_argument("--required-ruleset", default="mimiseek-canonical-main")
+    args = parser.parse_args(argv)
+    if args.verify_canonical_ref_boundary:
+        if not args.repository:
+            parser.error("--repository or GITHUB_REPOSITORY is required for canonical-ref verification")
+    elif not args.output_root or not args.state_file:
+        parser.error("--output-root and --state-file are required for evidence collection")
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
+    if args.verify_canonical_ref_boundary:
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or None
+        client = GitHubClient(token=token, api_url=args.api_url)
+        result = verify_canonical_ref_boundary(client, args.repository, args.required_ruleset)
+        print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+        return 0
+
     token = os.environ.get("MIMISEEK_GITHUB_TOKEN") or None
     client = GitHubClient(token=token, api_url=args.api_url)
     result = collect(
