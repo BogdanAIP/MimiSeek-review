@@ -46,3 +46,63 @@ jobs:
           python tools/collect_github_evidence.py
           --verify-canonical-ref-boundary
           --required-ruleset mimiseek-canonical-main
+
+  bootstrap-commit-provenance:
+    if: ${{ vars.MIMISEEK_COLLECTOR_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+
+      - name: Resolve source App scope
+        id: source-scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+
+          config = json.loads(Path("config/consumers.json").read_text(encoding="utf-8"))
+          repositories = [
+              item["repository"]
+              for item in config["consumers"]
+              if item.get("evidence", {}).get("enabled", True)
+          ]
+          owners = {repository.split("/", 1)[0] for repository in repositories}
+          if len(owners) != 1:
+              raise SystemExit(
+                  "provenance verifier v1 requires all enabled repositories to share one GitHub App installation owner"
+              )
+          owner = next(iter(owners))
+          names = [repository.split("/", 1)[1] for repository in repositories]
+          print(f"owner={owner}")
+          print("repositories<<MIMISEEK_REPOSITORIES")
+          print("\n".join(names))
+          print("MIMISEEK_REPOSITORIES")
+          PY
+
+      - name: Create read-only source token
+        id: source-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ secrets.MIMISEEK_COLLECTOR_CLIENT_ID }}
+          private-key: ${{ secrets.MIMISEEK_COLLECTOR_PRIVATE_KEY }}
+          owner: ${{ steps.source-scope.outputs.owner }}
+          repositories: ${{ steps.source-scope.outputs.repositories }}
+          permission-contents: read
+          permission-issues: read
+          permission-pull-requests: read
+
+      - name: Verify bootstrap BUGGY/FIXED/VERIFIED commit provenance
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          MIMISEEK_GITHUB_TOKEN: ${{ steps.source-token.outputs.token }}
+        run: python tools/verify_bootstrap_commit_provenance.py
