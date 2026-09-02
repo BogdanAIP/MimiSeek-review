@@ -27,93 +27,22 @@ jobs:
   canonical-ref-boundary:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify live canonical-main ruleset
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+
+      - name: Verify effective canonical-main rules
         env:
-          GH_API_URL: ${{ github.api_url }}
-          GH_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
-          REQUIRED_RULESET: mimiseek-canonical-main
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json
-          import os
-          import urllib.request
-
-          api = os.environ["GH_API_URL"].rstrip("/")
-          repo = os.environ["GH_REPOSITORY"]
-          token = os.environ["GH_TOKEN"]
-          required_name = os.environ["REQUIRED_RULESET"]
-          headers = {
-              "Accept": "application/vnd.github+json",
-              "Authorization": f"Bearer {token}",
-              "X-GitHub-Api-Version": "2026-03-10",
-              "User-Agent": "MimiSeek-ref-boundary-check/1",
-          }
-
-          def get(path):
-              request = urllib.request.Request(api + path, headers=headers, method="GET")
-              with urllib.request.urlopen(request, timeout=30) as response:
-                  return json.loads(response.read().decode("utf-8"))
-
-          repository = get(f"/repos/{repo}")
-          default_branch = repository["default_branch"]
-          rulesets = get(f"/repos/{repo}/rulesets")
-          matches = [
-              item for item in rulesets
-              if item.get("name") == required_name and item.get("enforcement") == "active"
-          ]
-          if len(matches) != 1:
-              raise SystemExit(
-                  f"required active ruleset {required_name!r} not uniquely present: matches={len(matches)}"
-              )
-
-          detail = get(f"/repos/{repo}/rulesets/{matches[0]['id']}")
-          if detail.get("target") != "branch":
-              raise SystemExit("canonical ruleset must target branches")
-
-          ref_condition = (detail.get("conditions") or {}).get("ref_name") or {}
-          include = set(ref_condition.get("include") or [])
-          exclude = set(ref_condition.get("exclude") or [])
-          default_ref = f"refs/heads/{default_branch}"
-          if "~DEFAULT_BRANCH" not in include and default_ref not in include:
-              raise SystemExit(f"canonical ruleset does not include {default_ref}")
-          if "~DEFAULT_BRANCH" in exclude or default_ref in exclude:
-              raise SystemExit(f"canonical ruleset excludes {default_ref}")
-
-          rule_types = {rule.get("type") for rule in detail.get("rules") or []}
-          required_types = {"pull_request", "deletion", "non_fast_forward"}
-          missing = sorted(required_types - rule_types)
-          if missing:
-              raise SystemExit(f"canonical ruleset missing required rules: {missing}")
-
-          branch = get(f"/repos/{repo}/branches/{default_branch}")
-          if not branch.get("protected"):
-              raise SystemExit(f"default branch {default_branch!r} is not reported protected")
-
-          # This is the fail-closed answer for the actual workflow caller. GitHub
-          # may omit bypass_actors for callers that cannot administer rulesets,
-          # so omission of that privileged field is never treated as proof that
-          # no bypass exists. The workflow is acceptable only when GitHub says
-          # this exact caller can never bypass the canonical ruleset.
-          if detail.get("current_user_can_bypass") != "never":
-              raise SystemExit(
-                  "canonical ruleset bypass capability is not provably 'never' for this workflow caller"
-              )
-
-          # When the privileged list is visible, any configured bypass actor is
-          # also unacceptable. Fresh terminal review independently verifies the
-          # full live ruleset with sufficient repository access.
-          if "bypass_actors" in detail and detail["bypass_actors"]:
-              raise SystemExit("canonical ruleset has bypass actors")
-
-          print(json.dumps({
-              "ruleset_id": detail.get("id"),
-              "ruleset_name": detail.get("name"),
-              "default_branch": default_branch,
-              "protected": branch.get("protected"),
-              "current_user_can_bypass": detail.get("current_user_can_bypass"),
-              "required_rule_types": sorted(required_types),
-          }, sort_keys=True))
-          PY
+        run: >-
+          python tools/collect_github_evidence.py
+          --verify-canonical-ref-boundary
+          --required-ruleset mimiseek-canonical-main
