@@ -18,6 +18,8 @@ BUGGY = "b" * 40
 FIX = "c" * 40
 VERIFIED = "d" * 40
 LIVE = "e" * 40
+OLD_BASE = "f" * 40
+REBASED_ANCHOR = "1" * 40
 
 
 def case_record():
@@ -70,6 +72,7 @@ def snapshot(commits=None):
             "id": 7007,
             "node_id": "PR_7007",
             "number": 7,
+            "user": {"id": 1, "login": "BogdanAIP", "type": "User"},
             "base": {
                 "repo": "BogdanAIP/example",
                 "repo_id": 101,
@@ -78,7 +81,77 @@ def snapshot(commits=None):
             "head": {"sha": LIVE},
         },
         "source": {"pull_request_url": "https://github.com/BogdanAIP/example/pull/7"},
+        "issue_comments": [],
+        "reviews": [],
+        "review_comments": [],
         "commits": commits,
+    }
+
+
+def rebased_snapshot():
+    result = snapshot(
+        [
+            {"sha": REBASED_ANCHOR, "parents": [BASE]},
+            {"sha": FIX, "parents": [REBASED_ANCHOR]},
+            {"sha": VERIFIED, "parents": [FIX]},
+            {"sha": LIVE, "parents": [VERIFIED]},
+        ]
+    )
+    result["issue_comments"] = [
+        {
+            "id": 10,
+            "user": {"id": 1, "login": "BogdanAIP", "type": "User"},
+            "body": f"@codex review exact head {BUGGY}",
+        }
+    ]
+    result["reviews"] = [
+        {
+            "id": 20,
+            "user": {"id": 2, "login": "chatgpt-codex-connector[bot]", "type": "Bot"},
+            "commit_id": BUGGY,
+        }
+    ]
+    result["review_comments"] = [
+        {
+            "id": 30,
+            "pull_request_review_id": 20,
+            "in_reply_to_id": None,
+            "user": {"id": 2, "login": "chatgpt-codex-connector[bot]", "type": "Bot"},
+            "commit_id": BUGGY,
+            "original_commit_id": BUGGY,
+            "body": "P1 concrete defect",
+        },
+        {
+            "id": 31,
+            "pull_request_review_id": 21,
+            "in_reply_to_id": 30,
+            "user": {"id": 1, "login": "BogdanAIP", "type": "User"},
+            "commit_id": REBASED_ANCHOR,
+            "original_commit_id": BUGGY,
+            "body": "Fixed on the rebased head.",
+        },
+    ]
+    return result
+
+
+def rebase_reconciliation():
+    return {
+        "case_ids": ["RC-EXAMPLE-01"],
+        "repository": "BogdanAIP/example",
+        "pr": 7,
+        "kind": provenance.REBASE_KIND,
+        "source_buggy_base": BASE,
+        "reviewed_buggy_head": BUGGY,
+        "reviewed_buggy_parent": OLD_BASE,
+        "rebased_fix_lineage_anchor": REBASED_ANCHOR,
+        "fix_head": FIX,
+        "verified_head": VERIFIED,
+        "source_conflict": "Source base belongs to later rebased lineage.",
+        "github_evidence": {
+            "review_request_issue_comment_id": 10,
+            "codex_review_id": 20,
+            "codex_review_comment_ids": [30],
+        },
     }
 
 
@@ -164,6 +237,38 @@ class BootstrapCommitProvenanceTests(unittest.TestCase):
         self.assertTrue(any("finding HEAD is not BUGGY HEAD" in error for error in errors))
         self.assertTrue(any("finding text differs" in error for error in errors))
 
+    def test_explicit_rebase_reconciliation_preserves_detached_reviewed_head(self):
+        errors = provenance.validate_case(
+            case_record(),
+            finding_record(),
+            rebased_snapshot(),
+            rebase_reconciliation(),
+            {"sha": BUGGY, "parents": (OLD_BASE,)},
+        )
+        self.assertEqual(errors, [])
+
+    def test_rebase_reconciliation_requires_pr_bound_codex_comment(self):
+        snap = rebased_snapshot()
+        snap["review_comments"][0]["commit_id"] = FIX
+        errors = provenance.validate_case(
+            case_record(),
+            finding_record(),
+            snap,
+            rebase_reconciliation(),
+            {"sha": BUGGY, "parents": (OLD_BASE,)},
+        )
+        self.assertTrue(any("commit_id differs from BUGGY HEAD" in error for error in errors))
+
+    def test_rebase_reconciliation_requires_exact_historical_parent(self):
+        errors = provenance.validate_case(
+            case_record(),
+            finding_record(),
+            rebased_snapshot(),
+            rebase_reconciliation(),
+            {"sha": BUGGY, "parents": (BASE,)},
+        )
+        self.assertTrue(any("reviewed BUGGY HEAD parent differs" in error for error in errors))
+
     def test_reconcile_fetches_one_snapshot_per_pr(self):
         calls = []
 
@@ -183,7 +288,10 @@ class BootstrapCommitProvenanceTests(unittest.TestCase):
         self.assertEqual(result["cases_checked"], 1)
         self.assertEqual(result["prs_checked"], 1)
         self.assertEqual(calls, [("BogdanAIP/example", 7)])
-        self.assertIn("does not infer semantic fix correctness from commit ancestry", result["limitations"])
+        self.assertEqual(result["provenance_modes"], {"linear_pr_history": 1})
+        self.assertTrue(
+            any("does not infer semantic fix correctness" in item for item in result["limitations"])
+        )
 
 
 if __name__ == "__main__":
