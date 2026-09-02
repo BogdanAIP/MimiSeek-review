@@ -83,7 +83,12 @@ jobs:
           if not branch.get("protected"):
               raise SystemExit(f"default branch {default_branch!r} is not reported protected")
 
-          if detail.get("bypass_actors"):
+          if detail.get("current_user_can_bypass") != "never":
+              raise SystemExit(
+                  "canonical ruleset bypass capability is not provably 'never' for this workflow caller"
+              )
+
+          if "bypass_actors" in detail and detail["bypass_actors"]:
               raise SystemExit("canonical ruleset has bypass actors")
 
           print(json.dumps({
@@ -91,6 +96,7 @@ jobs:
               "ruleset_name": detail.get("name"),
               "default_branch": default_branch,
               "protected": branch.get("protected"),
+              "current_user_can_bypass": detail.get("current_user_can_bypass"),
           }, sort_keys=True))
           PY
 
@@ -225,7 +231,11 @@ jobs:
               raise SystemExit("canonical ruleset lost required protections")
           if not branch.get("protected"):
               raise SystemExit("default branch is no longer protected")
-          if detail.get("bypass_actors"):
+          if detail.get("current_user_can_bypass") != "never":
+              raise SystemExit(
+                  "canonical ruleset bypass capability is not provably 'never' for this workflow caller"
+              )
+          if "bypass_actors" in detail and detail["bypass_actors"]:
               raise SystemExit("canonical ruleset has bypass actors")
           PY
 
