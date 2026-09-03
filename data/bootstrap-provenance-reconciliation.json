@@ -1,0 +1,57 @@
+{
+  "schema_version": "bootstrap_provenance_reconciliation_v1",
+  "authority": "governed_reconciliation_of_authenticated_source_claims",
+  "entries": [
+    {
+      "case_ids": [
+        "RC-CAP124-047",
+        "RC-CAP124-048",
+        "RC-CAP124-049",
+        "RC-CAP124-050",
+        "RC-CAP124-051",
+        "RC-CAP124-052",
+        "RC-CAP124-053"
+      ],
+      "repository": "BogdanAIP/chat-agent-platform",
+      "pr": 124,
+      "kind": "reviewed_head_rebased_before_fix",
+      "source_buggy_base": "0d30f1aca13c5c6b11f92b640586152ced9cc6ec",
+      "reviewed_buggy_head": "48d2e89c3b2fee9053b5038c093ad5060124b2ce",
+      "reviewed_buggy_parent": "e8bda851e9d810d0e007826693540ec1d4c71053",
+      "rebased_fix_lineage_anchor": "a2f22b3adcadc2fe23796a926871aae29bca3226",
+      "fix_head": "069601df1f6a194b676c74546a8bddb7c33e7711",
+      "verified_head": "069601df1f6a194b676c74546a8bddb7c33e7711",
+      "source_conflict": "The authenticated workbook records the later rebased PR base as BUGGY BASE even though the exact Codex-reviewed BUGGY HEAD predates that base and has a different parent. Preserve the workbook projection unchanged; use reviewed_buggy_parent for the historical BUGGY diff boundary and source_buggy_base for the rebased FIXED lineage.",
+      "github_evidence": {
+        "review_request_issue_comment_id": 5448840308,
+        "codex_review_id": 5048203630,
+        "codex_review_comment_ids": [
+          3878172592,
+          3878172595,
+          3878172603,
+          3878172608,
+          3878172612,
+          3878172617,
+          3878172622
+        ],
+        "owner_reply_comment_ids": [
+          3879163170,
+          3879164126,
+          3879164802,
+          3879165520,
+          3879166214,
+          3879166947,
+          3879167678
+        ]
+      }
+    }
+  ],
+  "rules": [
+    "bootstrap-v1 source projections remain immutable",
+    "a reconciliation exception must match exact source case identities before it can apply",
+    "historical detached heads require live PR-bound review evidence and live commit-parent verification",
+    "a rebased lineage anchor must be bound to the exact owner reply review submissions recorded on that anchor",
+    "rebased lineage does not imply semantic fix correctness",
+    "unlisted provenance conflicts fail closed"
+  ]
+}

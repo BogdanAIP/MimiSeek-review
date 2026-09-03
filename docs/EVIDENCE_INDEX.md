@@ -134,9 +134,61 @@ Accepted PR #5 foundation includes:
 - server-enforced canonical-main write boundary validated through effective rules for the actual default branch;
 - CI unit coverage plus live canonical-ref-boundary verification.
 
-The accepted foundation does **not** complete Stage 1. At acceptance, complete commit-level BUGGY/FIXED/VERIFIED provenance remained explicitly pending, no durable CAP/UV collector watermark had yet been demonstrated, exact accepted CAP/UV reviewer-policy refs had not yet been resolved into the Stage-1 baseline work, generic-versus-project-specific rule classification remained pending, and no baseline seed existed.
+The accepted foundation did **not** by itself complete Stage 1. At acceptance, complete commit-level BUGGY/FIXED/VERIFIED provenance remained explicitly pending, no durable CAP/UV collector watermark had yet been demonstrated, exact accepted CAP/UV reviewer-policy refs had not yet been resolved into the Stage-1 baseline work, generic-versus-project-specific rule classification remained pending, and no baseline seed existed.
 
-A live post-merge check found no `evidence/github-intake` branch, so the next evidence-intake step remains the first authenticated backfill and durable-watermark verification. Branch absence is not used to infer which external credential or enablement item is missing.
+### Accepted state synchronization — PR #7
+
+PR #7 — `Stage 1: record PR #5 acceptance and backfill readiness` synchronized `CURRENT_STATE`/`EVIDENCE_INDEX` after PR #5 without expanding Stage-1 authority.
+
+Acceptance identity:
+
+- BASE: `bda75c6d1c0b5b56a48728e4ab04aee84c77188b`
+- accepted exact PR HEAD: `1030f4aa39457837423bea83acd1dfe84982a364`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- rejected candidates: `16`
+- durable GitHub terminal-result comment id: `5510523944`
+- exact-head CI run: `33635510046`
+- CI state: `PASS`
+- merge commit on `main`: `3fadb539fb83db9f4b8a71f1b22f04ca3a461ea5`
+
+PR #7 did not activate the external collector or claim a durable intake watermark; it only made accepted repository documentation accurately describe the then-pending setup/backfill work.
+
+### Collector activation evidence after PR #7
+
+Collector activation is operational evidence within Stage 1, not a terminal acceptance record for the still-open provenance PR.
+
+The dedicated source GitHub App was configured outside repository contents and installed only on the registered CAP/UV repositories with read-only source permissions. Secret values are intentionally not recorded here. Repository variable `MIMISEEK_COLLECTOR_ENABLED=true` intentionally enabled the accepted collector workflow.
+
+The first authenticated run is durably identifiable as:
+
+- workflow: `Collect review evidence`;
+- run id: `33642703700`;
+- run attempt: `1`;
+- trigger: `workflow_dispatch`;
+- source branch: `main`;
+- exact workflow source HEAD: `3fadb539fb83db9f4b8a71f1b22f04ca3a461ea5`;
+- conclusion: `success`;
+- first intake commit: `77303e135a6dacb0c5f068940291c016902725d6`;
+- intake commit parent: `3fadb539fb83db9f4b8a71f1b22f04ca3a461ea5`;
+- durable scan/watermark: `2026-09-02T14:33:02Z`;
+- selected CAP PR snapshots: `16`;
+- selected UV PR snapshots: `4`.
+
+The first intake commit created the non-authoritative `evidence/github-intake` data from the accepted `main` workflow and wrote `evidence/github/collector-state.json` beside the PR snapshots. This proves authenticated CAP/UV source access, durable publication, and watermark/state advancement; it does not make the intake branch canonical truth.
+
+Immediate rerun attempts also completed successfully, but they are **not** accepted as the required unchanged-source no-op proof. `uv-studio` PR #89 genuinely changed between those scans. The collector correctly refreshed the moving `uv-studio/89.json`; one resulting evidence commit `8fc7c57d0f5531e73bebd05fb7b2b098535f97c7` changed that snapshot plus `collector-state.json`, while unchanged CAP snapshots were not rewritten. A clean quiet-source no-op/idempotence proof therefore remains pending and must not be inferred from these moving-source reruns.
+
+### Structural bootstrap commit provenance — active PR #8 work
+
+The active Stage-1 provenance slice is intentionally not listed as accepted until its normal PR acceptance completes. Current live verification work covers all 84 regression cases across **9 regression-source PRs**, not the wider 21-PR bootstrap identity scope.
+
+Fail-closed verification discovered one material authenticated-source lineage conflict: seven CAP PR #124 cases (`RC-CAP124-047` through `RC-CAP124-053`) point to Codex-reviewed historical BUGGY head `48d2e89c3b2fee9053b5038c093ad5060124b2ce`, while the workbook's recorded BUGGY BASE belongs to a later rebased lineage. GitHub still preserves the exact detached commit, Codex review submission/comments bound to it, its actual parent, and owner replies recording the rebase/fix transition.
+
+The active implementation preserves bootstrap-v1 projections unchanged and records the conflict in `data/bootstrap-provenance-reconciliation.json`. The live verifier distinguishes 77 ordinary linear-history cases from 7 explicit `reviewed_head_rebased_before_fix` cases. This is structural provenance only: semantic fix correctness, material source-commentary/disposition reconciliation, reviewer-policy refs, generic/project-specific classification, clean collector no-op, and baseline-seed derivation remain separate Stage-1 work.
 
 Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available.
 
