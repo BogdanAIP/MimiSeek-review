@@ -18,44 +18,20 @@ STATUS = "SUPPORTED_FIXED_AND_CLEAN_REREVIEW_EVIDENCE"
 CODEX_LOGIN = "chatgpt-codex-connector[bot]"
 CODEX_APP_SLUG = "chatgpt-codex-connector"
 
-TOP_FIELDS = {
-    "schema_version",
-    "authority",
-    "source_artifact_sha256",
-    "coverage",
-    "entries",
-    "rules",
-}
+TOP_FIELDS = {"schema_version", "authority", "source_artifact_sha256", "coverage", "entries", "rules"}
 COVERAGE_FIELDS = {
-    "kind",
-    "source_sheet",
-    "finding_ids",
-    "complete_for_scope",
+    "kind", "source_sheet", "finding_ids", "complete_for_scope",
     "global_commentary_reconciliation_complete",
 }
 ENTRY_FIELDS = {
-    "finding_id",
-    "repository",
-    "pr",
-    "reviewed_head",
-    "source_sheet",
-    "source_row",
-    "source_confirmed",
-    "source_note",
-    "kind",
-    "github_evidence",
-    "resolution_evidence",
-    "reconciliation_status",
-    "authority_limit",
+    "finding_id", "repository", "pr", "reviewed_head", "source_sheet", "source_row",
+    "source_confirmed", "source_note", "kind", "github_evidence", "resolution_evidence",
+    "reconciliation_status", "authority_limit",
 }
 GITHUB_EVIDENCE_FIELDS = {"codex_review_id", "codex_review_comment_id"}
 RESOLUTION_FIELDS = {
-    "fixed_head",
-    "owner_reply_comment_id",
-    "rereview_request_comment_id",
-    "clean_codex_result_comment_id",
-    "changed_files",
-    "content_assertions",
+    "fixed_head", "owner_reply_comment_id", "rereview_request_comment_id",
+    "clean_codex_result_comment_id", "changed_files", "content_assertions",
 }
 ASSERTION_FIELDS = {"path", "required_present", "required_absent"}
 REVIEWED_COMMIT_RE = re.compile(r"Reviewed commit:\*\*?\s*`([0-9a-f]{7,40})`", re.IGNORECASE)
@@ -70,8 +46,7 @@ def exact_object(raw: Any, fields: set[str], label: str) -> dict[str, Any]:
         raise RereviewReconciliationError(f"{label} must be an object")
     if set(raw) != fields:
         raise RereviewReconciliationError(
-            f"{label} shape mismatch; missing={sorted(fields - set(raw))} "
-            f"unknown={sorted(set(raw) - fields)}"
+            f"{label} shape mismatch; missing={sorted(fields - set(raw))} unknown={sorted(set(raw) - fields)}"
         )
     return raw
 
@@ -107,7 +82,7 @@ def timestamp(value: Any, label: str) -> datetime:
     try:
         parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise RereviewReconciliationError(f"{label} is not an ISO-8601 timestamp") from exc
+        raise RereviewReconciliationError(f"{label} is not ISO-8601") from exc
     if parsed.tzinfo is None:
         raise RereviewReconciliationError(f"{label} must be timezone-aware")
     return parsed.astimezone(timezone.utc)
@@ -115,29 +90,22 @@ def timestamp(value: Any, label: str) -> datetime:
 
 def load_document(path: Path, source_manifest_path: Path) -> dict[str, Any]:
     doc = exact_object(json.loads(path.read_text(encoding="utf-8")), TOP_FIELDS, str(path))
-    if doc["schema_version"] != SCHEMA_VERSION:
-        raise RereviewReconciliationError(f"{path}: unsupported schema")
-    if doc["authority"] != AUTHORITY:
-        raise RereviewReconciliationError(f"{path}: unexpected authority")
-
+    if doc["schema_version"] != SCHEMA_VERSION or doc["authority"] != AUTHORITY:
+        raise RereviewReconciliationError(f"{path}: unsupported schema/authority")
     manifest = json.loads(source_manifest_path.read_text(encoding="utf-8"))
     if doc["source_artifact_sha256"] != manifest.get("sha256"):
         raise RereviewReconciliationError(f"{path}: source artifact digest mismatch")
 
     coverage = exact_object(doc["coverage"], COVERAGE_FIELDS, f"{path}: coverage")
-    if coverage["kind"] != "bounded_material_commentary_rereview_slice":
-        raise RereviewReconciliationError(f"{path}: unsupported coverage kind")
-    if coverage["source_sheet"] != "Findings":
-        raise RereviewReconciliationError(f"{path}: source_sheet must be Findings")
+    if coverage["kind"] != "bounded_material_commentary_rereview_slice" or coverage["source_sheet"] != "Findings":
+        raise RereviewReconciliationError(f"{path}: unsupported coverage")
     ids = string_array(coverage["finding_ids"], f"{path}: finding_ids")
-    if coverage["complete_for_scope"] is not True:
-        raise RereviewReconciliationError(f"{path}: complete_for_scope must be true")
-    if coverage["global_commentary_reconciliation_complete"] is not False:
-        raise RereviewReconciliationError(f"{path}: bounded slice cannot claim global completion")
+    if coverage["complete_for_scope"] is not True or coverage["global_commentary_reconciliation_complete"] is not False:
+        raise RereviewReconciliationError(f"{path}: bounded coverage flags are invalid")
 
     entries = doc["entries"]
     if not isinstance(entries, list) or not entries:
-        raise RereviewReconciliationError(f"{path}: entries must be a non-empty array")
+        raise RereviewReconciliationError(f"{path}: entries must be non-empty")
     seen_ids: set[str] = set()
     seen_rows: set[int] = set()
     for index, raw_entry in enumerate(entries, start=1):
@@ -152,9 +120,9 @@ def load_document(path: Path, source_manifest_path: Path) -> dict[str, Any]:
         row = positive_int(entry["source_row"], f"{label} source_row")
         nonempty(entry["source_confirmed"], f"{label} source_confirmed")
         nonempty(entry["source_note"], f"{label} source_note")
+        nonempty(entry["authority_limit"], f"{label} authority_limit")
         if entry["kind"] != KIND or entry["reconciliation_status"] != STATUS:
             raise RereviewReconciliationError(f"{label}: unsupported kind/status")
-        nonempty(entry["authority_limit"], f"{label} authority_limit")
 
         evidence = exact_object(entry["github_evidence"], GITHUB_EVIDENCE_FIELDS, f"{label} github_evidence")
         positive_int(evidence["codex_review_id"], f"{label} codex_review_id")
@@ -162,9 +130,8 @@ def load_document(path: Path, source_manifest_path: Path) -> dict[str, Any]:
 
         resolution = exact_object(entry["resolution_evidence"], RESOLUTION_FIELDS, f"{label} resolution_evidence")
         sha40(resolution["fixed_head"], f"{label} fixed_head")
-        positive_int(resolution["owner_reply_comment_id"], f"{label} owner_reply_comment_id")
-        positive_int(resolution["rereview_request_comment_id"], f"{label} rereview_request_comment_id")
-        positive_int(resolution["clean_codex_result_comment_id"], f"{label} clean_codex_result_comment_id")
+        for field in ("owner_reply_comment_id", "rereview_request_comment_id", "clean_codex_result_comment_id"):
+            positive_int(resolution[field], f"{label} {field}")
         changed_files = string_array(resolution["changed_files"], f"{label} changed_files")
         assertions = resolution["content_assertions"]
         if not isinstance(assertions, list) or not assertions:
@@ -175,7 +142,7 @@ def load_document(path: Path, source_manifest_path: Path) -> dict[str, Any]:
             assertion = exact_object(raw_assertion, ASSERTION_FIELDS, assertion_label)
             path_value = nonempty(assertion["path"], f"{assertion_label} path")
             if path_value in paths:
-                raise RereviewReconciliationError(f"{label}: duplicate assertion path {path_value}")
+                raise RereviewReconciliationError(f"{label}: duplicate assertion path")
             paths.add(path_value)
             present = string_array(assertion["required_present"], f"{assertion_label} required_present")
             absent = string_array(assertion["required_absent"], f"{assertion_label} required_absent", allow_empty=True)
@@ -183,9 +150,8 @@ def load_document(path: Path, source_manifest_path: Path) -> dict[str, Any]:
                 raise RereviewReconciliationError(f"{assertion_label}: contradictory tokens")
         if not paths.issubset(set(changed_files)):
             raise RereviewReconciliationError(f"{label}: assertions must target changed files")
-
         if finding_id in seen_ids or row in seen_rows:
-            raise RereviewReconciliationError(f"{label}: duplicate finding or source row")
+            raise RereviewReconciliationError(f"{label}: duplicate finding/source row")
         seen_ids.add(finding_id)
         seen_rows.add(row)
 
@@ -206,11 +172,10 @@ def validate_source(entry: dict[str, Any], finding: dict[str, Any], snapshot: di
     check(snapshot.get("repository") == entry["repository"], "snapshot repository differs")
     check(snapshot.get("pr_number") == entry["pr"], "snapshot PR differs")
     pr = snapshot.get("pull_request") or {}
-    resolution = entry["resolution_evidence"]
     check(pr.get("number") == entry["pr"], "live PR number differs")
     check(pr.get("state") == "closed", "source PR is not closed")
     check(pr.get("merged_at") is not None, "source PR is not merged")
-    check(((pr.get("head") or {}).get("sha")) == resolution["fixed_head"], "live final PR HEAD differs from fixed head")
+    check(((pr.get("head") or {}).get("sha")) == entry["resolution_evidence"]["fixed_head"], "live final PR HEAD differs from fixed head")
 
     evidence = entry["github_evidence"]
     reviews = {item.get("id"): item for item in snapshot.get("reviews", []) if isinstance(item, dict)}
@@ -218,11 +183,11 @@ def validate_source(entry: dict[str, Any], finding: dict[str, Any], snapshot: di
     review = reviews.get(evidence["codex_review_id"])
     comment = comments.get(evidence["codex_review_comment_id"])
     check(review is not None, "exact original Codex review is absent")
-    if review is not None:
+    if review:
         check(review.get("commit_id") == entry["reviewed_head"], "original Codex review commit differs")
         check(((review.get("user") or {}).get("login")) == CODEX_LOGIN, "original review actor differs")
     check(comment is not None, "exact original Codex finding is absent")
-    if comment is not None:
+    if comment:
         check(comment.get("pull_request_review_id") == evidence["codex_review_id"], "original finding review id differs")
         check(comment.get("commit_id") == entry["reviewed_head"], "original finding commit differs")
         check(comment.get("original_commit_id") == entry["reviewed_head"], "original finding original_commit differs")
@@ -236,10 +201,11 @@ def validate_reviewed_to_fixed_compare(raw: Any, reviewed_head: str, fixed_head:
     status = nonempty(raw.get("status"), "reviewed-to-fixed compare status")
     base_sha = sha40(((raw.get("base_commit") or {}).get("sha")), "reviewed-to-fixed base")
     merge_base = sha40(((raw.get("merge_base_commit") or {}).get("sha")), "reviewed-to-fixed merge base")
-    head_sha = sha40(((raw.get("head_commit") or {}).get("sha")), "reviewed-to-fixed head")
-    if base_sha != reviewed_head or merge_base != reviewed_head or head_sha != fixed_head or status != "ahead":
+    # Some scoped-App compare responses omit head_commit. The fixed identity is
+    # independently bound to the live final PR head and immutable fixed-head content.
+    if base_sha != reviewed_head or merge_base != reviewed_head or status != "ahead":
         raise RereviewReconciliationError(
-            f"fixed head is not an exact descendant of reviewed head; status={status} base={base_sha} merge_base={merge_base} head={head_sha}"
+            f"fixed head is not an exact descendant of reviewed head; status={status} base={base_sha} merge_base={merge_base} fixed={fixed_head}"
         )
 
 
@@ -251,30 +217,28 @@ def parse_clean_reviewed_prefix(body: str, fixed_head: str) -> None:
         raise RereviewReconciliationError("clean Codex result has no Reviewed commit identity")
     prefix = match.group(1)
     if not fixed_head.startswith(prefix):
-        raise RereviewReconciliationError(
-            f"clean Codex result reviewed commit {prefix} does not match fixed head {fixed_head}"
-        )
+        raise RereviewReconciliationError(f"clean Codex result reviewed commit {prefix} does not match fixed head {fixed_head}")
 
 
 def resolve_and_validate_live(client: base.GitHubClient, entry: dict[str, Any], snapshot: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     finding_id = entry["finding_id"]
-    repository = entry["repository"]
-    owner, name = base.split_repository(repository)
+    owner, name = base.split_repository(entry["repository"])
     prefix = f"/repos/{owner}/{name}"
     pr = snapshot.get("pull_request") or {}
     pr_owner = ((pr.get("user") or {}).get("login"))
     if not pr_owner:
-        errors.append(f"{finding_id}: PR owner identity is unavailable")
-        return errors
-
+        return [f"{finding_id}: PR owner identity is unavailable"]
     resolution = entry["resolution_evidence"]
     fixed_head = resolution["fixed_head"]
     evidence = entry["github_evidence"]
 
     try:
-        compare = client.get(f"{prefix}/compare/{entry['reviewed_head']}...{fixed_head}")
-        validate_reviewed_to_fixed_compare(compare, entry["reviewed_head"], fixed_head)
+        validate_reviewed_to_fixed_compare(
+            client.get(f"{prefix}/compare/{entry['reviewed_head']}...{fixed_head}"),
+            entry["reviewed_head"],
+            fixed_head,
+        )
         base.fetch_default_branch_ancestry(client, prefix, fixed_head, "fixed rereview head")
 
         files = client.paged(f"{prefix}/pulls/{entry['pr']}/files")
@@ -283,7 +247,7 @@ def resolve_and_validate_live(client: base.GitHubClient, entry: dict[str, Any], 
             errors.append(f"{finding_id}: final changed-file inventory differs")
 
         for assertion in resolution["content_assertions"]:
-            text = base.fetch_text_file(client, repository, assertion["path"], fixed_head)
+            text = base.fetch_text_file(client, entry["repository"], assertion["path"], fixed_head)
             for token in assertion["required_present"]:
                 if token not in text:
                     errors.append(f"{finding_id}: {assertion['path']} is missing required token {token!r}")
@@ -305,58 +269,51 @@ def resolve_and_validate_live(client: base.GitHubClient, entry: dict[str, Any], 
         if not str(owner_reply.get("pull_request_url") or "").endswith(f"/pulls/{entry['pr']}"):
             errors.append(f"{finding_id}: owner reply is not bound to exact PR")
 
-        rereview_request = client.get(f"{prefix}/issues/comments/{resolution['rereview_request_comment_id']}")
-        clean_result = client.get(f"{prefix}/issues/comments/{resolution['clean_codex_result_comment_id']}")
-        if not isinstance(rereview_request, dict) or rereview_request.get("id") != resolution["rereview_request_comment_id"]:
+        request = client.get(f"{prefix}/issues/comments/{resolution['rereview_request_comment_id']}")
+        clean = client.get(f"{prefix}/issues/comments/{resolution['clean_codex_result_comment_id']}")
+        if not isinstance(request, dict) or request.get("id") != resolution["rereview_request_comment_id"]:
             raise RereviewReconciliationError("exact re-review request is unavailable")
-        if not isinstance(clean_result, dict) or clean_result.get("id") != resolution["clean_codex_result_comment_id"]:
+        if not isinstance(clean, dict) or clean.get("id") != resolution["clean_codex_result_comment_id"]:
             raise RereviewReconciliationError("exact clean Codex result is unavailable")
-
-        if ((rereview_request.get("user") or {}).get("login")) != pr_owner:
+        if ((request.get("user") or {}).get("login")) != pr_owner:
             errors.append(f"{finding_id}: re-review request actor differs from PR owner")
-        request_body = str(rereview_request.get("body") or "")
+        request_body = str(request.get("body") or "")
         if "@codex review" not in request_body or fixed_head not in request_body:
             errors.append(f"{finding_id}: re-review request does not bind exact fixed head")
-        if not str(rereview_request.get("issue_url") or "").endswith(f"/issues/{entry['pr']}"):
+        if not str(request.get("issue_url") or "").endswith(f"/issues/{entry['pr']}"):
             errors.append(f"{finding_id}: re-review request is not bound to exact PR")
 
-        if ((clean_result.get("user") or {}).get("login")) != CODEX_LOGIN:
+        if ((clean.get("user") or {}).get("login")) != CODEX_LOGIN:
             errors.append(f"{finding_id}: clean result actor is not Codex bot")
-        if ((clean_result.get("performed_via_github_app") or {}).get("slug")) != CODEX_APP_SLUG:
+        if ((clean.get("performed_via_github_app") or {}).get("slug")) != CODEX_APP_SLUG:
             errors.append(f"{finding_id}: clean result is not attributed to expected Codex GitHub App")
-        if not str(clean_result.get("issue_url") or "").endswith(f"/issues/{entry['pr']}"):
+        if not str(clean.get("issue_url") or "").endswith(f"/issues/{entry['pr']}"):
             errors.append(f"{finding_id}: clean result is not bound to exact PR")
         try:
-            parse_clean_reviewed_prefix(str(clean_result.get("body") or ""), fixed_head)
+            parse_clean_reviewed_prefix(str(clean.get("body") or ""), fixed_head)
         except RereviewReconciliationError as exc:
             errors.append(f"{finding_id}: {exc}")
 
-        request_time = timestamp(rereview_request.get("created_at"), "re-review request created_at")
-        clean_time = timestamp(clean_result.get("created_at"), "clean result created_at")
-        owner_reply_time = timestamp(owner_reply.get("created_at"), "owner reply created_at")
+        request_time = timestamp(request.get("created_at"), "re-review request created_at")
+        clean_time = timestamp(clean.get("created_at"), "clean result created_at")
+        reply_time = timestamp(owner_reply.get("created_at"), "owner reply created_at")
         merged_time = timestamp(pr.get("merged_at"), "PR merged_at")
-        if not request_time < clean_time < owner_reply_time < merged_time:
+        if not request_time < clean_time < reply_time < merged_time:
             errors.append(f"{finding_id}: re-review evidence chronology is inconsistent")
 
-        # "final exact-head Codex re-review" means no later Codex-authored review
-        # submission, inline finding, or issue comment exists before merge.
-        latest_codex_time = clean_time
-        for item in snapshot.get("reviews", []):
-            if isinstance(item, dict) and ((item.get("user") or {}).get("login")) == CODEX_LOGIN:
-                candidate = item.get("submitted_at")
-                if candidate and timestamp(candidate, "Codex review submitted_at") > latest_codex_time:
-                    errors.append(f"{finding_id}: later Codex review exists after declared clean result")
-        for item in snapshot.get("review_comments", []):
-            if isinstance(item, dict) and ((item.get("user") or {}).get("login")) == CODEX_LOGIN:
-                candidate = item.get("created_at")
-                if candidate and timestamp(candidate, "Codex review comment created_at") > latest_codex_time:
-                    errors.append(f"{finding_id}: later Codex inline finding exists after declared clean result")
-        for item in snapshot.get("issue_comments", []):
-            if isinstance(item, dict) and item.get("id") != resolution["clean_codex_result_comment_id"] and ((item.get("user") or {}).get("login")) == CODEX_LOGIN:
-                candidate = item.get("created_at")
-                if candidate and timestamp(candidate, "Codex issue comment created_at") > latest_codex_time:
-                    errors.append(f"{finding_id}: later Codex issue comment exists after declared clean result")
-
+        for collection, time_field, message in (
+            (snapshot.get("reviews", []), "submitted_at", "later Codex review exists after declared clean result"),
+            (snapshot.get("review_comments", []), "created_at", "later Codex inline finding exists after declared clean result"),
+            (snapshot.get("issue_comments", []), "created_at", "later Codex issue comment exists after declared clean result"),
+        ):
+            for item in collection:
+                if not isinstance(item, dict) or ((item.get("user") or {}).get("login")) != CODEX_LOGIN:
+                    continue
+                if item.get("id") == resolution["clean_codex_result_comment_id"]:
+                    continue
+                candidate = item.get(time_field)
+                if candidate and timestamp(candidate, f"Codex {time_field}") > clean_time:
+                    errors.append(f"{finding_id}: {message}")
     except Exception as exc:
         errors.append(f"{finding_id}: live rereview verification failed: {exc}")
     return errors
@@ -368,8 +325,7 @@ def verify(findings_path: Path, reconciliation_path: Path, source_manifest_path:
     doc = load_document(reconciliation_path, source_manifest_path)
     snapshots: dict[tuple[str, int], dict[str, Any]] = {}
     errors: list[str] = []
-    entries: list[dict[str, Any]] = []
-
+    summaries: list[dict[str, Any]] = []
     for entry in doc["entries"]:
         finding = findings_by_id.get(entry["finding_id"])
         if finding is None:
@@ -382,21 +338,20 @@ def verify(findings_path: Path, reconciliation_path: Path, source_manifest_path:
         entry_errors = validate_source(entry, finding, snapshot)
         entry_errors.extend(resolve_and_validate_live(client, entry, snapshot))
         errors.extend(entry_errors)
-        entries.append({
+        summaries.append({
             "finding_id": entry["finding_id"],
             "reconciliation_status": entry["reconciliation_status"],
             "status": "PASS" if not entry_errors else "FAIL",
         })
-
     return {
         "schema_version": "bootstrap_commentary_rereview_reconciliation_check_v1",
         "authority": "derived_live_verification_not_source_truth",
         "source_artifact_sha256": doc["source_artifact_sha256"],
         "scope": doc["coverage"],
-        "entries_checked": len(entries),
+        "entries_checked": len(summaries),
         "status": "PASS" if not errors else "FAIL",
         "errors": errors,
-        "entries": entries,
+        "entries": summaries,
         "limitations": [
             "a clean exact-head Codex re-review is evidence about that bounded review run, not universal proof of semantic correctness",
             "owner fixed prose is not accepted without independent fixed-head content and identity evidence",
