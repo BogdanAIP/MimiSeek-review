@@ -48,7 +48,7 @@ The normal provenance path requires:
 
 A fail-closed live run exposed one authenticated-source lineage conflict rather than silently normalizing it away: seven cases `RC-CAP124-047` through `RC-CAP124-053` refer to the exact Codex-reviewed historical CAP PR #124 head `48d2e89c3b2fee9053b5038c093ad5060124b2ce`, while the workbook's `BUGGY BASE` belongs to the later rebased lineage. GitHub preserves the detached reviewed commit, its actual parent, the exact Codex review submission/comments bound to that commit, and owner replies recording the rebase/fix transition.
 
-The governed exception is recorded in `data/bootstrap-provenance-reconciliation.json`. It does **not** rewrite `regression-cases.jsonl` or `findings.jsonl`: those remain immutable authenticated-source projections. The exception must match the exact seven case IDs, repository/PR identity, source values, historical reviewed head and parent, rebased lineage anchor, review request, Codex review identity, and original review-comment identities. Unlisted or mismatched lineage conflicts fail closed.
+The governed exception is recorded in `data/bootstrap-provenance-reconciliation.json`. It does **not** rewrite `regression-cases.jsonl` or `findings.jsonl`: those remain immutable authenticated-source projections. The exception must match the exact seven case IDs, repository/PR identity, source values, historical reviewed head and parent, rebased lineage anchor, review request, Codex review identity, original review-comment identities, and the exact owner-review submissions that bind the rebased response anchor. Unlisted or mismatched lineage conflicts fail closed.
 
 The structural verifier therefore has two explicit modes:
 
@@ -58,6 +58,21 @@ The structural verifier therefore has two explicit modes:
 The accepted implementation target is structural provenance only. A PASS means that imported commit identities, exact PR-bound review evidence, and declared ancestry/rebase structure are supported by live GitHub evidence. It **does not** prove that a fix is semantically correct merely because a later commit descends from an earlier one or because an owner reply says “fixed”. Material source-commentary/disposition claims still require separate governed reconciliation before baseline derivation.
 
 CI runs the verifier with the same dedicated source GitHub App restricted to read-only CAP/UV access. The verification path writes nothing to either consumer repository.
+
+## Bounded source-commentary reconciliation
+
+`data/bootstrap-commentary-reconciliation.json` is a separate governed reconciliation layer for material assertions recovered from authenticated workbook commentary. It is not a replacement for the workbook and does not modify or supersede `review-runs.jsonl`, `findings.jsonl`, or `regression-cases.jsonl`.
+
+The first bounded slice covers only CAP PR #121 findings `F050` and `F051` from the workbook `Findings` sheet:
+
+- `F050` remains source `UNKNOWN`. The reconciliation binds its exact normalized source row, reviewed HEAD, Codex review, and original inline finding, but intentionally asserts no follow-up. `PRESERVED_UNKNOWN` means no positive/negative absence inference is made.
+- `F051` retains the authenticated source disposition while reconciling only its material Notes claim that follow-up PR #123 added the hostile-caller output-ownership implementation/regression evidence. The reconciliation binds exact source/follow-up repository and PR identities, source reviewed HEAD, PR #121 merge commit as PR #123 BASE, exact PR #123 HEAD/merge commit, exact changed-file inventory, and immutable-head file-content assertions for the fake-caller verifier and owned Playwright-output path.
+
+`tools/verify_bootstrap_commentary_reconciliation.py` verifies those bindings against live GitHub through the same read-only source App used for structural provenance. It also binds the reconciliation document to the exact bootstrap workbook SHA-256 from `data/bootstrap-source.json` and binds each entry to the normalized finding/source-row identity.
+
+The status `SUPPORTED_MATERIAL_ADDRESS_EVIDENCE` is intentionally narrower than “fixed” or “semantically correct”. It means the exact material source-note claim about the existence/content of the follow-up implementation/regression is supported by immutable GitHub evidence. It does **not** infer semantic repair from owner prose, merge state, ancestry, or test success alone.
+
+The reconciliation document declares `global_commentary_reconciliation_complete=false`. This bounded F050/F051 slice must not be used to claim that all material workbook commentary/disposition assertions are reconciled. Remaining material commentary stays pending before baseline derivation.
 
 ## Continuous GitHub evidence intake
 
@@ -84,7 +99,7 @@ The intake branch is deliberately **non-authoritative**:
 
 The collector is implemented by `tools/collect_github_evidence.py` and scheduled by `.github/workflows/collect-review-evidence.yml`. Reliable scheduled operation requires both the dedicated read-only CAP/UV GitHub App credentials **and** server-enforced protection of MimiSeek's canonical `main` ref. The repository write token used by the intake workflow is repository-scoped, so the workflow must remain disabled unless an active ruleset named `mimiseek-canonical-main` protects the default branch with no bypass actor and requires pull requests while blocking deletion and non-fast-forward updates. The workflow verifies that boundary before collection/push; terminal acceptance must independently re-resolve the live GitHub rule rather than trusting workflow shell intent.
 
-The first authenticated backfill is now durable on `evidence/github-intake`; the clean unchanged-source no-op/idempotence proof remains pending because immediate repeat runs overlapped genuine `uv-studio` PR #89 movement. This pending no-op proof does not block structural provenance work, but it must remain explicit until a quiet-source run proves it.
+The first authenticated backfill is now durable on `evidence/github-intake`; the clean unchanged-source no-op/idempotence proof remains pending because immediate repeat runs overlapped genuine `uv-studio` PR #89 movement. This pending no-op proof does not block structural/commentary provenance work, but it must remain explicit until a quiet-source run proves it.
 
 Stage 2 will add the structured consumer evidence-export contract required to make fresh ordinary-ChatGPT terminal results automatically recoverable from consumer GitHub state. Stage 3 will complete normalized operational collector/outcome-store semantics.
 
@@ -99,5 +114,7 @@ Stage 2 will add the structured consumer evidence-export contract required to ma
 - Bootstrap-v1 datasets are immutable authenticated-source projections, not append targets for operational records.
 - A discovered source-lineage conflict is represented in a separate governed reconciliation layer; it is not silently repaired by mutating the source projection.
 - Source commentary omitted from normalized tuples remains recoverable by manifest + `source_row`; material assertions from it must be provenance-reconciled before baseline derivation.
-- Structural commit provenance does not equal semantic fix correctness.
+- Bounded source-commentary reconciliation must explicitly state its coverage and may not claim global completion.
+- Preserved source `UNKNOWN` is not evidence that later proof does or does not exist.
+- Structural commit provenance and material follow-up evidence do not equal semantic fix correctness.
 - A baseline seed may not be derived merely because files exist; Stage 1 provenance/policy/classification/current-intake requirements must also be satisfied.
