@@ -49,18 +49,19 @@
         ]
       },
       "reconciliation_status": "SUPPORTED_FIXED_AND_CLEAN_REREVIEW_EVIDENCE",
-      "authority_limit": "This entry proves the exact authenticated source-note claim that the P2 was materially changed on the final PR head and that an exact-head Codex re-review then reported no remaining major issues. It does not elevate owner prose or the clean Codex result into universal semantic-correctness authority."
+      "authority_limit": "This entry proves the exact authenticated source-note claim that the P2 was materially changed on the live final PR head and that an exact-head Codex re-review then reported no remaining major issues. It does not claim that the reviewed head itself became a canonical-main commit, and it does not elevate owner prose or the clean Codex result into universal semantic-correctness authority."
     }
   ],
   "rules": [
     "bootstrap-v1 source projections remain immutable",
     "the original finding must bind an exact Codex review and inline comment on the authenticated reviewed head",
-    "the fixed head must be the live final PR head, descend from the reviewed head, and remain on canonical default-branch ancestry",
+    "the fixed head must be the live final merged-PR head and must descend from the reviewed head",
     "the owner reply must be the exact reply to the original finding and must bind the declared fixed head in its body",
     "the re-review request must be owner-authored and name the full declared fixed head",
     "the clean Codex result must be the exact bot/App-authored issue comment, follow the re-review request, and bind its Reviewed commit prefix to the declared fixed head",
     "the clean result must remain the final Codex-authored review evidence on that PR",
     "immutable fixed-head content must support the material change claimed by the source note",
+    "no canonical-main ancestry is inferred for the reviewed final head when the source claim is only about exact-head review evidence",
     "a clean re-review is evidence about that exact review run, not universal proof of semantic correctness",
     "global material source-commentary reconciliation remains incomplete"
   ]
