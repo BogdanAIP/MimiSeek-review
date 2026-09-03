@@ -99,7 +99,7 @@ This F052 slice also declares `global_commentary_reconciliation_complete=false`;
 
 `data/bootstrap-commentary-fix-evidence-reconciliation.json` introduces a third bounded commentary evidence shape for authenticated Notes that point to a material fix inside the same source PR without relying on later reviewer silence as proof of repair.
 
-The current slice is exactly UV PR #71 findings `F053` and `F054`, both originally reviewed on `238870958fb88a291cdfa3e2345d8c5d84821534`. For each entry, `tools/verify_bootstrap-commentary-fix-evidence-reconciliation.py` requires:
+The current slice is exactly UV PR #71 findings `F053` and `F054`, both originally reviewed on `238870958fb88a291cdfa3e2345d8c5d84821534`. For each entry, `tools/verify_bootstrap_commentary_fix_evidence_reconciliation.py` requires:
 
 - exact normalized finding/source-row identity and exact Codex review submission;
 - exact original inline finding with immutable `original_commit_id` binding to the reviewed head;
