@@ -99,7 +99,7 @@ This F052 slice also declares `global_commentary_reconciliation_complete=false`;
 
 `data/bootstrap-commentary-fix-evidence-reconciliation.json` introduces a third bounded commentary evidence shape for authenticated Notes that point to a material fix inside the same source PR without relying on later reviewer silence as proof of repair.
 
-The current slice is exactly UV PR #71 findings `F053` and `F054`, both originally reviewed on `238870958fb88a291cdfa3e2345d8c5d84821534`. For each entry, `tools/verify_bootstrap_commentary_fix_evidence_reconciliation.py` requires:
+The current slice is exactly UV PR #71 findings `F053` and `F054`, both originally reviewed on `238870958fb88a291cdfa3e2345d8c5d84821534`. For each entry, `tools/verify_bootstrap-commentary-fix-evidence-reconciliation.py` requires:
 
 - exact normalized finding/source-row identity and exact Codex review submission;
 - exact original inline finding with immutable `original_commit_id` binding to the reviewed head;
@@ -122,7 +122,7 @@ Typical path:
 
 `evidence/github/<owner>/<repo>/pulls/<pr-number>.json`
 
-Each snapshot preserves PR identity/BASE/HEAD, issue comments, PR-level reactions, PR reviews, inline review comments with GitHub reaction summaries, and PR commit history. Collector state/watermarks live alongside those snapshots on the intake branch.
+Each snapshot preserves PR identity/BASE/HEAD, issue comments, PR-level reactions, PR reviews, inline review comments with GitHub reaction summaries, and PR commit history. Collector state/watermarks live alongside those snapshots on the intake branch. For a PR whose declared commit count exceeds GitHub's 250-commit pull-list cap, the accepted collector obtains the exact commit sequence through paginated BASE...HEAD comparison and fails closed on inconsistent count, compare identity, duplicate SHAs, source movement, or failure to terminate at the exact PR HEAD.
 
 Every open PR is refreshed on each scheduled run because GitHub reactions do not reliably advance the PR/issue `updated_at` timestamp. Closed-PR refresh uses the configured backfill/watermark overlap; the initial collector is source preservation infrastructure, not yet the complete Stage 3 normalized outcome store.
 
@@ -137,7 +137,7 @@ The intake branch is deliberately **non-authoritative**:
 
 The collector is implemented by `tools/collect_github_evidence.py` and scheduled by `.github/workflows/collect-review-evidence.yml`. Reliable scheduled operation requires both the dedicated read-only CAP/UV GitHub App credentials **and** server-enforced protection of MimiSeek's canonical `main` ref. The repository write token used by the intake workflow is repository-scoped, so the workflow must remain disabled unless an active ruleset named `mimiseek-canonical-main` protects the default branch with no bypass actor and requires pull requests while blocking deletion and non-fast-forward updates. The workflow verifies that boundary before collection/push; terminal acceptance must independently re-resolve the live GitHub rule rather than trusting workflow shell intent.
 
-The first authenticated backfill is now durable on `evidence/github-intake`; the clean unchanged-source no-op/idempotence proof remains pending because immediate repeat runs overlapped genuine `uv-studio` PR #89 movement. This pending no-op proof does not block structural/commentary provenance work, but it must remain explicit until a quiet-source run proves it.
+The first authenticated backfill is durable on `evidence/github-intake`. Accepted PR #12 subsequently closed two collector boundaries exposed by a quiet-source control: UV PR #89 exceeded GitHub's 250-commit pull-list cap, and the prior implementation advanced durable collector-state timestamps even when all selected snapshots were byte-identical. The accepted implementation uses paginated exact BASE...HEAD comparison for >250-commit PRs and leaves per-repository durable watermark/state unchanged on a real no-op. Its exact-head physical two-pass CAP/UV run first converged stale local evidence and then, after wall-clock time advanced, produced `changed_files=0`, `state_changed=false`, zero changed snapshots, no watermark advancement, an empty recursive byte diff, and an unchanged remote intake ref. This is the accepted clean unchanged-source no-op/idempotence proof; it does not promote the intake branch into canonical adjudicated truth.
 
 Stage 2 will add the structured consumer evidence-export contract required to make fresh ordinary-ChatGPT terminal results automatically recoverable from consumer GitHub state. Stage 3 will complete normalized operational collector/outcome-store semantics.
 
