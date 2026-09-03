@@ -310,8 +310,8 @@ def resolve_and_validate_live(client: base.GitHubClient, entry: dict[str, Any], 
                     continue
                 if item.get("id") == resolution["clean_codex_result_comment_id"]:
                     continue
-                candidate = item.get(time_field)
-                if candidate and timestamp(candidate, f"Codex {time_field}") > clean_time:
+                candidate_time = timestamp(item.get(time_field), f"Codex {time_field}")
+                if candidate_time > clean_time:
                     errors.append(f"{finding_id}: {message}")
     except Exception as exc:
         errors.append(f"{finding_id}: live rereview verification failed: {exc}")
