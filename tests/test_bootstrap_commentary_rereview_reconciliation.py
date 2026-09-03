@@ -271,6 +271,42 @@ class BootstrapCommentaryRereviewTests(unittest.TestCase):
         errors = rereview.resolve_and_validate_live(FakeClient(), entry(), snap)
         self.assertTrue(any("later Codex inline finding" in error for error in errors))
 
+    def test_missing_codex_review_timestamp_fails_closed(self):
+        snap = snapshot()
+        snap["reviews"].append(
+            {
+                "id": 998,
+                "submitted_at": None,
+                "user": {"login": rereview.CODEX_LOGIN},
+            }
+        )
+        errors = rereview.resolve_and_validate_live(FakeClient(), entry(), snap)
+        self.assertTrue(any("Codex submitted_at must be a non-empty string" in error for error in errors))
+
+    def test_missing_codex_inline_comment_timestamp_fails_closed(self):
+        snap = snapshot()
+        snap["review_comments"].append(
+            {
+                "id": 997,
+                "created_at": None,
+                "user": {"login": rereview.CODEX_LOGIN},
+            }
+        )
+        errors = rereview.resolve_and_validate_live(FakeClient(), entry(), snap)
+        self.assertTrue(any("Codex created_at must be a non-empty string" in error for error in errors))
+
+    def test_missing_codex_issue_comment_timestamp_fails_closed(self):
+        snap = snapshot()
+        snap["issue_comments"].append(
+            {
+                "id": 996,
+                "created_at": None,
+                "user": {"login": rereview.CODEX_LOGIN},
+            }
+        )
+        errors = rereview.resolve_and_validate_live(FakeClient(), entry(), snap)
+        self.assertTrue(any("Codex created_at must be a non-empty string" in error for error in errors))
+
     def test_chronology_must_be_request_then_clean_then_owner_reply_then_merge(self):
         client = FakeClient()
         client.clean["created_at"] = "2026-08-28T17:33:00Z"
