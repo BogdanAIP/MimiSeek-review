@@ -233,7 +233,55 @@ PR #8 remains structural provenance only. It does not establish semantic correct
    - exact-head CI `33719367707`: PASS;
    - fresh independent terminal review: `CURRENT PASS`, 0 findings, 18 rejected candidates.
 
-Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available. Material source commentary remains only partially reconciled; no baseline seed exists yet.
+### Accepted first bounded source-commentary reconciliation — PR #9
+
+PR #9 — `Stage 1: reconcile CAP #121 source commentary` established the first accepted governed reconciliation of material authenticated-workbook commentary without changing bootstrap-v1 source projections.
+
+Acceptance identity:
+
+- BASE: `1250f54a39578d85f28ad7938edd8845eb6d096b`
+- accepted exact PR HEAD: `2fd1254d915363d6eb4720adacfebbce555e5ef9`
+- `review_policy_ref`: `1250f54a39578d85f28ad7938edd8845eb6d096b`
+- changed files: `8`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- rejected candidates: `24`
+- review timestamp: `2026-09-03T12:39:06+03:00`
+- durable GitHub terminal-result comment id: `5523796231`
+- exact-head CI run: `33736633164`
+- CI state: `PASS`
+- merge commit on `main`: `3ac7a3281808db95d2db47dae8bed53395b62d8c`
+
+The terminal result was persisted as top-level PR comment `5523796231` before merge without changing the reviewed HEAD. The merge then used `expected_head_sha=2fd1254d915363d6eb4720adacfebbce555e5ef9`; the resulting merge commit records the accepted exact head and terminal-result pointer.
+
+Accepted PR #9 establishes:
+
+- `data/bootstrap-commentary-reconciliation.json` as a separate governed layer rather than a rewrite of authenticated workbook/JSONL source projections;
+- exact preservation of F050 as source `UNKNOWN`, without negative inference from absence;
+- bounded F051 `SUPPORTED_MATERIAL_ADDRESS_EVIDENCE` for the workbook Notes claim that CAP follow-up PR #123 added hostile-caller output-ownership implementation/regression evidence;
+- exact source/follow-up PR, commit, tree/parent, commit→PR and fixed-content bindings for that F051 claim;
+- explicit separation between material follow-up evidence and universal semantic fix correctness;
+- continued `global_commentary_reconciliation_complete=false`.
+
+#### PR #9 review/remediation chronology
+
+1. Exact head `64ee3a99c7bc9bf78115f4d7ab774c659a010cf4`
+   - fresh independent review: `CURRENT FINDINGS` (1 P1);
+   - defect: the declared PR #123 resulting commit was not uniquely bound; actual PR HEAD `09c58c4bc286a639662cd77432a54c3f08438ad7` could satisfy the old parent/tree/commit→PR predicates in place of intended result `e8bda851e9d810d0e007826693540ec1d4c71053`;
+   - result became STALE when HEAD moved.
+
+2. Remediation on final head `2fd1254d915363d6eb4720adacfebbce555e5ef9`
+   - added an independent canonical default-branch ancestry discriminator for the declared result commits in this F051 evidence shape;
+   - exact result `e8bda851e9d810d0e007826693540ec1d4c71053` is accepted only with the full conjunction of exact SHA/tree/parent/PR association plus canonical ancestry;
+   - real alternate PR HEAD `09c58c4bc286a639662cd77432a54c3f08438ad7` is rejected as divergent;
+   - adversarial test preserves the old predicates while substituting that real alternate head;
+   - exact-head CI `33736633164`: PASS;
+   - fresh independent terminal review: `CURRENT PASS`, 0 findings, 24 rejected candidates.
+
+Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available. Material source commentary remains only partially reconciled; the clean unchanged-source collector no-op, reviewer-policy refs, generic/project-specific classification, and baseline seed remain pending.
 
 ## Later stages
 
