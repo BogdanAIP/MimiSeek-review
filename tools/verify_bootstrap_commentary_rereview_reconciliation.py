@@ -201,8 +201,8 @@ def validate_reviewed_to_fixed_compare(raw: Any, reviewed_head: str, fixed_head:
     status = nonempty(raw.get("status"), "reviewed-to-fixed compare status")
     base_sha = sha40(((raw.get("base_commit") or {}).get("sha")), "reviewed-to-fixed base")
     merge_base = sha40(((raw.get("merge_base_commit") or {}).get("sha")), "reviewed-to-fixed merge base")
-    # Some scoped-App compare responses omit head_commit. The fixed identity is
-    # independently bound to the live final PR head and immutable fixed-head content.
+    # Scoped-App compare may omit head_commit. Fixed identity is independently
+    # bound to the live final PR head and immutable fixed-head content.
     if base_sha != reviewed_head or merge_base != reviewed_head or status != "ahead":
         raise RereviewReconciliationError(
             f"fixed head is not an exact descendant of reviewed head; status={status} base={base_sha} merge_base={merge_base} fixed={fixed_head}"
@@ -239,7 +239,6 @@ def resolve_and_validate_live(client: base.GitHubClient, entry: dict[str, Any], 
             entry["reviewed_head"],
             fixed_head,
         )
-        base.fetch_default_branch_ancestry(client, prefix, fixed_head, "fixed rereview head")
 
         files = client.paged(f"{prefix}/pulls/{entry['pr']}/files")
         changed = sorted(item.get("filename") for item in files if isinstance(item, dict))
@@ -355,6 +354,7 @@ def verify(findings_path: Path, reconciliation_path: Path, source_manifest_path:
         "limitations": [
             "a clean exact-head Codex re-review is evidence about that bounded review run, not universal proof of semantic correctness",
             "owner fixed prose is not accepted without independent fixed-head content and identity evidence",
+            "the final reviewed PR head is not asserted to be a canonical-main commit when the source claim does not require that",
             "does not modify authenticated bootstrap-v1 source projections",
             "does not claim global source-commentary reconciliation is complete",
         ],
