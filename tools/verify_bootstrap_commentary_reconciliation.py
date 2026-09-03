@@ -202,7 +202,7 @@ def load_reconciliation(path: Path, source_manifest_path: Path) -> dict[str, Any
     raw = json.loads(path.read_text(encoding="utf-8"))
     doc = require_exact_shape(raw, TOP_FIELDS, str(path))
     if doc["schema_version"] != SCHEMA_VERSION:
-        raise CommentaryProvenanceError(f"{path}: unsupported schema version")
+        raise CommentaryProvenanceError(f"{path}: unsupported reconciliation schema")
     if doc["authority"] != AUTHORITY:
         raise CommentaryProvenanceError(f"{path}: unexpected authority")
     if not isinstance(doc["source_artifact_sha256"], str) or not SHA256_RE.fullmatch(
@@ -304,8 +304,7 @@ def load_reconciliation(path: Path, source_manifest_path: Path) -> dict[str, Any
         raise CommentaryProvenanceError(
             f"{path}: bounded slice must declare complete_for_scope=true for its listed identities"
         )
-    rules = doc["rules"]
-    require_string_array(rules, f"{path}: rules")
+    require_string_array(doc["rules"], f"{path}: rules")
     return doc
 
 
@@ -406,7 +405,42 @@ def fetch_text_file(client: GitHubClient, repository: str, path: str, ref: str) 
         ) from exc
 
 
-def resolve_follow_up(client: GitHubClient, follow_up: dict[str, Any]) -> dict[str, Any]:
+def fetch_commit_identity(client: GitHubClient, prefix: str, sha: str) -> dict[str, Any]:
+    raw = client.get(f"{prefix}/commits/{sha}")
+    if not isinstance(raw, dict) or raw.get("sha") != sha:
+        raise CommentaryProvenanceError(f"live commit lookup did not return exact {sha}")
+    tree = ((raw.get("commit") or {}).get("tree") or {}).get("sha")
+    require_sha(tree, f"commit {sha} tree")
+    parents_raw = raw.get("parents")
+    if not isinstance(parents_raw, list):
+        raise CommentaryProvenanceError(f"commit {sha} parents are malformed")
+    parents: list[str] = []
+    for parent in parents_raw:
+        if not isinstance(parent, dict):
+            raise CommentaryProvenanceError(f"commit {sha} parent is malformed")
+        parents.append(require_sha(parent.get("sha"), f"commit {sha} parent"))
+    return {"sha": sha, "tree": tree, "parents": tuple(parents)}
+
+
+def fetch_associated_pr_numbers(client: GitHubClient, prefix: str, sha: str) -> set[int]:
+    raw = client.get(f"{prefix}/commits/{sha}/pulls")
+    if not isinstance(raw, list):
+        raise CommentaryProvenanceError(f"commit-to-PR association lookup failed for {sha}")
+    numbers: set[int] = set()
+    for item in raw:
+        if not isinstance(item, dict):
+            raise CommentaryProvenanceError(f"commit-to-PR association for {sha} is malformed")
+        number = require_positive_int(item.get("number"), f"associated PR number for {sha}")
+        numbers.add(number)
+    return numbers
+
+
+def resolve_follow_up(
+    client: GitHubClient,
+    follow_up: dict[str, Any],
+    source_pr_number: int,
+    source_head_sha: str,
+) -> dict[str, Any]:
     repository = follow_up["repository"]
     owner, name = split_repository(repository)
     pr_number = follow_up["pr"]
@@ -427,6 +461,19 @@ def resolve_follow_up(client: GitHubClient, follow_up: dict[str, Any]) -> dict[s
             item.get("filename") for item in files if isinstance(item, dict)
         ),
         "contents": contents,
+        "source_head_commit": fetch_commit_identity(client, prefix, source_head_sha),
+        "source_merge_commit": fetch_commit_identity(client, prefix, follow_up["base_sha"]),
+        "source_merge_associated_prs": fetch_associated_pr_numbers(
+            client, prefix, follow_up["base_sha"]
+        ),
+        "follow_head_commit": fetch_commit_identity(client, prefix, follow_up["head_sha"]),
+        "follow_merge_commit": fetch_commit_identity(
+            client, prefix, follow_up["merge_commit_sha"]
+        ),
+        "follow_merge_associated_prs": fetch_associated_pr_numbers(
+            client, prefix, follow_up["merge_commit_sha"]
+        ),
+        "expected_source_pr_number": source_pr_number,
     }
 
 
@@ -450,7 +497,6 @@ def validate_follow_up_live(
     check(pr.get("number") == follow_up["pr"], "follow-up PR number differs")
     check(pr.get("state") == "closed", "follow-up PR is not closed")
     check(pr.get("merged_at") is not None, "follow-up PR is not merged")
-    check(pr.get("merge_commit_sha") == follow_up["merge_commit_sha"], "follow-up merge commit differs")
     check(((pr.get("base") or {}).get("sha")) == follow_up["base_sha"], "follow-up BASE differs")
     check(((pr.get("head") or {}).get("sha")) == follow_up["head_sha"], "follow-up HEAD differs")
 
@@ -464,10 +510,47 @@ def validate_follow_up_live(
         "follow-up repository numeric identity differs from source PR repository",
     )
 
-    source_pr = source_snapshot.get("pull_request") or {}
+    source_head_commit = resolved.get("source_head_commit") or {}
+    source_merge_commit = resolved.get("source_merge_commit") or {}
+    follow_head_commit = resolved.get("follow_head_commit") or {}
+    follow_merge_commit = resolved.get("follow_merge_commit") or {}
+
     check(
-        follow_up["base_sha"] == source_pr.get("merge_commit_sha"),
-        "follow-up BASE is not the exact merge commit of the source PR",
+        source_head_commit.get("sha") == entry["reviewed_head"],
+        "source reviewed HEAD commit identity differs",
+    )
+    check(
+        source_merge_commit.get("sha") == follow_up["base_sha"],
+        "source merged commit identity differs from follow-up BASE",
+    )
+    check(
+        source_merge_commit.get("tree") == source_head_commit.get("tree"),
+        "source merged commit tree differs from exact reviewed source HEAD tree",
+    )
+    check(
+        entry["pr"] in (resolved.get("source_merge_associated_prs") or set()),
+        "source merged commit is not associated with the exact source PR",
+    )
+
+    check(
+        follow_head_commit.get("sha") == follow_up["head_sha"],
+        "follow-up HEAD commit identity differs",
+    )
+    check(
+        follow_merge_commit.get("sha") == follow_up["merge_commit_sha"],
+        "follow-up merged commit identity differs",
+    )
+    check(
+        follow_merge_commit.get("parents") == (follow_up["base_sha"],),
+        "follow-up merged commit is not directly based on the declared source merge/base",
+    )
+    check(
+        follow_merge_commit.get("tree") == follow_head_commit.get("tree"),
+        "follow-up merged commit tree differs from exact follow-up HEAD tree",
+    )
+    check(
+        follow_up["pr"] in (resolved.get("follow_merge_associated_prs") or set()),
+        "follow-up merged commit is not associated with the exact follow-up PR",
     )
 
     changed_files = resolved.get("changed_files")
@@ -519,7 +602,12 @@ def verify(
         entry_errors.extend(validate_original_github_evidence(entry, source_snapshot))
 
         if entry["kind"] == SUPPORTED_ADDRESS_KIND:
-            resolved = resolve_follow_up(client, entry["follow_up"])
+            resolved = resolve_follow_up(
+                client,
+                entry["follow_up"],
+                entry["pr"],
+                entry["reviewed_head"],
+            )
             entry_errors.extend(validate_follow_up_live(entry, source_snapshot, resolved))
 
         errors.extend(entry_errors)
@@ -544,8 +632,9 @@ def verify(
         "limitations": [
             "does not infer semantic fix correctness from owner prose, merge status, ancestry, or passing tests",
             "does not infer absence of later evidence for PRESERVED_UNKNOWN entries",
-            "does not modify authenticated bootstrap-v1 projections",
+            "does not modify authenticated bootstrap-v1 source projections",
             "does not claim global source-commentary reconciliation is complete",
+            "does not rely on pull.merge_commit_sha because the scoped source GitHub App redacts that field; merged-commit identity is instead checked through immutable Git objects and commit-to-PR association",
         ],
     }
 
