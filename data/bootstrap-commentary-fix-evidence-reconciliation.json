@@ -1,0 +1,115 @@
+{
+  "schema_version": "bootstrap_commentary_fix_evidence_reconciliation_v1",
+  "authority": "governed_reconciliation_of_authenticated_source_commentary",
+  "source_artifact_sha256": "6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a",
+  "coverage": {
+    "kind": "bounded_same_pr_material_fix_evidence_slice",
+    "source_sheet": "Findings",
+    "finding_ids": [
+      "F053",
+      "F054"
+    ],
+    "complete_for_scope": true,
+    "global_commentary_reconciliation_complete": false
+  },
+  "entries": [
+    {
+      "finding_id": "F053",
+      "repository": "BogdanAIP/uv-studio",
+      "pr": 71,
+      "reviewed_head": "238870958fb88a291cdfa3e2345d8c5d84821534",
+      "source_sheet": "Findings",
+      "source_row": 54,
+      "source_confirmed": "CONFIRMED",
+      "source_note": "Fixed with persistence-time role/output/identity revalidation.",
+      "kind": "supported_same_pr_material_fix_evidence",
+      "github_evidence": {
+        "codex_review_id": 5043741722,
+        "codex_review_comment_id": 3874197354,
+        "owner_reply_comment_id": 3874292248
+      },
+      "fix_evidence": {
+        "fix_head": "ce4a51f042e628df2f569532d42be17394e2ab4b",
+        "changed_files": [
+          "tests/test_agent_stage17_result_integrity.py",
+          "uv_studio/agent/stage17_provenance.py"
+        ],
+        "content_assertions": [
+          {
+            "path": "tests/test_agent_stage17_result_integrity.py",
+            "required_present": [
+              "test_persist_plan_revalidates_media_role_for_exactly_addressed_result",
+              "media role cannot propose action 'production.create_scene'",
+              "self.assertEqual(AgentPlanStore(self.store).list(self.project.project_id), ())"
+            ],
+            "required_absent": []
+          },
+          {
+            "path": "uv_studio/agent/stage17_provenance.py",
+            "required_present": [
+              "if not isinstance(result, AgentSubagentResult):",
+              "self._validate_role_output(",
+              "expected_delegation_id = _delegation_id(result)"
+            ],
+            "required_absent": []
+          }
+        ]
+      },
+      "reconciliation_status": "SUPPORTED_SAME_PR_MATERIAL_FIX_EVIDENCE",
+      "authority_limit": "The evidence proves that the exact owner-declared same-PR fix commit contains persistence-time role/output/identity revalidation implementation and focused regression evidence materially corresponding to F053. It does not infer universal semantic fix correctness from owner prose, commit ancestry, later review silence, or tests alone."
+    },
+    {
+      "finding_id": "F054",
+      "repository": "BogdanAIP/uv-studio",
+      "pr": 71,
+      "reviewed_head": "238870958fb88a291cdfa3e2345d8c5d84821534",
+      "source_sheet": "Findings",
+      "source_row": 55,
+      "source_confirmed": "CONFIRMED",
+      "source_note": "Fixed for normal shared execution and committed-effect recovery.",
+      "kind": "supported_same_pr_material_fix_evidence",
+      "github_evidence": {
+        "codex_review_id": 5043741722,
+        "codex_review_comment_id": 3874197368,
+        "owner_reply_comment_id": 3874293460
+      },
+      "fix_evidence": {
+        "fix_head": "aafddd3b37476a65558d56755edd2ae440648b74",
+        "changed_files": [
+          "tests/test_agent_stage17_shared_executor_provenance.py",
+          "uv_studio/agent/stage16_review_consistency.py"
+        ],
+        "content_assertions": [
+          {
+            "path": "tests/test_agent_stage17_shared_executor_provenance.py",
+            "required_present": [
+              "test_plain_stage16_executor_preserves_stage17_plan_provenance",
+              "test_plain_stage16_reopen_recovery_preserves_stage17_plan_provenance",
+              "self.assertIn(result.delegation_id, trace.canonical_references)",
+              "self.assertIn(result.delegation_id, traces[0].canonical_references)"
+            ],
+            "required_absent": []
+          },
+          {
+            "path": "uv_studio/agent/stage16_review_consistency.py",
+            "required_present": [
+              "references = list(plan.canonical_references)",
+              "*plan.canonical_references,"
+            ],
+            "required_absent": []
+          }
+        ]
+      },
+      "reconciliation_status": "SUPPORTED_SAME_PR_MATERIAL_FIX_EVIDENCE",
+      "authority_limit": "The evidence proves that the exact owner-declared same-PR fix commit contains normal shared-executor and committed-effect recovery provenance implementation plus focused regression evidence materially corresponding to F054. It does not infer universal semantic fix correctness from owner prose, commit ancestry, later review silence, or tests alone."
+    }
+  ],
+  "rules": [
+    "bootstrap-v1 source projections remain immutable",
+    "authenticated source commentary is not promoted to truth merely because it exists",
+    "same-PR material-fix evidence must bind the exact original Codex finding, exact owner reply thread, exact declared fix commit, changed-file inventory, and immutable fix-head content",
+    "later reviewer silence is not accepted as proof that an old defect is fixed",
+    "material fix evidence does not by itself prove universal semantic correctness",
+    "unreconciled source commentary remains pending before baseline derivation"
+  ]
+}
