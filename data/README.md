@@ -74,7 +74,26 @@ For these historical PR reads, the scoped source GitHub App exposes `base`, `hea
 
 The status `SUPPORTED_MATERIAL_ADDRESS_EVIDENCE` is intentionally narrower than “fixed” or “semantically correct”. It means the exact material source-note claim about the existence/content of the follow-up implementation/regression is supported by immutable GitHub evidence. It does **not** infer semantic repair from owner prose, merge state, ancestry, or test success alone.
 
-The reconciliation document declares `global_commentary_reconciliation_complete=false`. This bounded F050/F051 slice must not be used to claim that all material workbook commentary/disposition assertions are reconciled. Remaining material commentary stays pending before baseline derivation.
+The accepted F050/F051 reconciliation document declares `global_commentary_reconciliation_complete=false`. That bounded slice must not be used to claim that all material workbook commentary/disposition assertions are reconciled.
+
+### Bounded fixed-head + clean re-review reconciliation
+
+`data/bootstrap-commentary-rereview-reconciliation.json` uses a separate strict schema for a different evidence shape: an original finding is materially changed on the live final PR head and a later exact-head Codex re-review reports no remaining major issues.
+
+The first such slice covers only `F052` from CAP PR #129. The authenticated source note says `Fixed; final exact-head Codex re-review reported no remaining major issues.` The verifier binds that bounded claim to:
+
+- exact normalized F052/source-row identity and the original Codex review/inline P2 on reviewed head `0dde5aab1725c076ff56e2d2c8662c842e57b8ae`;
+- live merged PR #129 final head `d6ea5bbd913d8a3ab27d7d1521d389e972602de2` as an exact descendant of the reviewed head;
+- exact owner reply to the original finding and exact owner re-review request naming the full final head;
+- the exact Codex GitHub-App clean-result comment whose `Reviewed commit` prefix matches that final head;
+- evidence chronology and absence of any later Codex-authored review evidence before merge;
+- exact final three-file PR inventory and immutable final-head contract-test text that checks the complete screenshot-after-every-action negation rather than only a keyword.
+
+This evidence shape deliberately does **not** require the final reviewed PR head itself to be an ancestor of today's canonical `main`. Live history for PR #129 is divergent after the PR's merge mechanics, and the authenticated source claim is about an exact-head review result, not about the reviewed branch SHA becoming the canonical merge/result commit. The fixed-head identity is instead bound directly to the live final merged-PR head, exact reviewed→fixed ancestry, immutable fixed-head content, and the clean Codex result for that same head.
+
+`SUPPORTED_FIXED_AND_CLEAN_REREVIEW_EVIDENCE` is still narrower than universal semantic correctness. It establishes that the exact authenticated source-note claim about the fixed-head material change and clean exact-head Codex re-review is supported by live evidence. It does not turn owner prose, merge state, or a clean reviewer result into a general proof that no defect exists.
+
+This F052 slice also declares `global_commentary_reconciliation_complete=false`; remaining material commentary stays pending before baseline derivation.
 
 ## Continuous GitHub evidence intake
 
@@ -118,5 +137,5 @@ Stage 2 will add the structured consumer evidence-export contract required to ma
 - Source commentary omitted from normalized tuples remains recoverable by manifest + `source_row`; material assertions from it must be provenance-reconciled before baseline derivation.
 - Bounded source-commentary reconciliation must explicitly state its coverage and may not claim global completion.
 - Preserved source `UNKNOWN` is not evidence that later proof does or does not exist.
-- Structural commit provenance and material follow-up evidence do not equal semantic fix correctness.
+- Structural commit provenance, material follow-up evidence, and clean exact-head re-review evidence do not by themselves equal universal semantic fix correctness.
 - A baseline seed may not be derived merely because files exist; Stage 1 provenance/policy/classification/current-intake requirements must also be satisfied.

@@ -7,10 +7,11 @@ Last synchronized: 2026-09-03
 - Project: MimiSeek Review
 - Repository: `BogdanAIP/MimiSeek-review`
 - Stable branch: `main`
-- Development status: Stage 1 in progress — authenticated collector active, first backfill durable, and structural BUGGY/FIXED/VERIFIED provenance accepted; clean unchanged-source no-op, remaining source-commentary reconciliation, reviewer-policy refs, classification, and baseline seed remain pending
+- Development status: Stage 1 in progress — authenticated collector active, first backfill durable, structural BUGGY/FIXED/VERIFIED provenance accepted, and the first bounded source-commentary slice accepted; clean unchanged-source no-op, remaining source-commentary reconciliation, reviewer-policy refs, classification, and baseline seed remain pending
 - Stage 0 implementation foundation: accepted and merged
 - Stage 1 bootstrap-data/evidence-intake foundation: accepted and merged
 - Stage 1 structural bootstrap commit provenance: accepted and merged
+- Stage 1 first bounded source-commentary reconciliation (F050/F051): accepted and merged
 - Stable reviewer version: **not established yet**
 - Bootstrap baseline seed: none
 - Candidate reviewer version: none
@@ -41,9 +42,13 @@ The accepted Stage 1 foundation provides:
 
 Accepted PR #8 adds structural live verification of all 84 imported BUGGY/FIXED/VERIFIED cases across 9 regression-source PRs. The normal path requires exact case/finding identity, exact source PR identity, commit membership, and ancestry. A discovered CAP PR #124 historical rebase conflict is preserved separately in `data/bootstrap-provenance-reconciliation.json`: the authenticated bootstrap projection is not rewritten, the exact Codex-reviewed detached BUGGY head remains bound to its historical GitHub review evidence and actual parent, and the later rebased FIXED lineage is independently bound to the exact owner-review submissions that identify the rebased response anchor. This structural reconciliation does **not** infer semantic fix correctness from ancestry, thread replies, owner prose, or a passing test and does not promote workbook commentary into canonical truth.
 
-The current bounded commentary-reconciliation work starts from the two post-merge CAP PR #121 findings F050/F051. `data/bootstrap-commentary-reconciliation.json` is a separate governed layer tied to the authenticated workbook digest and normalized finding/source-row identities. F050 remains explicit `UNKNOWN`; the layer binds its original Codex finding but makes no claim that later evidence is absent. For F051, the layer checks only the material workbook Notes assertion that follow-up PR #123 added the hostile-caller output-ownership implementation/regression evidence, including exact follow-up BASE/HEAD/merge identity, exact changed-file inventory, and immutable-head file-content assertions. Even when that evidence is present, semantic fix correctness is still not inferred.
+Accepted PR #9 establishes the first bounded source-commentary reconciliation for CAP PR #121 findings F050/F051. `data/bootstrap-commentary-reconciliation.json` is a separate governed layer tied to the authenticated workbook digest and normalized finding/source-row identities. F050 remains explicit `UNKNOWN`; the layer binds its original Codex finding but makes no claim that later evidence is absent. For F051, the layer verifies only the material workbook Notes assertion that follow-up PR #123 added the hostile-caller output-ownership implementation/regression evidence, using exact source/follow-up identities, Git/result provenance, changed-file inventory, and immutable-head content. Even when that evidence is present, semantic fix correctness is still not inferred.
 
-This commentary slice is deliberately bounded to F050/F051 and explicitly reports that global source-commentary reconciliation is incomplete. Other material source-commentary/disposition assertions still require governed reconciliation before baseline derivation.
+The current proposed bounded continuation adds a distinct F052 evidence shape for CAP PR #129. The authenticated source note says that the P2 was fixed and a final exact-head Codex re-review reported no remaining major issues. `data/bootstrap-commentary-rereview-reconciliation.json` binds that claim to the exact original Codex finding on reviewed head `0dde5aab1725c076ff56e2d2c8662c842e57b8ae`, live merged-PR final head `d6ea5bbd913d8a3ab27d7d1521d389e972602de2`, exact owner reply/re-review request, exact Codex GitHub-App clean-result comment, evidence chronology, final changed-file inventory, and immutable final-head contract-test text.
+
+This F052 evidence does not claim that the final reviewed branch head itself became a canonical-main commit. Live PR #129 history is divergent after merge mechanics, while the authenticated source claim is specifically about an exact-head review. The relevant identity boundary is therefore the exact live final merged-PR head plus reviewed→fixed descent, immutable fixed-head content, and the clean Codex result bound to that same head. A clean re-review remains evidence about that bounded review run, not universal semantic-correctness authority.
+
+Both commentary slices explicitly report that global source-commentary reconciliation is incomplete. Other material source-commentary/disposition assertions still require governed reconciliation before baseline derivation.
 
 Stage 1 is therefore still incomplete. A clean live unchanged-source collector no-op has not yet been demonstrated, material source-commentary/disposition reconciliation is only partially covered, CAP/UV accepted reviewer-policy refs are unresolved here, generic-versus-project-specific classification is unfinished, and no baseline seed exists.
 
@@ -79,14 +84,14 @@ GitHub-native Codex reviews, PR comments, review comments, commits, and owner ad
 
 Fresh ordinary-ChatGPT terminal reviews that existed only inside ChatGPT and were never durably exported into the consumer PR cannot be reconstructed from GitHub alone. Stage 2 must define/implement structured consumer evidence export so future fresh terminal results are also captured automatically. Historical chat-only gaps must remain explicit rather than being inferred from absence.
 
-Authenticated workbook commentary can contain material fix/adjudication hints. Structural commit reconciliation is not enough to promote those hints. The bounded CAP #121 slice demonstrates the required pattern: bind the exact source row and original finding to governed GitHub identities, distinguish positive follow-up evidence from explicit unknowns, and keep semantic correctness outside the claim unless separately proven. The rest of the material commentary corpus still needs the same treatment.
+Authenticated workbook commentary can contain material fix/adjudication hints. Structural commit reconciliation is not enough to promote those hints. Accepted F050/F051 and the proposed F052 slice demonstrate two bounded patterns: preserve explicit unknowns, bind positive follow-up claims to governed identities/content, and bind exact-head clean re-review claims to the exact review chain without silently turning any of them into universal semantic correctness. The rest of the material commentary corpus still needs the same treatment.
 
 ## Next canonical action
 
 Continue Stage 1, in this order where dependencies allow parallel preparation:
 
 1. when a genuinely quiet source window is available, obtain one clean live unchanged-source collector run and verify true no-op/idempotent snapshot behavior; do not substitute runs that overlap real source movement;
-2. meanwhile continue material source-commentary/disposition reconciliation on top of the accepted structural BUGGY/FIXED/VERIFIED provenance layer, preserving explicit unknowns where evidence is insufficient and never converting remediation evidence into semantic correctness by implication;
+2. meanwhile continue material source-commentary/disposition reconciliation on top of the accepted structural BUGGY/FIXED/VERIFIED provenance layer, preserving explicit unknowns where evidence is insufficient and never converting remediation or clean-review evidence into semantic correctness by implication;
 3. resolve exact accepted CAP/UV reviewer-policy refs;
 4. classify generic versus project-specific rules;
 5. only after the evidence set is current and reconciled, derive an immutable reusable **baseline seed** that is explicitly not stable and not distributable.
@@ -106,6 +111,7 @@ All repository changes continue through normal post-bootstrap branch/PR acceptan
 - Chat-only review evidence cannot be inferred from GitHub absence.
 - Source workbook commentary may contain useful fix/adjudication hints, but those hints are not canonical truth until reconciled against governed provenance.
 - A bounded commentary slice must never be misreported as complete corpus reconciliation.
+- A clean exact-head reviewer result must remain bound to its exact reviewed head and must not be generalized into a claim about later history or universal correctness.
 - A naive common baseline could silently lose CAP- or UV-specific obligations.
 - Historical outcomes are selection-biased; they are learning/regression evidence, not a neutral leaderboard.
 - First-promotion evaluation must later define fixed absolute requirements without fabricating a nonexistent stable comparison.
