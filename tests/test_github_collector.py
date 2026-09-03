@@ -18,7 +18,14 @@ def repo(full_name="BogdanAIP/example", repo_id=101, node_id="R_example"):
     return {"full_name": full_name, "id": repo_id, "node_id": node_id}
 
 
-def pr(number=7, updated_at="2026-09-01T12:00:00Z"):
+def pr(
+    number=7,
+    updated_at="2026-09-01T12:00:00Z",
+    *,
+    commits=1,
+    base_sha="a" * 40,
+    head_sha="b" * 40,
+):
     return {
         "id": 7007,
         "node_id": "PR_7007",
@@ -33,18 +40,18 @@ def pr(number=7, updated_at="2026-09-01T12:00:00Z"):
         "closed_at": None,
         "merged_at": None,
         "merge_commit_sha": None,
-        "base": {"ref": "main", "sha": "a"*40, "repo": repo()},
-        "head": {"ref": "feature", "sha": "b"*40, "repo": repo()},
+        "base": {"ref": "main", "sha": base_sha, "repo": repo()},
+        "head": {"ref": "feature", "sha": head_sha, "repo": repo()},
         "user": {"id": 1, "login": "BogdanAIP", "type": "User"},
         "html_url": "https://github.com/BogdanAIP/example/pull/7",
-        "commits": 1,
+        "commits": commits,
     }
 
 
-def commit(sha="b"*40):
+def commit(sha="b" * 40, parent_sha="a" * 40):
     return {
         "sha": sha,
-        "parents": [{"sha": "a"*40}],
+        "parents": [{"sha": parent_sha}],
         "commit": {
             "author": {"date": "2026-09-01T11:00:00Z"},
             "committer": {"date": "2026-09-01T11:00:00Z"},
@@ -79,7 +86,7 @@ class FakeClient:
             return [{
                 "id": 20, "node_id": "IC_20",
                 "user": {"id": 1, "login": "BogdanAIP", "type": "User"},
-                "body": "CONFIRMED and fixed on head " + "c"*40,
+                "body": "CONFIRMED and fixed on head " + "c" * 40,
                 "reactions": {"+1": 1, "-1": 0, "total_count": 1},
                 "created_at": "2026-09-01T12:10:00Z",
                 "updated_at": "2026-09-01T12:10:00Z",
@@ -98,7 +105,7 @@ class FakeClient:
                 "id": 30, "node_id": "R_30",
                 "user": {"id": 2, "login": "chatgpt-codex-connector[bot]", "type": "Bot"},
                 "body": "Codex review", "state": "COMMENTED",
-                "commit_id": "b"*40, "submitted_at": "2026-09-01T12:05:00Z",
+                "commit_id": "b" * 40, "submitted_at": "2026-09-01T12:05:00Z",
                 "html_url": "https://example/review/30", "author_association": "NONE",
             }]
         if path.endswith("/pulls/7/comments"):
@@ -107,7 +114,7 @@ class FakeClient:
                 "user": {"id": 2, "login": "chatgpt-codex-connector[bot]", "type": "Bot"},
                 "body": "P1 concrete defect",
                 "reactions": {"+1": 2, "-1": 0, "total_count": 2},
-                "commit_id": "b"*40, "original_commit_id": "b"*40,
+                "commit_id": "b" * 40, "original_commit_id": "b" * 40,
                 "path": "x.py", "line": 10, "side": "RIGHT", "start_line": None, "start_side": None,
                 "original_line": 10, "diff_hunk": "@@",
                 "created_at": "2026-09-01T12:05:00Z", "updated_at": "2026-09-01T12:05:00Z",
@@ -129,6 +136,56 @@ class MovingPrClient(FakeClient):
             self.pull_reads += 1
             return pr() if self.pull_reads == 1 else deepcopy(self.final_pr)
         raise AssertionError(path)
+
+
+class LargePrClient(FakeClient):
+    def __init__(self, count=274, *, declared_total=None, mutate_identity_page=None):
+        super().__init__()
+        self.base_sha = "0" * 40
+        self.commits = []
+        parent = self.base_sha
+        for index in range(1, count + 1):
+            sha = f"{index:040x}"
+            self.commits.append(commit(sha=sha, parent_sha=parent))
+            parent = sha
+        self.large_pr = pr(
+            commits=count,
+            base_sha=self.base_sha,
+            head_sha=self.commits[-1]["sha"],
+        )
+        self.listed = [deepcopy(self.large_pr)]
+        self.declared_total = count if declared_total is None else declared_total
+        self.mutate_identity_page = mutate_identity_page
+
+    def get(self, path, params=None):
+        self.calls.append(("get", path, deepcopy(params)))
+        if path.endswith("/pulls/7"):
+            self.pull_reads += 1
+            return deepcopy(self.large_pr)
+        if "/compare/" in path:
+            params = dict(params or {})
+            per_page = int(params.get("per_page", 30))
+            page = int(params.get("page", 1))
+            start = (page - 1) * per_page
+            page_commits = deepcopy(self.commits[start:start + per_page])
+            behind_by = 0
+            if self.mutate_identity_page == page:
+                behind_by = 1
+            return {
+                "status": "ahead",
+                "total_commits": self.declared_total,
+                "ahead_by": self.declared_total,
+                "behind_by": behind_by,
+                "base_commit": {"sha": self.base_sha},
+                "merge_base_commit": {"sha": self.base_sha},
+                "commits": page_commits,
+            }
+        raise AssertionError(path)
+
+    def paged(self, path, params=None):
+        if path.endswith("/pulls/7/commits"):
+            raise AssertionError("large PR must not use the 250-capped PR commits endpoint")
+        return super().paged(path, params)
 
 
 class RulesClient:
@@ -189,7 +246,7 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual(snap["pull_request"]["node_id"], "PR_7007")
         self.assertEqual(snap["pull_request"]["base"]["repo_id"], 101)
         self.assertEqual(snap["pull_request"]["head"]["repo_id"], 101)
-        self.assertEqual(snap["reviews"][0]["commit_id"], "b"*40)
+        self.assertEqual(snap["reviews"][0]["commit_id"], "b" * 40)
         self.assertEqual(snap["review_comments"][0]["body"], "P1 concrete defect")
         self.assertEqual(snap["review_comments"][0]["reactions"]["+1"], 2)
         self.assertIn("CONFIRMED", snap["issue_comments"][0]["body"])
@@ -198,14 +255,14 @@ class CollectorTests(unittest.TestCase):
 
     def test_snapshot_fails_if_commit_added_during_collection(self):
         final = pr(updated_at="2026-09-01T12:01:00Z")
-        final["head"]["sha"] = "c"*40
+        final["head"]["sha"] = "c" * 40
         final["commits"] = 2
         with self.assertRaisesRegex(collector.GitHubApiError, "moved during evidence snapshot"):
             collector.build_snapshot(MovingPrClient(final), "BogdanAIP/example", 7)
 
     def test_snapshot_fails_on_equal_count_force_push(self):
         final = pr(updated_at="2026-09-01T12:01:00Z")
-        final["head"]["sha"] = "c"*40
+        final["head"]["sha"] = "c" * 40
         final["commits"] = 1
         with self.assertRaisesRegex(collector.GitHubApiError, "moved during evidence snapshot"):
             collector.build_snapshot(MovingPrClient(final), "BogdanAIP/example", 7)
@@ -216,7 +273,35 @@ class CollectorTests(unittest.TestCase):
         with self.assertRaisesRegex(collector.GitHubApiError, "moved during evidence snapshot"):
             collector.build_snapshot(MovingPrClient(final), "BogdanAIP/example", 7)
 
-    def test_collect_is_byte_idempotent_for_unchanged_source(self):
+    def test_large_pr_uses_paginated_compare_beyond_pull_commit_cap(self):
+        client = LargePrClient(274)
+        snap = collector.build_snapshot(client, "BogdanAIP/example", 7)
+        self.assertEqual(len(snap["commits"]), 274)
+        self.assertEqual(snap["commits"][-1]["sha"], client.large_pr["head"]["sha"])
+        compare_pages = [
+            call[2]["page"]
+            for call in client.calls
+            if len(call) == 3 and call[0] == "get" and "/compare/" in call[1]
+        ]
+        self.assertEqual(compare_pages, [1, 2, 3])
+
+    def test_large_pr_compare_count_mismatch_fails_closed(self):
+        with self.assertRaisesRegex(collector.GitHubApiError, "compare count differs"):
+            collector.build_snapshot(
+                LargePrClient(274, declared_total=273),
+                "BogdanAIP/example",
+                7,
+            )
+
+    def test_large_pr_compare_identity_movement_between_pages_fails_closed(self):
+        with self.assertRaisesRegex(collector.GitHubApiError, "compare identity moved between pages"):
+            collector.build_snapshot(
+                LargePrClient(274, mutate_identity_page=2),
+                "BogdanAIP/example",
+                7,
+            )
+
+    def test_collect_is_byte_idempotent_for_unchanged_source_at_later_time(self):
         client = FakeClient()
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -231,22 +316,34 @@ class CollectorTests(unittest.TestCase):
             }), encoding="utf-8")
             output = root / "evidence"
             state = root / "state.json"
-            scan = datetime(2026, 9, 1, 13, 0, tzinfo=timezone.utc)
+            first_scan = datetime(2026, 9, 1, 13, 0, tzinfo=timezone.utc)
+            second_scan = datetime(2026, 9, 1, 14, 0, tzinfo=timezone.utc)
 
-            first = collector.collect(client, config, output, state, scan_started_at=scan)
+            first = collector.collect(client, config, output, state, scan_started_at=first_scan)
             snapshot_path = output / "BogdanAIP" / "example" / "pulls" / "7.json"
             first_bytes = snapshot_path.read_bytes()
             state_bytes = state.read_bytes()
 
-            second = collector.collect(client, config, output, state, scan_started_at=scan)
+            second = collector.collect(client, config, output, state, scan_started_at=second_scan)
             self.assertEqual(snapshot_path.read_bytes(), first_bytes)
             self.assertEqual(state.read_bytes(), state_bytes)
             self.assertEqual(first["changed_files"], 2)
             self.assertEqual(second["changed_files"], 0)
+            self.assertFalse(second["state_changed"])
+            self.assertFalse(second["repositories"]["BogdanAIP/example"]["watermark_advanced"])
+            self.assertEqual(
+                second["repositories"]["BogdanAIP/example"]["watermark_after"],
+                "2026-09-01T13:00:00Z",
+            )
+            durable_state = json.loads(state.read_text(encoding="utf-8"))
+            self.assertEqual(
+                durable_state["last_successful_scan_started_at"],
+                "2026-09-01T13:00:00Z",
+            )
 
     def test_failed_snapshot_does_not_advance_watermark(self):
         final = pr(updated_at="2026-09-01T12:01:00Z")
-        final["head"]["sha"] = "c"*40
+        final["head"]["sha"] = "c" * 40
         client = MovingPrClient(final)
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
