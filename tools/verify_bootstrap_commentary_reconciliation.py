@@ -435,6 +435,48 @@ def fetch_associated_pr_numbers(client: GitHubClient, prefix: str, sha: str) -> 
     return numbers
 
 
+def validate_default_branch_ancestry(raw: Any, sha: str, label: str) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        raise CommentaryProvenanceError(f"{label} default-branch compare is unavailable")
+    status = require_nonempty_string(raw.get("status"), f"{label} compare status")
+    base_sha = require_sha(
+        ((raw.get("base_commit") or {}).get("sha")), f"{label} compare base commit"
+    )
+    merge_base_sha = require_sha(
+        ((raw.get("merge_base_commit") or {}).get("sha")), f"{label} compare merge base"
+    )
+    if base_sha != sha:
+        raise CommentaryProvenanceError(
+            f"{label} compare base {base_sha} does not match declared commit {sha}"
+        )
+    if status not in {"ahead", "identical"} or merge_base_sha != sha:
+        raise CommentaryProvenanceError(
+            f"{label} {sha} is not on canonical default-branch ancestry; "
+            f"status={status} merge_base={merge_base_sha}"
+        )
+    return {
+        "status": status,
+        "base_sha": base_sha,
+        "merge_base_sha": merge_base_sha,
+    }
+
+
+def fetch_default_branch_ancestry(
+    client: GitHubClient, prefix: str, sha: str, label: str
+) -> dict[str, Any]:
+    repository = client.get(prefix)
+    if not isinstance(repository, dict):
+        raise CommentaryProvenanceError(f"{label} repository metadata is unavailable")
+    default_branch = require_nonempty_string(
+        repository.get("default_branch"), f"{label} default branch"
+    )
+    encoded_branch = urllib.parse.quote(default_branch, safe="")
+    compare = client.get(f"{prefix}/compare/{sha}...{encoded_branch}")
+    result = validate_default_branch_ancestry(compare, sha, label)
+    result["default_branch"] = default_branch
+    return result
+
+
 def resolve_follow_up(
     client: GitHubClient,
     follow_up: dict[str, Any],
@@ -455,6 +497,12 @@ def resolve_follow_up(
         )
         for assertion in follow_up["content_assertions"]
     }
+    source_default_branch_ancestry = fetch_default_branch_ancestry(
+        client, prefix, follow_up["base_sha"], "source resulting commit"
+    )
+    follow_default_branch_ancestry = fetch_default_branch_ancestry(
+        client, prefix, follow_up["merge_commit_sha"], "follow-up resulting commit"
+    )
     return {
         "pr": pr,
         "changed_files": sorted(
@@ -466,6 +514,7 @@ def resolve_follow_up(
         "source_merge_associated_prs": fetch_associated_pr_numbers(
             client, prefix, follow_up["base_sha"]
         ),
+        "source_merge_default_branch_ancestry": source_default_branch_ancestry,
         "follow_head_commit": fetch_commit_identity(client, prefix, follow_up["head_sha"]),
         "follow_merge_commit": fetch_commit_identity(
             client, prefix, follow_up["merge_commit_sha"]
@@ -473,6 +522,7 @@ def resolve_follow_up(
         "follow_merge_associated_prs": fetch_associated_pr_numbers(
             client, prefix, follow_up["merge_commit_sha"]
         ),
+        "follow_merge_default_branch_ancestry": follow_default_branch_ancestry,
         "expected_source_pr_number": source_pr_number,
     }
 
@@ -634,7 +684,7 @@ def verify(
             "does not infer absence of later evidence for PRESERVED_UNKNOWN entries",
             "does not modify authenticated bootstrap-v1 source projections",
             "does not claim global source-commentary reconciliation is complete",
-            "does not rely on pull.merge_commit_sha because the scoped source GitHub App redacts that field; merged-commit identity is instead checked through immutable Git objects and commit-to-PR association",
+            "does not rely on pull.merge_commit_sha because the scoped source GitHub App redacts that field; resulting-commit identity is instead checked through immutable Git objects, commit-to-PR association, and canonical default-branch ancestry",
         ],
     }
 
