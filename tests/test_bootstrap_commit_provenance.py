@@ -20,6 +20,7 @@ VERIFIED = "d" * 40
 LIVE = "e" * 40
 OLD_BASE = "f" * 40
 REBASED_ANCHOR = "1" * 40
+ALT_ANCHOR = "2" * 40
 
 
 def case_record():
@@ -91,7 +92,8 @@ def snapshot(commits=None):
 def rebased_snapshot():
     result = snapshot(
         [
-            {"sha": REBASED_ANCHOR, "parents": [BASE]},
+            {"sha": ALT_ANCHOR, "parents": [BASE]},
+            {"sha": REBASED_ANCHOR, "parents": [ALT_ANCHOR]},
             {"sha": FIX, "parents": [REBASED_ANCHOR]},
             {"sha": VERIFIED, "parents": [FIX]},
             {"sha": LIVE, "parents": [VERIFIED]},
@@ -109,7 +111,12 @@ def rebased_snapshot():
             "id": 20,
             "user": {"id": 2, "login": "chatgpt-codex-connector[bot]", "type": "Bot"},
             "commit_id": BUGGY,
-        }
+        },
+        {
+            "id": 21,
+            "user": {"id": 1, "login": "BogdanAIP", "type": "User"},
+            "commit_id": REBASED_ANCHOR,
+        },
     ]
     result["review_comments"] = [
         {
@@ -126,7 +133,7 @@ def rebased_snapshot():
             "pull_request_review_id": 21,
             "in_reply_to_id": 30,
             "user": {"id": 1, "login": "BogdanAIP", "type": "User"},
-            "commit_id": REBASED_ANCHOR,
+            "commit_id": BUGGY,
             "original_commit_id": BUGGY,
             "body": "Fixed on the rebased head.",
         },
@@ -151,6 +158,7 @@ def rebase_reconciliation():
             "review_request_issue_comment_id": 10,
             "codex_review_id": 20,
             "codex_review_comment_ids": [30],
+            "owner_reply_comment_ids": [31],
         },
     }
 
@@ -268,6 +276,42 @@ class BootstrapCommitProvenanceTests(unittest.TestCase):
             {"sha": BUGGY, "parents": (BASE,)},
         )
         self.assertTrue(any("reviewed BUGGY HEAD parent differs" in error for error in errors))
+
+    def test_rebase_reconciliation_rejects_same_lineage_anchor_without_owner_review_binding(self):
+        reconciliation = rebase_reconciliation()
+        reconciliation["rebased_fix_lineage_anchor"] = ALT_ANCHOR
+        errors = provenance.validate_case(
+            case_record(),
+            finding_record(),
+            rebased_snapshot(),
+            reconciliation,
+            {"sha": BUGGY, "parents": (OLD_BASE,)},
+        )
+        self.assertTrue(any("not bound to rebased lineage anchor" in error for error in errors))
+
+    def test_rebase_reconciliation_rejects_tampered_owner_reply_review_binding(self):
+        snap = rebased_snapshot()
+        snap["reviews"][1]["commit_id"] = ALT_ANCHOR
+        errors = provenance.validate_case(
+            case_record(),
+            finding_record(),
+            snap,
+            rebase_reconciliation(),
+            {"sha": BUGGY, "parents": (OLD_BASE,)},
+        )
+        self.assertTrue(any("not bound to rebased lineage anchor" in error for error in errors))
+
+    def test_rebase_reconciliation_requires_exact_owner_reply_identity(self):
+        reconciliation = rebase_reconciliation()
+        reconciliation["github_evidence"]["owner_reply_comment_ids"] = [999]
+        errors = provenance.validate_case(
+            case_record(),
+            finding_record(),
+            rebased_snapshot(),
+            reconciliation,
+            {"sha": BUGGY, "parents": (OLD_BASE,)},
+        )
+        self.assertTrue(any("exact owner reply 999 is absent" in error for error in errors))
 
     def test_reconcile_fetches_one_snapshot_per_pr(self):
         calls = []
