@@ -180,7 +180,7 @@ The first authenticated run is durably identifiable as:
 
 The first intake commit created the non-authoritative `evidence/github-intake` data from the accepted `main` workflow and wrote `evidence/github/collector-state.json` beside the PR snapshots. This proves authenticated CAP/UV source access, durable publication, and watermark/state advancement; it does not make the intake branch canonical truth.
 
-Immediate rerun attempts also completed successfully, but they are **not** accepted as the required unchanged-source no-op proof. `uv-studio` PR #89 genuinely changed between those scans. The collector correctly refreshed the moving `uv-studio/89.json`; one resulting evidence commit `8fc7c57d0f5531e73bebd05fb7b2b098535f97c7` changed that snapshot plus `collector-state.json`, while unchanged CAP snapshots were not rewritten. A clean quiet-source no-op/idempotence proof therefore remains pending and must not be inferred from these moving-source reruns.
+Immediate rerun attempts also completed successfully, but they are **not** accepted as the required unchanged-source no-op proof. `uv-studio` PR #89 genuinely changed between those scans. The collector correctly refreshed the moving `uv-studio/89.json`; one resulting evidence commit `8fc7c57d0f5531e73bebd05fb7b2b098535f97c7` changed that snapshot plus `collector-state.json`, while unchanged CAP snapshots were not rewritten. A clean quiet-source no-op/idempotence proof therefore remained pending until the later accepted PR #12 control described below.
 
 ### Accepted structural bootstrap commit provenance — PR #8
 
@@ -281,7 +281,91 @@ Accepted PR #9 establishes:
    - exact-head CI `33736633164`: PASS;
    - fresh independent terminal review: `CURRENT PASS`, 0 findings, 24 rejected candidates.
 
-Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available. Material source commentary remains only partially reconciled; the clean unchanged-source collector no-op, reviewer-policy refs, generic/project-specific classification, and baseline seed remain pending.
+### Accepted exact-head clean re-review reconciliation — PR #10
+
+PR #10 — `Stage 1: reconcile CAP #129 clean re-review evidence` established the accepted F052 evidence shape for an original finding, material final-head change, and exact-head clean Codex re-review without promoting that chain to universal semantic correctness.
+
+Acceptance identity:
+
+- BASE: `3ac7a3281808db95d2db47dae8bed53395b62d8c`
+- accepted exact PR HEAD: `6569c6641574bc0d2d871a24e2d94faf6cb2bda4`
+- `review_policy_ref`: `3ac7a3281808db95d2db47dae8bed53395b62d8c`
+- changed files: `7`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- rejected candidates: `36`
+- review timestamp: `2026-09-03T17:04:04+02:00`
+- durable GitHub terminal-result comment id: `5527850500`
+- exact-head CI run: `33763496281`
+- CI state: `PASS`
+- merge commit on `main`: `2b182584018e46aa90043cfc84d4a72ca7a9b2be`
+
+The terminal result was persisted as top-level PR comment `5527850500` before merge without moving the reviewed HEAD. The merge used `expected_head_sha=6569c6641574bc0d2d871a24e2d94faf6cb2bda4`; the resulting merge commit records both the exact accepted HEAD and the durable terminal-result pointer.
+
+Accepted PR #10 establishes:
+
+- `data/bootstrap-commentary-rereview-reconciliation.json` as a separate bounded F052 layer tied to the authenticated workbook digest and normalized source identity;
+- exact binding of original CAP PR #129 Codex review/finding on reviewed head `0dde5aab1725c076ff56e2d2c8662c842e57b8ae`;
+- live final PR head `d6ea5bbd913d8a3ab27d7d1521d389e972602de2`, exact reviewed→fixed ancestry, immutable fixed-head contract-test evidence, exact owner reply/re-review request, exact Codex GitHub-App clean result and finality chronology;
+- deliberate non-requirement that the reviewed branch head itself be on today's canonical-main ancestry, because the authenticated F052 claim is about the exact reviewed head rather than a resulting merge commit;
+- explicit separation between a clean exact-head review result and universal semantic correctness;
+- continued `global_commentary_reconciliation_complete=false`.
+
+#### PR #10 review/remediation chronology
+
+1. Exact head `c6e9896a01c0e4c258a78ad12789dedc1c14af1e`
+   - fresh independent review: `CURRENT FINDINGS` (1 P2);
+   - defect: the finality scan skipped an additional Codex-authored artifact when its relevant timestamp was missing/empty because timestamp parsing was guarded by truthiness;
+   - result became STALE when HEAD moved.
+
+2. Remediation on final head `6569c6641574bc0d2d871a24e2d94faf6cb2bda4`
+   - timestamp validation became unconditional after an artifact is identified as Codex-authored and is not the declared clean-result comment;
+   - missing/empty/malformed/timezone-naive chronology evidence now fails closed;
+   - adversarial tests cover missing review `submitted_at`, inline-comment `created_at`, and issue-comment `created_at`;
+   - exact-head CI `33763496281`: PASS;
+   - fresh independent terminal review: `CURRENT PASS`, 0 findings, 36 rejected candidates.
+
+### Accepted collector clean no-op and large-PR support — PR #12
+
+PR #12 — `Stage 1: make collector clean no-op and support large PRs` closed the previously pending unchanged-source idempotence gate and the GitHub >250-commit source-collection boundary without changing bootstrap authority or consumer write permissions.
+
+Acceptance identity:
+
+- BASE: `2b182584018e46aa90043cfc84d4a72ca7a9b2be`
+- accepted exact PR HEAD: `11b7166deed4c5dbb25a9bbe9bf0128bf5558dc7`
+- `review_policy_ref`: `2b182584018e46aa90043cfc84d4a72ca7a9b2be`
+- changed files: `3`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- rejected candidates: `10`
+- review timestamp: `2026-09-03T18:55:46+02:00`
+- durable GitHub terminal-result comment id: `5529178600`
+- exact-head CI run: `33780251151`
+- exact-head physical live no-op run: `33780251291`
+- CI state: `PASS`
+- merge commit on `main`: `8f31ddae0b5bc36dbd62b9e3c07eaae7d212c125`
+
+The terminal result was persisted as top-level PR comment `5529178600` before merge without moving the reviewed HEAD. The merge then used `expected_head_sha=11b7166deed4c5dbb25a9bbe9bf0128bf5558dc7`; the resulting merge commit records the accepted exact head and terminal-result pointer.
+
+Accepted PR #12 establishes:
+
+- fail-closed complete commit collection for source PRs whose declared commit count exceeds GitHub's 250-commit pull-list cap, using exact paginated BASE...HEAD compare evidence bound to the validated PR identity;
+- required agreement between the PR declared commit count, compare `total_commits`/`ahead_by`, stable compare identity across pages, unique valid commit SHAs, and exact final PR HEAD;
+- preservation of the existing post-read PR identity fence, including equal-count force-push/movement rejection;
+- no durable per-repository watermark/state advancement merely because wall-clock time passed when all selected source snapshots are byte-identical; the older watermark is retained conservatively so the next scan rechecks at least the same overlap interval;
+- a read-only exact-head physical two-pass CAP/UV check in run `33780251291`: the first pass converged stale local evidence, while the later second pass returned `changed_files=0`, `state_changed=false`, zero CAP/UV changed snapshots, no watermark advancement, and an empty recursive byte diff;
+- an explicit evidence-branch movement fence proving remote `evidence/github-intake` remained unchanged during the physical check, plus canonical-main verification before and after;
+- continued read-only CAP/UV source-App permissions and no source-repository write authority.
+
+The quiet-window attempt that motivated this PR first failed closed on live UV PR #89 with `declared=274 collected=250` and published nothing. The accepted repair then physically exercised that real 274-commit topology. The physical proof remains bounded evidence of the observed no-op interval and does not make the intake branch canonical adjudicated truth or claim universal completeness for every future GitHub topology.
+
+Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available. Material source commentary remains only partially reconciled; reviewer-policy refs, generic/project-specific classification, and baseline seed remain pending.
 
 ## Later stages
 
