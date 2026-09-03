@@ -33,6 +33,15 @@
           3878172612,
           3878172617,
           3878172622
+        ],
+        "owner_reply_comment_ids": [
+          3879163170,
+          3879164126,
+          3879164802,
+          3879165520,
+          3879166214,
+          3879166947,
+          3879167678
         ]
       }
     }
@@ -41,6 +50,7 @@
     "bootstrap-v1 source projections remain immutable",
     "a reconciliation exception must match exact source case identities before it can apply",
     "historical detached heads require live PR-bound review evidence and live commit-parent verification",
+    "a rebased lineage anchor must be bound to the exact owner reply review submissions recorded on that anchor",
     "rebased lineage does not imply semantic fix correctness",
     "unlisted provenance conflicts fail closed"
   ]
