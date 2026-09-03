@@ -16,6 +16,8 @@ SOURCE_HEAD = "2849ef50fff1ec1b66cc86db3858cc8300d63742"
 SOURCE_MERGE = "050e4b267c4dd58df4326b66240700ad12707f19"
 FOLLOW_HEAD = "09c58c4bc286a639662cd77432a54c3f08438ad7"
 FOLLOW_MERGE = "e8bda851e9d810d0e007826693540ec1d4c71053"
+SOURCE_TREE = "1" * 40
+FOLLOW_TREE = "2" * 40
 REVIEW_ID = 5048123956
 COMMENT_ID = 3878098608
 TEST_PATH = "runtime/semantic-projection/tests/inventory-guard-acceptance.mjs"
@@ -100,7 +102,9 @@ def source_snapshot():
         "pr_number": 121,
         "pull_request": {
             "number": 121,
-            "merge_commit_sha": SOURCE_MERGE,
+            # Scoped GitHub App installation tokens redact this field on these
+            # historical PR reads; verification must not depend on it.
+            "merge_commit_sha": None,
             "head": {"sha": SOURCE_HEAD},
         },
         "reviews": [
@@ -144,7 +148,7 @@ if (process.argv.includes('--verify-runtime-output-ownership')) {
             "number": 123,
             "state": "closed",
             "merged_at": "2026-08-28T05:25:11Z",
-            "merge_commit_sha": FOLLOW_MERGE,
+            "merge_commit_sha": None,
             "base": {
                 "sha": SOURCE_MERGE,
                 "repo": {
@@ -159,6 +163,29 @@ if (process.argv.includes('--verify-runtime-output-ownership')) {
             TEST_PATH: test_text,
             LAUNCHER_PATH: launcher_text,
         },
+        "source_head_commit": {
+            "sha": SOURCE_HEAD,
+            "tree": SOURCE_TREE,
+            "parents": ("0" * 40,),
+        },
+        "source_merge_commit": {
+            "sha": SOURCE_MERGE,
+            "tree": SOURCE_TREE,
+            "parents": ("0" * 40,),
+        },
+        "source_merge_associated_prs": {121},
+        "follow_head_commit": {
+            "sha": FOLLOW_HEAD,
+            "tree": FOLLOW_TREE,
+            "parents": (SOURCE_MERGE,),
+        },
+        "follow_merge_commit": {
+            "sha": FOLLOW_MERGE,
+            "tree": FOLLOW_TREE,
+            "parents": (SOURCE_MERGE,),
+        },
+        "follow_merge_associated_prs": {123},
+        "expected_source_pr_number": 121,
     }
 
 
@@ -175,7 +202,7 @@ class BootstrapCommentaryReconciliationTests(unittest.TestCase):
         self.assertEqual(unknown["reconciliation_status"], commentary.PRESERVED_UNKNOWN_STATUS)
         self.assertIsNone(unknown["follow_up"])
 
-    def test_supported_material_address_evidence_passes(self):
+    def test_supported_material_address_evidence_passes_with_redacted_pr_merge_sha(self):
         entry = entry_record()
         self.assertEqual(commentary.validate_normalized_source(entry, finding_record()), [])
         self.assertEqual(
@@ -194,13 +221,45 @@ class BootstrapCommentaryReconciliationTests(unittest.TestCase):
         errors = commentary.validate_original_github_evidence(entry_record(), snapshot)
         self.assertTrue(any("original_commit_id differs" in error for error in errors))
 
-    def test_follow_up_base_must_be_source_pr_merge_commit(self):
-        snapshot = source_snapshot()
-        snapshot["pull_request"]["merge_commit_sha"] = "a" * 40
+    def test_source_merge_commit_must_match_exact_reviewed_head_tree(self):
+        resolved = resolved_follow_up()
+        resolved["source_merge_commit"]["tree"] = "3" * 40
         errors = commentary.validate_follow_up_live(
-            entry_record(), snapshot, resolved_follow_up()
+            entry_record(), source_snapshot(), resolved
         )
-        self.assertTrue(any("exact merge commit of the source PR" in error for error in errors))
+        self.assertTrue(any("source merged commit tree differs" in error for error in errors))
+
+    def test_source_merge_commit_must_be_associated_with_source_pr(self):
+        resolved = resolved_follow_up()
+        resolved["source_merge_associated_prs"] = {120}
+        errors = commentary.validate_follow_up_live(
+            entry_record(), source_snapshot(), resolved
+        )
+        self.assertTrue(any("exact source PR" in error for error in errors))
+
+    def test_follow_up_merge_commit_must_be_directly_based_on_source_merge(self):
+        resolved = resolved_follow_up()
+        resolved["follow_merge_commit"]["parents"] = ("4" * 40,)
+        errors = commentary.validate_follow_up_live(
+            entry_record(), source_snapshot(), resolved
+        )
+        self.assertTrue(any("not directly based" in error for error in errors))
+
+    def test_follow_up_merge_commit_tree_must_match_exact_head(self):
+        resolved = resolved_follow_up()
+        resolved["follow_merge_commit"]["tree"] = "5" * 40
+        errors = commentary.validate_follow_up_live(
+            entry_record(), source_snapshot(), resolved
+        )
+        self.assertTrue(any("merged commit tree differs" in error for error in errors))
+
+    def test_follow_up_merge_commit_must_be_associated_with_follow_up_pr(self):
+        resolved = resolved_follow_up()
+        resolved["follow_merge_associated_prs"] = {122}
+        errors = commentary.validate_follow_up_live(
+            entry_record(), source_snapshot(), resolved
+        )
+        self.assertTrue(any("exact follow-up PR" in error for error in errors))
 
     def test_fake_caller_regression_evidence_cannot_be_omitted(self):
         resolved = resolved_follow_up()
