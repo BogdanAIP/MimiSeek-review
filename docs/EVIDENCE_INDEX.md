@@ -159,7 +159,7 @@ PR #7 did not activate the external collector or claim a durable intake watermar
 
 ### Collector activation evidence after PR #7
 
-Collector activation is operational evidence within Stage 1, not a terminal acceptance record for the still-open provenance PR.
+Collector activation is operational evidence within Stage 1, not terminal acceptance of Stage 1 itself.
 
 The dedicated source GitHub App was configured outside repository contents and installed only on the registered CAP/UV repositories with read-only source permissions. Secret values are intentionally not recorded here. Repository variable `MIMISEEK_COLLECTOR_ENABLED=true` intentionally enabled the accepted collector workflow.
 
@@ -182,15 +182,58 @@ The first intake commit created the non-authoritative `evidence/github-intake` d
 
 Immediate rerun attempts also completed successfully, but they are **not** accepted as the required unchanged-source no-op proof. `uv-studio` PR #89 genuinely changed between those scans. The collector correctly refreshed the moving `uv-studio/89.json`; one resulting evidence commit `8fc7c57d0f5531e73bebd05fb7b2b098535f97c7` changed that snapshot plus `collector-state.json`, while unchanged CAP snapshots were not rewritten. A clean quiet-source no-op/idempotence proof therefore remains pending and must not be inferred from these moving-source reruns.
 
-### Structural bootstrap commit provenance — active PR #8 work
+### Accepted structural bootstrap commit provenance — PR #8
 
-The active Stage-1 provenance slice is intentionally not listed as accepted until its normal PR acceptance completes. Current live verification work covers all 84 regression cases across **9 regression-source PRs**, not the wider 21-PR bootstrap identity scope.
+PR #8 — `Stage 1: verify bootstrap commit provenance live` established accepted structural BUGGY/FIXED/VERIFIED provenance verification for the 84 regression cases across 9 regression-source PRs.
 
-Fail-closed verification discovered one material authenticated-source lineage conflict: seven CAP PR #124 cases (`RC-CAP124-047` through `RC-CAP124-053`) point to Codex-reviewed historical BUGGY head `48d2e89c3b2fee9053b5038c093ad5060124b2ce`, while the workbook's recorded BUGGY BASE belongs to a later rebased lineage. GitHub still preserves the exact detached commit, Codex review submission/comments bound to it, its actual parent, and owner replies recording the rebase/fix transition.
+Acceptance identity:
 
-The active implementation preserves bootstrap-v1 projections unchanged and records the conflict in `data/bootstrap-provenance-reconciliation.json`. The live verifier distinguishes 77 ordinary linear-history cases from 7 explicit `reviewed_head_rebased_before_fix` cases. This is structural provenance only: semantic fix correctness, material source-commentary/disposition reconciliation, reviewer-policy refs, generic/project-specific classification, clean collector no-op, and baseline-seed derivation remain separate Stage-1 work.
+- BASE: `3fadb539fb83db9f4b8a71f1b22f04ca3a461ea5`
+- accepted exact PR HEAD: `c9326633380efd2a991d99e1f8e0328e33353c78`
+- `review_policy_ref`: `3fadb539fb83db9f4b8a71f1b22f04ca3a461ea5`
+- changed files: `7`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- rejected candidates: `18`
+- review timestamp: `2026-09-03T08:57:40+03:00`
+- durable GitHub terminal-result comment id: `5521259867`
+- exact-head CI run: `33719367707`
+- CI state: `PASS`
+- merge commit on `main`: `1250f54a39578d85f28ad7938edd8845eb6d096b`
 
-Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available.
+The terminal result was persisted as top-level PR comment `5521259867` before merge without changing the reviewed HEAD. The merge then used `expected_head_sha=c9326633380efd2a991d99e1f8e0328e33353c78`; the resulting merge commit records both the accepted HEAD and the durable terminal-result pointer.
+
+Accepted PR #8 establishes:
+
+- live structural verification of all 84 regression cases across 9 regression-source PRs;
+- 77 ordinary `linear_pr_history` cases requiring exact source identity, commit membership, ordered BUGGY→FIXED→VERIFIED ancestry, and VERIFIED ancestry into the live/final PR head;
+- 7 CAP PR #124 `reviewed_head_rebased_before_fix` cases preserved without rewriting authenticated bootstrap-v1 projections;
+- exact binding of the detached historical Codex-reviewed BUGGY head to its actual parent, exact Codex review/comment identities, and the later rebased response anchor to seven distinct owner review submissions;
+- fail-closed rejection of alternate same-lineage anchors, wrong historical parent, wrong review/comment identity, missing/non-descendant commits, malformed identities, and incomplete/mixed-head source evidence;
+- a live read-only source-App CI check alongside unit and canonical-ref-boundary checks.
+
+PR #8 remains structural provenance only. It does not establish semantic correctness of historical fixes, does not adjudicate workbook Notes by itself, and does not complete source-commentary/disposition reconciliation, clean collector no-op proof, reviewer-policy refs, generic/project-specific classification, or baseline-seed derivation.
+
+#### PR #8 review/remediation chronology
+
+1. Exact head `a676f48c69c20f0f9b055eddad3c53a490148ee3`
+   - fresh independent review: `CURRENT FINDINGS` (1 HIGH);
+   - defect: the CAP #124 rebased lineage anchor was constrained by ancestry but was not bound to the exact owner review submissions that identify that response commit;
+   - concrete alternate same-lineage commit `3d89e5c9d811b0077fd54969811cd6cbc57d3ec5` could have substituted under the old predicates;
+   - result became STALE when HEAD moved.
+
+2. Remediation on final head `c9326633380efd2a991d99e1f8e0328e33353c78`
+   - exact seven owner reply identities were recorded;
+   - each reply must bind to its exact original Codex thread and resolve to a distinct owner review submission;
+   - every such owner review must have `commit_id=a2f22b3adcadc2fe23796a926871aae29bca3226`;
+   - negative tests cover alternate same-lineage anchor, tampered owner-review commit binding, and exact owner-reply identity;
+   - exact-head CI `33719367707`: PASS;
+   - fresh independent terminal review: `CURRENT PASS`, 0 findings, 18 rejected candidates.
+
+Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available. Material source commentary remains only partially reconciled; no baseline seed exists yet.
 
 ## Later stages
 

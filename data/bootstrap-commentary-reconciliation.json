@@ -1,0 +1,95 @@
+{
+  "schema_version": "bootstrap_commentary_reconciliation_v1",
+  "authority": "governed_reconciliation_of_authenticated_source_commentary",
+  "source_artifact_sha256": "6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a",
+  "coverage": {
+    "kind": "bounded_material_commentary_slice",
+    "source_sheet": "Findings",
+    "finding_ids": [
+      "F050",
+      "F051"
+    ],
+    "complete_for_scope": true,
+    "global_commentary_reconciliation_complete": false
+  },
+  "entries": [
+    {
+      "finding_id": "F050",
+      "repository": "BogdanAIP/chat-agent-platform",
+      "pr": 121,
+      "reviewed_head": "2849ef50fff1ec1b66cc86db3858cc8300d63742",
+      "source_sheet": "Findings",
+      "source_row": 51,
+      "source_confirmed": "UNKNOWN",
+      "source_note": "Post-merge finding; no later adjudication/fix was reconstructed in this pass.",
+      "kind": "preserve_source_unknown",
+      "github_evidence": {
+        "codex_review_id": 5048123956,
+        "codex_review_comment_id": 3878098602
+      },
+      "follow_up": null,
+      "reconciliation_status": "PRESERVED_UNKNOWN",
+      "authority_limit": "No absence claim is inferred. This entry only preserves the authenticated source UNKNOWN disposition while binding the original GitHub finding identity."
+    },
+    {
+      "finding_id": "F051",
+      "repository": "BogdanAIP/chat-agent-platform",
+      "pr": 121,
+      "reviewed_head": "2849ef50fff1ec1b66cc86db3858cc8300d63742",
+      "source_sheet": "Findings",
+      "source_row": 52,
+      "source_confirmed": "CONFIRMED",
+      "source_note": "Materially addressed by PR #123, which launches the ownership verifier from a fake caller CWD and asserts no hostile output is created.",
+      "kind": "supported_material_address",
+      "github_evidence": {
+        "codex_review_id": 5048123956,
+        "codex_review_comment_id": 3878098608
+      },
+      "follow_up": {
+        "repository": "BogdanAIP/chat-agent-platform",
+        "pr": 123,
+        "base_sha": "050e4b267c4dd58df4326b66240700ad12707f19",
+        "head_sha": "09c58c4bc286a639662cd77432a54c3f08438ad7",
+        "merge_commit_sha": "e8bda851e9d810d0e007826693540ec1d4c71053",
+        "changed_files": [
+          "runtime/semantic-projection/bin/semantic-control-plane-projection.mjs",
+          "runtime/semantic-projection/bin/semantic-projection-launcher.mjs",
+          "runtime/semantic-projection/tests/inventory-guard-acceptance.mjs"
+        ],
+        "content_assertions": [
+          {
+            "path": "runtime/semantic-projection/tests/inventory-guard-acceptance.mjs",
+            "required_present": [
+              "const callerRoot = fs.mkdtempSync",
+              "[launcherEntry, '--verify-runtime-output-ownership']",
+              "cwd: callerRoot",
+              "fs.existsSync(path.join(callerRoot, '.playwright-mcp'))",
+              "fs.existsSync(hostileOutput)"
+            ],
+            "required_absent": []
+          },
+          {
+            "path": "runtime/semantic-projection/bin/semantic-projection-launcher.mjs",
+            "required_present": [
+              "PLAYWRIGHT_MCP_OUTPUT_DIR",
+              "--verify-runtime-output-ownership"
+            ],
+            "required_absent": [
+              "CHAT_SEMANTIC_RUNTIME_ROOT"
+            ]
+          }
+        ]
+      },
+      "reconciliation_status": "SUPPORTED_MATERIAL_ADDRESS_EVIDENCE",
+      "authority_limit": "The evidence proves the exact follow-up implementation/regression claim in the authenticated source note. It does not infer semantic fix correctness from owner prose, ancestry, merge status, or a passing test alone."
+    }
+  ],
+  "rules": [
+    "bootstrap-v1 source projections remain immutable",
+    "source commentary is not promoted to truth merely because it exists in the authenticated workbook",
+    "preserved UNKNOWN never becomes a negative absence inference",
+    "supported material-address evidence must bind the original finding and exact follow-up repository/PR/commit/file content",
+    "material-address evidence does not by itself prove semantic fix correctness",
+    "unreconciled source commentary remains pending before baseline derivation"
+  ]
+}
