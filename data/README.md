@@ -95,6 +95,23 @@ This evidence shape deliberately does **not** require the final reviewed PR head
 
 This F052 slice also declares `global_commentary_reconciliation_complete=false`; remaining material commentary stays pending before baseline derivation.
 
+### Bounded same-PR material-fix evidence reconciliation
+
+`data/bootstrap-commentary-fix-evidence-reconciliation.json` introduces a third bounded commentary evidence shape for authenticated Notes that point to a material fix inside the same source PR without relying on later reviewer silence as proof of repair.
+
+The current slice is exactly UV PR #71 findings `F053` and `F054`, both originally reviewed on `238870958fb88a291cdfa3e2345d8c5d84821534`. For each entry, `tools/verify_bootstrap_commentary_fix_evidence_reconciliation.py` requires:
+
+- exact normalized finding/source-row identity and exact Codex review submission;
+- exact original inline finding with immutable `original_commit_id` binding to the reviewed head;
+- an exact owner reply to that original thread naming the full declared same-PR fix commit;
+- the declared fix commit to be present in the exact PR commit history and to descend exactly from the reviewed head;
+- exact fix-commit changed-file inventory;
+- immutable fix-head implementation/regression text materially corresponding to the source Note.
+
+GitHub may relocate an old inline comment's current `commit_id` onto the merged PR's later final head. This mutable relocation is not treated as the historical reviewed-head authority: the exact review submission plus `original_commit_id` provide that binding. The verifier still rejects an arbitrary relocated commit by allowing the current `commit_id` only when it is either the original reviewed head or the live final PR head.
+
+`SUPPORTED_SAME_PR_MATERIAL_FIX_EVIDENCE` means that the exact owner-declared fix commit contains implementation/regression evidence materially corresponding to the authenticated source Note. It does not mean that ancestry, owner prose, tests, or absence of a repeated finding proves universal semantic correctness. The F053/F054 document also keeps `global_commentary_reconciliation_complete=false`.
+
 ## Continuous GitHub evidence intake
 
 The bounded Stage 1 intake foundation polls repositories registered in `config/consumers.json` and stores deterministic per-PR source snapshots on branch:
@@ -137,5 +154,5 @@ Stage 2 will add the structured consumer evidence-export contract required to ma
 - Source commentary omitted from normalized tuples remains recoverable by manifest + `source_row`; material assertions from it must be provenance-reconciled before baseline derivation.
 - Bounded source-commentary reconciliation must explicitly state its coverage and may not claim global completion.
 - Preserved source `UNKNOWN` is not evidence that later proof does or does not exist.
-- Structural commit provenance, material follow-up evidence, and clean exact-head re-review evidence do not by themselves equal universal semantic fix correctness.
+- Structural commit provenance, material follow-up evidence, clean exact-head re-review evidence, and same-PR material-fix evidence do not by themselves equal universal semantic fix correctness.
 - A baseline seed may not be derived merely because files exist; Stage 1 provenance/policy/classification/current-intake requirements must also be satisfied.
