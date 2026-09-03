@@ -1,5 +1,4 @@
 import base64
-import copy
 import importlib.util
 import sys
 import unittest
@@ -170,8 +169,6 @@ class FakeClient:
         self.fixed_text = FIXED_TEST
         self.fixed_compare_status = "ahead"
         self.fixed_compare_merge_base = REVIEWED
-        self.default_compare_status = "ahead"
-        self.default_compare_merge_base = FIXED
 
     def get(self, path, params=None):
         prefix = "/repos/BogdanAIP/chat-agent-platform"
@@ -180,15 +177,6 @@ class FakeClient:
                 "status": self.fixed_compare_status,
                 "base_commit": {"sha": REVIEWED},
                 "merge_base_commit": {"sha": self.fixed_compare_merge_base},
-                "head_commit": {"sha": FIXED},
-            }
-        if path == prefix:
-            return {"default_branch": "main"}
-        if path == f"{prefix}/compare/{FIXED}...main":
-            return {
-                "status": self.default_compare_status,
-                "base_commit": {"sha": FIXED},
-                "merge_base_commit": {"sha": self.default_compare_merge_base},
             }
         if path == f"{prefix}/pulls/comments/{OWNER_REPLY}":
             return self.owner_reply
@@ -225,6 +213,12 @@ class BootstrapCommentaryRereviewTests(unittest.TestCase):
         self.assertEqual(rereview.validate_source(item, finding(), snapshot()), [])
         self.assertEqual(rereview.resolve_and_validate_live(FakeClient(), item, snapshot()), [])
 
+    def test_live_final_pr_head_must_equal_declared_fixed_head(self):
+        snap = snapshot()
+        snap["pull_request"]["head"]["sha"] = REVIEWED
+        errors = rereview.validate_source(entry(), finding(), snap)
+        self.assertTrue(any("live final PR HEAD differs from fixed head" in error for error in errors))
+
     def test_clean_result_must_bind_reviewed_commit_prefix_to_fixed_head(self):
         client = FakeClient()
         client.clean["body"] = "Codex Review: Didn't find any major issues.\n\n**Reviewed commit:** `09c58c4bc2`"
@@ -255,13 +249,6 @@ class BootstrapCommentaryRereviewTests(unittest.TestCase):
         client.fixed_compare_merge_base = "0" * 40
         errors = rereview.resolve_and_validate_live(client, entry(), snapshot())
         self.assertTrue(any("not an exact descendant" in error for error in errors))
-
-    def test_fixed_head_must_remain_on_canonical_default_branch_ancestry(self):
-        client = FakeClient()
-        client.default_compare_status = "diverged"
-        client.default_compare_merge_base = REVIEWED
-        errors = rereview.resolve_and_validate_live(client, entry(), snapshot())
-        self.assertTrue(any("not on canonical default-branch ancestry" in error for error in errors))
 
     def test_full_negated_contract_content_is_required(self):
         client = FakeClient()
