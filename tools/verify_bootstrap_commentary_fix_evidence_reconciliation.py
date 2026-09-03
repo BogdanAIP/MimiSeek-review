@@ -223,7 +223,17 @@ def validate_source(entry: dict[str, Any], finding: dict[str, Any], snapshot: di
     check(comment is not None, "exact original Codex finding is absent")
     if comment:
         check(comment.get("pull_request_review_id") == github["codex_review_id"], "original finding review id differs")
-        check(comment.get("commit_id") == entry["reviewed_head"], "original finding commit differs")
+        # GitHub may relocate an outdated inline comment onto the merged PR's later
+        # head while preserving original_commit_id. Treat original_commit_id plus the
+        # exact review submission as the immutable historical binding, but require
+        # any current relocation to be either the original reviewed head or live final
+        # PR head rather than an arbitrary commit.
+        current_commit = comment.get("commit_id")
+        live_final_head = ((pr.get("head") or {}).get("sha"))
+        check(
+            current_commit in {entry["reviewed_head"], live_final_head},
+            "original finding commit differs",
+        )
         check(comment.get("original_commit_id") == entry["reviewed_head"], "original finding original_commit differs")
         check(((comment.get("user") or {}).get("login")) == CODEX_LOGIN, "original finding actor differs")
 
@@ -326,6 +336,7 @@ def verify(findings_path: Path, reconciliation_path: Path, source_manifest_path:
         "entries": summaries,
         "limitations": [
             "owner fixed prose is not accepted without exact thread, commit, inventory, ancestry, and immutable content evidence",
+            "GitHub current commit_id relocation for historical inline comments is not treated as the immutable reviewed-head identity; original_commit_id plus the exact review submission is",
             "later reviewer silence is not used as proof that an old defect is fixed",
             "material same-PR fix evidence is not universal semantic correctness proof",
             "does not modify authenticated bootstrap-v1 source projections",
