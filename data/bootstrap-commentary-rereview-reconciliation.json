@@ -1,0 +1,67 @@
+{
+  "schema_version": "bootstrap_commentary_rereview_reconciliation_v1",
+  "authority": "governed_reconciliation_of_authenticated_source_commentary",
+  "source_artifact_sha256": "6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a",
+  "coverage": {
+    "kind": "bounded_material_commentary_rereview_slice",
+    "source_sheet": "Findings",
+    "finding_ids": [
+      "F052"
+    ],
+    "complete_for_scope": true,
+    "global_commentary_reconciliation_complete": false
+  },
+  "entries": [
+    {
+      "finding_id": "F052",
+      "repository": "BogdanAIP/chat-agent-platform",
+      "pr": 129,
+      "reviewed_head": "0dde5aab1725c076ff56e2d2c8662c842e57b8ae",
+      "source_sheet": "Findings",
+      "source_row": 53,
+      "source_confirmed": "CONFIRMED",
+      "source_note": "Fixed; final exact-head Codex re-review reported no remaining major issues.",
+      "kind": "supported_fixed_clean_rereview",
+      "github_evidence": {
+        "codex_review_id": 5053423808,
+        "codex_review_comment_id": 3882602422
+      },
+      "resolution_evidence": {
+        "fixed_head": "d6ea5bbd913d8a3ab27d7d1521d389e972602de2",
+        "owner_reply_comment_id": 3882673119,
+        "rereview_request_comment_id": 5455619813,
+        "clean_codex_result_comment_id": 5455644288,
+        "changed_files": [
+          "project-context/COMPUTER_USE_ARCHITECTURE.md",
+          "project-context/ROADMAP.md",
+          "tests/test_computer_use_architecture_contract.py"
+        ],
+        "content_assertions": [
+          {
+            "path": "tests/test_computer_use_architecture_contract.py",
+            "required_present": [
+              "visual_section = architecture.split(\"### Fresh visual post-action verification\", maxsplit=1)[1].split(",
+              "self.assertIn(\"this is **not** a screenshot-after-every-action requirement\", visual_section)",
+              "self.assertIn(\"does **not** require a screenshot after every action\", roadmap.casefold())"
+            ],
+            "required_absent": []
+          }
+        ]
+      },
+      "reconciliation_status": "SUPPORTED_FIXED_AND_CLEAN_REREVIEW_EVIDENCE",
+      "authority_limit": "This entry proves the exact authenticated source-note claim that the P2 was materially changed on the final PR head and that an exact-head Codex re-review then reported no remaining major issues. It does not elevate owner prose or the clean Codex result into universal semantic-correctness authority."
+    }
+  ],
+  "rules": [
+    "bootstrap-v1 source projections remain immutable",
+    "the original finding must bind an exact Codex review and inline comment on the authenticated reviewed head",
+    "the fixed head must be the live final PR head, descend from the reviewed head, and remain on canonical default-branch ancestry",
+    "the owner reply must be the exact reply to the original finding and must bind the declared fixed head in its body",
+    "the re-review request must be owner-authored and name the full declared fixed head",
+    "the clean Codex result must be the exact bot/App-authored issue comment, follow the re-review request, and bind its Reviewed commit prefix to the declared fixed head",
+    "the clean result must remain the final Codex-authored review evidence on that PR",
+    "immutable fixed-head content must support the material change claimed by the source note",
+    "a clean re-review is evidence about that exact review run, not universal proof of semantic correctness",
+    "global material source-commentary reconciliation remains incomplete"
+  ]
+}
