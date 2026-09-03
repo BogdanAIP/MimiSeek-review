@@ -101,32 +101,6 @@ jobs:
           permission-issues: read
           permission-pull-requests: read
 
-      - name: Diagnose historical CAP merge identities
-        env:
-          GITHUB_API_URL: ${{ github.api_url }}
-          MIMISEEK_GITHUB_TOKEN: ${{ steps.source-token.outputs.token }}
-        run: |
-          python - <<'PY'
-          import os
-          import sys
-          sys.path.insert(0, "tools")
-          from collect_github_evidence import GitHubClient
-
-          client = GitHubClient(
-              token=os.environ["MIMISEEK_GITHUB_TOKEN"],
-              api_url=os.environ["GITHUB_API_URL"],
-          )
-          for number in (121, 123):
-              pr = client.get(f"/repos/BogdanAIP/chat-agent-platform/pulls/{number}")
-              print(
-                  f"CAP_PR_{number} "
-                  f"base={pr.get('base', {}).get('sha')} "
-                  f"head={pr.get('head', {}).get('sha')} "
-                  f"merge={pr.get('merge_commit_sha')} "
-                  f"merged_at={pr.get('merged_at')}"
-              )
-          PY
-
       - name: Verify bootstrap BUGGY/FIXED/VERIFIED commit provenance
         env:
           GITHUB_API_URL: ${{ github.api_url }}
