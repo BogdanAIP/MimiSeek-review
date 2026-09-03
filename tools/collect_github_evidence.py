@@ -21,6 +21,8 @@ DEFAULT_OVERLAP_MINUTES = 180
 DEFAULT_TIMEOUT_SECONDS = 30
 USER_AGENT = "MimiSeek-Review-Collector/1"
 REQUIRED_CANONICAL_RULE_TYPES = frozenset({"pull_request", "deletion", "non_fast_forward"})
+PR_COMMIT_LIST_CAP = 250
+COMPARE_PAGE_SIZE = 100
 
 ISO_Z_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -411,6 +413,12 @@ def _require_positive_int(value: Any, label: str) -> int:
     return value
 
 
+def _require_nonnegative_int(value: Any, label: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise GitHubApiError(f"{label} must be a non-negative integer, got {value!r}")
+    return value
+
+
 def _require_nonempty_string(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise GitHubApiError(f"{label} must be a non-empty string, got {value!r}")
@@ -492,6 +500,105 @@ def _pr_identity_fence(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _validate_commit_sequence(commits: list[Any], declared_count: int, head_sha: str, label: str) -> list[dict[str, Any]]:
+    if len(commits) != declared_count:
+        raise GitHubApiError(
+            f"{label} commit list is inconsistent: declared={declared_count} collected={len(commits)}"
+        )
+    normalized: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for index, raw in enumerate(commits, start=1):
+        if not isinstance(raw, dict):
+            raise GitHubApiError(f"{label} commit {index} is malformed")
+        sha = raw.get("sha")
+        if not isinstance(sha, str) or not SHA40_RE.fullmatch(sha):
+            raise GitHubApiError(f"{label} commit {index} has invalid sha {sha!r}")
+        if sha in seen:
+            raise GitHubApiError(f"{label} commit list contains duplicate sha {sha}")
+        seen.add(sha)
+        normalized.append(raw)
+    if declared_count and normalized[-1].get("sha") != head_sha:
+        raise GitHubApiError(
+            f"{label} commit list does not terminate at exact PR head: "
+            f"expected={head_sha} actual={normalized[-1].get('sha')!r}"
+        )
+    return normalized
+
+
+def _collect_complete_pr_commits(
+    client: GitHubClient,
+    prefix: str,
+    pr_number: int,
+    pr: dict[str, Any],
+) -> list[dict[str, Any]]:
+    declared_count = pr["commits"]
+    base_sha = (pr.get("base") or {}).get("sha")
+    head_sha = (pr.get("head") or {}).get("sha")
+    label = f"pull request {prefix}#{pr_number}"
+
+    if declared_count <= PR_COMMIT_LIST_CAP:
+        commits = client.paged(f"{prefix}/pulls/{pr_number}/commits")
+        return _validate_commit_sequence(commits, declared_count, head_sha, label)
+
+    # GitHub's List commits on a pull request endpoint is hard-capped at 250.
+    # For larger PRs, use the paginated compare endpoint on the exact BASE...HEAD
+    # identity. Its commit pages are complete beyond 250 and remain independently
+    # fenced by the PR re-read below.
+    encoded_base = urllib.parse.quote(base_sha, safe="")
+    encoded_head = urllib.parse.quote(head_sha, safe="")
+    path = f"{prefix}/compare/{encoded_base}...{encoded_head}"
+    commits: list[dict[str, Any]] = []
+    comparison_identity: tuple[Any, ...] | None = None
+    page = 1
+    while True:
+        payload = client.get(path, {"per_page": COMPARE_PAGE_SIZE, "page": page})
+        if not isinstance(payload, dict):
+            raise GitHubApiError(f"{label} compare page {page} is unavailable")
+        status = _require_nonempty_string(payload.get("status"), f"{label} compare status")
+        total_commits = _require_nonnegative_int(
+            payload.get("total_commits"), f"{label} compare total_commits"
+        )
+        ahead_by = _require_nonnegative_int(payload.get("ahead_by"), f"{label} compare ahead_by")
+        behind_by = _require_nonnegative_int(payload.get("behind_by"), f"{label} compare behind_by")
+        compare_base_sha = _require_nonempty_string(
+            ((payload.get("base_commit") or {}).get("sha")), f"{label} compare base sha"
+        )
+        merge_base_sha = _require_nonempty_string(
+            ((payload.get("merge_base_commit") or {}).get("sha")), f"{label} compare merge-base sha"
+        )
+        if not SHA40_RE.fullmatch(compare_base_sha) or not SHA40_RE.fullmatch(merge_base_sha):
+            raise GitHubApiError(f"{label} compare commit identity is malformed")
+        if compare_base_sha != base_sha:
+            raise GitHubApiError(
+                f"{label} compare base differs: expected={base_sha} actual={compare_base_sha}"
+            )
+        if status not in {"ahead", "diverged"}:
+            raise GitHubApiError(f"{label} compare status {status!r} cannot describe a non-empty PR")
+        if total_commits != declared_count or ahead_by != declared_count:
+            raise GitHubApiError(
+                f"{label} compare count differs from PR: declared={declared_count} "
+                f"total={total_commits} ahead={ahead_by}"
+            )
+
+        identity = (status, total_commits, ahead_by, behind_by, compare_base_sha, merge_base_sha)
+        if comparison_identity is None:
+            comparison_identity = identity
+        elif identity != comparison_identity:
+            raise GitHubApiError(f"{label} compare identity moved between pages")
+
+        page_commits = payload.get("commits")
+        if not isinstance(page_commits, list):
+            raise GitHubApiError(f"{label} compare page {page} commits are malformed")
+        commits.extend(page_commits)
+        if len(commits) > declared_count:
+            raise GitHubApiError(f"{label} compare returned more commits than declared")
+        if len(page_commits) < COMPARE_PAGE_SIZE:
+            break
+        page += 1
+
+    return _validate_commit_sequence(commits, declared_count, head_sha, label)
+
+
 def build_snapshot(client: GitHubClient, repository: str, pr_number: int) -> dict[str, Any]:
     owner, name = split_repository(repository)
     prefix = f"/repos/{owner}/{name}"
@@ -502,14 +609,7 @@ def build_snapshot(client: GitHubClient, repository: str, pr_number: int) -> dic
     issue_reactions = client.paged(f"{prefix}/issues/{pr_number}/reactions")
     reviews = client.paged(f"{prefix}/pulls/{pr_number}/reviews")
     review_comments = client.paged(f"{prefix}/pulls/{pr_number}/comments")
-    commits = client.paged(f"{prefix}/pulls/{pr_number}/commits")
-
-    declared_commit_count = pr_before["commits"]
-    if declared_commit_count != len(commits):
-        raise GitHubApiError(
-            f"pull request commit list is inconsistent for {repository}#{pr_number}: "
-            f"declared={declared_commit_count} collected={len(commits)}"
-        )
+    commits = _collect_complete_pr_commits(client, prefix, pr_number, pr_before)
 
     # Re-read the PR after every dependent evidence call. A changed HEAD, BASE,
     # repository identity, state/update identity, or commit count means the
@@ -607,11 +707,15 @@ def collect(
     changed_files = 0
     collected_prs = 0
     per_repository: dict[str, Any] = {}
+    state_advanced = False
 
     for consumer in consumers:
         if not consumer.evidence_enabled:
             continue
-        repo_state = state["repositories"].setdefault(consumer.repository, {})
+        existing_repo_state = state["repositories"].get(consumer.repository)
+        if existing_repo_state is not None and not isinstance(existing_repo_state, dict):
+            raise ValueError(f"collector state for {consumer.repository} must be an object")
+        repo_state = dict(existing_repo_state or {})
         since = calculate_since(consumer, repo_state, overlap_minutes)
         prs = client.pulls_to_refresh(consumer.repository, since)
 
@@ -625,20 +729,33 @@ def collect(
                 repo_changed += 1
             collected_prs += 1
 
-        repo_state["watermark"] = to_z(scan_started_at)
-        repo_state["backfill_from"] = consumer.backfill_from
-        repo_state["last_selected_pr_count"] = len(prs)
+        # A real unchanged-source run must be a byte-level no-op. Do not advance
+        # durable scan state merely because wall-clock time passed; otherwise every
+        # scheduled run would create collector-state churn and an evidence commit.
+        # Keeping the old watermark is conservative: the next scan rechecks at
+        # least the same overlap window, so evidence cannot be skipped.
+        should_advance = repo_changed > 0 or existing_repo_state is None
+        if should_advance:
+            repo_state["watermark"] = to_z(scan_started_at)
+            repo_state["backfill_from"] = consumer.backfill_from
+            repo_state["last_selected_pr_count"] = len(prs)
+            state["repositories"][consumer.repository] = repo_state
+            state_advanced = True
+        watermark_after = repo_state.get("watermark")
         per_repository[consumer.repository] = {
             "since": to_z(since),
             "selected_prs": len(prs),
             "changed_snapshots": repo_changed,
-            "watermark_after": to_z(scan_started_at),
+            "watermark_advanced": should_advance,
+            "watermark_after": watermark_after,
         }
 
-    state["last_successful_scan_started_at"] = to_z(scan_started_at)
-    state_changed = write_if_changed(state_path, state)
-    if state_changed:
-        changed_files += 1
+    state_changed = False
+    if state_advanced:
+        state["last_successful_scan_started_at"] = to_z(scan_started_at)
+        state_changed = write_if_changed(state_path, state)
+        if state_changed:
+            changed_files += 1
 
     return {
         "scan_started_at": to_z(scan_started_at),
