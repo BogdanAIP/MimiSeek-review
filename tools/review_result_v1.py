@@ -29,14 +29,18 @@ def parse_review_result_v1(
 
 
 def capture_review_result_v1(
-    job: Mapping[str, Any], expected_revision: int, raw_result_text: str
+    job: Mapping[str, Any],
+    expected_revision: int,
+    observed_execution_ref: str,
+    raw_result_text: str,
 ) -> dict[str, Any]:
-    """Capture only metadata derived from the exact bytes that are hashed."""
+    """Capture exact result bytes only for the same observed execution."""
 
     metadata, expected_digest, _ = parse_review_result_v1(job, raw_result_text)
     captured = review_job_state.capture_result(
         job,
         expected_revision,
+        observed_execution_ref,
         raw_result_text,
     )
     if captured["result_identity"] != metadata:

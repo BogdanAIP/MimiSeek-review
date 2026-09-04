@@ -18,6 +18,8 @@ HEAD = "b" * 40
 MOVED_HEAD = "c" * 40
 LAUNCH_CAPABILITY = "d" * 40
 RETURN_CAPABILITY = "e" * 40
+EXECUTION_REF = "private-external-execution-capability"
+OTHER_EXECUTION_REF = "different-private-execution-capability"
 
 
 def make_job():
@@ -80,26 +82,23 @@ def raw_result(job, identity=None, report="Terminal review result."):
     return json.dumps(payload, sort_keys=True, ensure_ascii=False) + "\n"
 
 
-def advance_to_reviewing():
+def advance_to_reviewing(execution_ref=EXECUTION_REF):
     job = make_job()
     job = review_job.validate_request(job, 0, live())
     job = review_job.claim_launch(job, 1, "launch-0001", live())
-    job = review_job.mark_reviewing(
-        job,
-        2,
-        "launch-0001",
-        "private-external-execution-capability",
-    )
-    return job
+    return review_job.mark_reviewing(job, 2, "launch-0001", execution_ref)
+
+
+def capture(job, text, *, execution_ref=EXECUTION_REF):
+    return review_job.capture_result(job, job["revision"], execution_ref, text)
 
 
 def advance_to_result_validated(*, raw=None, identity=None, live_state=None):
     job = advance_to_reviewing()
     identity = identity or result_identity(job)
     raw = raw if raw is not None else raw_result(job, identity)
-    job = review_job.capture_result(job, 3, raw)
-    job = review_job.validate_captured_result(job, 4, live_state or live())
-    return job
+    job = capture(job, raw)
+    return review_job.validate_captured_result(job, job["revision"], live_state or live())
 
 
 class ReviewJobIdentityTests(unittest.TestCase):
@@ -117,20 +116,15 @@ class ReviewJobIdentityTests(unittest.TestCase):
         job["head_sha"] = MOVED_HEAD
         with self.assertRaises(review_job.ReviewJobIdentityError):
             review_job.validate_job(job)
-
         job["identity_sha256"] = review_job.derive_identity_sha256(job)
-        with self.assertRaisesRegex(
-            review_job.ReviewJobIdentityError,
-            "job_id does not match",
-        ):
+        with self.assertRaisesRegex(review_job.ReviewJobIdentityError, "job_id does not match"):
             review_job.validate_job(job)
 
     def test_wrong_live_repository_or_pr_is_identity_error_not_stale(self):
-        job = make_job()
         wrong = live()
         wrong["repository_id"] += 1
         with self.assertRaises(review_job.ReviewJobIdentityError):
-            review_job.validate_request(job, 0, wrong)
+            review_job.validate_request(make_job(), 0, wrong)
 
     def test_new_head_is_explicit_stale_before_launch(self):
         job = review_job.validate_request(make_job(), 0, live(head=MOVED_HEAD))
@@ -141,14 +135,12 @@ class ReviewJobIdentityTests(unittest.TestCase):
         self.assertIsNone(job["result_identity"])
 
     def test_closed_draft_or_merged_source_is_not_current(self):
-        for kwargs in (
-            {"state": "closed"},
-            {"draft": True},
-            {"merged": True, "state": "closed"},
-        ):
+        for kwargs in ({"state": "closed"}, {"draft": True}, {"merged": True, "state": "closed"}):
             with self.subTest(kwargs=kwargs):
-                job = review_job.validate_request(make_job(), 0, live(**kwargs))
-                self.assertEqual(job["outcome"], "STALE")
+                self.assertEqual(
+                    review_job.validate_request(make_job(), 0, live(**kwargs))["outcome"],
+                    "STALE",
+                )
 
 
 class ReviewJobPrivacyAndSerializationTests(unittest.TestCase):
@@ -169,29 +161,22 @@ class ReviewJobPrivacyAndSerializationTests(unittest.TestCase):
         job["request_ref"] = "https://chatgpt.com/c/private-conversation"
         job["identity_sha256"] = review_job.derive_identity_sha256(job)
         job["job_id"] = "rj_" + job["identity_sha256"][:32]
-        with self.assertRaisesRegex(
-            review_job.ReviewJobValidationError,
-            "GitHub-owned durable locator",
-        ):
+        with self.assertRaisesRegex(review_job.ReviewJobValidationError, "GitHub-owned durable locator"):
             review_job.validate_job(job)
 
     def test_external_execution_is_persisted_only_as_digest(self):
         job = advance_to_reviewing()
         self.assertRegex(job["external_execution_sha256"], r"^[0-9a-f]{64}$")
-        self.assertNotIn("private-external-execution-capability", json.dumps(job))
+        self.assertNotIn(EXECUTION_REF, json.dumps(job))
 
     def test_canonical_serialization_round_trips_and_rejects_duplicate_keys(self):
         job = make_job()
         serialized = review_job.serialize_job(job)
         self.assertEqual(review_job.deserialize_job(serialized), job)
         self.assertTrue(serialized.endswith("\n"))
-
         duplicate = serialized.rstrip()
         duplicate = duplicate[:-1] + ',"schema":"REVIEW_JOB_V1"}'
-        with self.assertRaisesRegex(
-            review_job.ReviewJobValidationError,
-            "duplicate JSON key",
-        ):
+        with self.assertRaisesRegex(review_job.ReviewJobValidationError, "duplicate JSON key"):
             review_job.deserialize_job(duplicate)
 
     def test_captured_result_provenance_is_required_after_recovery(self):
@@ -218,35 +203,21 @@ class ReviewJobPrivacyAndSerializationTests(unittest.TestCase):
             "https://github.com/BogdanAIP/MimiSeek-review/issues/200#issuecomment-2001",
         )
         snapshots.append(job)
-        job = review_job.complete_job(job, job["revision"])
-        snapshots.append(job)
-
+        snapshots.append(review_job.complete_job(job, job["revision"]))
         self.assertEqual(
             [snapshot["state"] for snapshot in snapshots],
-            [
-                "RESULT_VALIDATED",
-                "RESULT_PERSISTED",
-                "RETURN_PENDING",
-                "RETURN_UNKNOWN",
-                "RETURN_DELIVERED",
-                "DONE",
-            ],
+            ["RESULT_VALIDATED", "RESULT_PERSISTED", "RETURN_PENDING", "RETURN_UNKNOWN", "RETURN_DELIVERED", "DONE"],
         )
         for snapshot in snapshots:
             for field in ("launch_claim_id", "external_execution_sha256"):
                 with self.subTest(state=snapshot["state"], field=field):
                     corrupted = json.loads(review_job.serialize_job(snapshot))
                     corrupted[field] = None
-                    with self.assertRaisesRegex(
-                        review_job.ReviewJobValidationError,
-                        "provenance",
-                    ):
+                    with self.assertRaisesRegex(review_job.ReviewJobValidationError, "provenance"):
                         review_job.deserialize_job(json.dumps(corrupted))
 
     def test_machine_schema_has_exact_public_property_set(self):
-        schema = json.loads(
-            (ROOT / "schemas" / "review-job-v1.schema.json").read_text(encoding="utf-8")
-        )
+        schema = json.loads((ROOT / "schemas" / "review-job-v1.schema.json").read_text(encoding="utf-8"))
         self.assertFalse(schema["additionalProperties"])
         self.assertEqual(set(schema["properties"]), review_job.PUBLIC_KEYS)
         self.assertEqual(set(schema["required"]), review_job.PUBLIC_KEYS)
@@ -256,75 +227,47 @@ class ReviewJobLaunchTests(unittest.TestCase):
     def test_same_launch_claim_is_idempotent_but_different_claim_conflicts(self):
         job = review_job.validate_request(make_job(), 0, live())
         claimed = review_job.claim_launch(job, 1, "launch-0001", live())
-        repeated = review_job.claim_launch(
+        self.assertEqual(
+            review_job.claim_launch(claimed, claimed["revision"], "launch-0001", live()),
             claimed,
-            claimed["revision"],
-            "launch-0001",
-            live(),
         )
-        self.assertEqual(repeated, claimed)
-
         with self.assertRaises(review_job.ReviewJobConflictError):
-            review_job.claim_launch(
-                claimed,
-                claimed["revision"],
-                "launch-0002",
-                live(),
-            )
+            review_job.claim_launch(claimed, claimed["revision"], "launch-0002", live())
 
     def test_unknown_launch_blocks_blind_resend_until_reconciled(self):
         job = review_job.validate_request(make_job(), 0, live())
         job = review_job.claim_launch(job, 1, "launch-0001", live())
         job = review_job.mark_launch_unknown(job, 2, "launch-0001")
-
         with self.assertRaises(review_job.ReviewJobTransitionError):
-            review_job.claim_launch(
-                job,
-                job["revision"],
-                "launch-0001",
-                live(),
-            )
-
-        job = review_job.resolve_launch_absent(
-            job,
-            job["revision"],
-            "launch-0001",
-        )
-        job = review_job.claim_launch(
-            job,
-            job["revision"],
-            "launch-0001",
-            live(),
-        )
+            review_job.claim_launch(job, job["revision"], "launch-0001", live())
+        job = review_job.resolve_launch_absent(job, job["revision"], "launch-0001")
+        job = review_job.claim_launch(job, job["revision"], "launch-0001", live())
         self.assertEqual(job["state"], "LAUNCH_CLAIMED")
 
     def test_unknown_launch_can_reconcile_to_exact_execution(self):
         job = review_job.validate_request(make_job(), 0, live())
         job = review_job.claim_launch(job, 1, "launch-0001", live())
         job = review_job.mark_launch_unknown(job, 2, "launch-0001")
-        job = review_job.mark_reviewing(
-            job,
-            job["revision"],
-            "launch-0001",
-            "exact-execution-after-reconcile",
-        )
+        job = review_job.mark_reviewing(job, job["revision"], "launch-0001", EXECUTION_REF)
         self.assertEqual(job["state"], "REVIEWING")
 
     def test_head_move_between_validation_and_launch_prevents_launch(self):
         job = review_job.validate_request(make_job(), 0, live())
-        job = review_job.claim_launch(
-            job,
-            job["revision"],
-            "launch-0001",
-            live(head=MOVED_HEAD),
-        )
+        job = review_job.claim_launch(job, job["revision"], "launch-0001", live(head=MOVED_HEAD))
         self.assertEqual(job["state"], "RESULT_VALIDATED")
         self.assertEqual(job["outcome"], "STALE")
-        self.assertEqual(
-            job["outcome_code"],
-            "SOURCE_IDENTITY_MOVED_BEFORE_LAUNCH",
-        )
+        self.assertEqual(job["outcome_code"], "SOURCE_IDENTITY_MOVED_BEFORE_LAUNCH")
         self.assertIsNone(job["launch_claim_id"])
+
+    def test_generic_failure_cannot_bypass_launch_reconciliation(self):
+        validated = review_job.validate_request(make_job(), 0, live())
+        claimed = review_job.claim_launch(validated, validated["revision"], "launch-0001", live())
+        unknown = review_job.mark_launch_unknown(claimed, claimed["revision"], "launch-0001")
+        reviewing = review_job.mark_reviewing(unknown, unknown["revision"], "launch-0001", EXECUTION_REF)
+        for job in (claimed, unknown, reviewing):
+            with self.subTest(state=job["state"]):
+                with self.assertRaisesRegex(review_job.ReviewJobTransitionError, "reconciliation"):
+                    review_job.set_failure_outcome(job, job["revision"], "EXECUTOR_UNAVAILABLE")
 
 
 class ReviewJobResultTests(unittest.TestCase):
@@ -337,11 +280,10 @@ class ReviewJobResultTests(unittest.TestCase):
     def test_current_findings_requires_positive_count(self):
         job = advance_to_reviewing()
         finding_result = result_identity(job, status="FINDINGS", findings=2)
-        job = review_job.capture_result(job, 3, raw_result(job, finding_result, "Two findings."))
-        job = review_job.validate_captured_result(job, 4, live())
+        job = capture(job, raw_result(job, finding_result, "Two findings."))
+        job = review_job.validate_captured_result(job, job["revision"], live())
         self.assertEqual(job["outcome"], "FINDINGS")
         self.assertEqual(job["result_identity"], finding_result)
-
         bad = result_identity(job, status="FINDINGS", findings=0)
         with self.assertRaises(review_job.ReviewJobValidationError):
             review_job.validate_result_identity(job, bad)
@@ -350,7 +292,7 @@ class ReviewJobResultTests(unittest.TestCase):
         job = advance_to_reviewing()
         bad = result_identity(job, status="PASS", findings=1)
         with self.assertRaises(review_job.ReviewJobValidationError):
-            review_job.capture_result(job, 3, raw_result(job, bad, "Bad result."))
+            capture(job, raw_result(job, bad, "Bad result."))
 
     def test_capture_has_no_separate_metadata_channel(self):
         job = advance_to_reviewing()
@@ -359,10 +301,21 @@ class ReviewJobResultTests(unittest.TestCase):
         findings_bytes = raw_result(job, findings_metadata, "One finding.")
         with self.assertRaises(TypeError):
             review_job.capture_result(job, 3, pass_metadata, findings_bytes)
-
-        captured = review_job.capture_result(job, 3, findings_bytes)
+        captured = capture(job, findings_bytes)
         self.assertEqual(captured["result_identity"]["status"], "FINDINGS")
         self.assertEqual(captured["result_identity"]["reported_findings"], 1)
+
+    def test_result_capture_requires_exact_observed_execution(self):
+        job = advance_to_reviewing(EXECUTION_REF)
+        text = raw_result(job)
+        with self.assertRaisesRegex(review_job.ReviewJobConflictError, "external execution"):
+            review_job.capture_result(job, job["revision"], OTHER_EXECUTION_REF, text)
+        captured = review_job.capture_result(job, job["revision"], EXECUTION_REF, text)
+        self.assertEqual(captured["state"], "RESULT_RECEIVED")
+        self.assertEqual(
+            captured["external_execution_sha256"],
+            review_job.fingerprint_external_reference(EXECUTION_REF),
+        )
 
     def test_wrong_job_head_policy_or_job_id_fails_closed(self):
         for field, value in (
@@ -375,32 +328,31 @@ class ReviewJobResultTests(unittest.TestCase):
                 identity = result_identity(job)
                 identity[field] = value
                 with self.assertRaises(review_job.ReviewJobIdentityError):
-                    review_job.capture_result(job, 3, raw_result(job, identity, "Wrong identity."))
+                    capture(job, raw_result(job, identity, "Wrong identity."))
 
     def test_repeated_identical_result_is_noop_conflicting_result_is_rejected(self):
         job = advance_to_reviewing()
-        identity = result_identity(job)
-        text = raw_result(job, identity, "Same result.")
-        captured = review_job.capture_result(job, 3, text)
+        text = raw_result(job, result_identity(job), "Same result.")
+        captured = capture(job, text)
         repeated = review_job.capture_result(
             captured,
             captured["revision"],
+            EXECUTION_REF,
             text,
         )
         self.assertEqual(repeated, captured)
-
         with self.assertRaises(review_job.ReviewJobConflictError):
             review_job.capture_result(
                 captured,
                 captured["revision"],
-                raw_result(job, identity, "Different exact bytes."),
+                EXECUTION_REF,
+                raw_result(job, result_identity(job), "Different exact bytes."),
             )
 
     def test_live_head_move_after_pass_forces_stale(self):
         job = advance_to_reviewing()
-        identity = result_identity(job)
-        job = review_job.capture_result(job, 3, raw_result(job, identity, "Pass on old head."))
-        job = review_job.validate_captured_result(job, 4, live(head=MOVED_HEAD))
+        job = capture(job, raw_result(job, result_identity(job), "Pass on old head."))
+        job = review_job.validate_captured_result(job, job["revision"], live(head=MOVED_HEAD))
         self.assertEqual(job["outcome"], "STALE")
         self.assertEqual(job["outcome_code"], "SOURCE_IDENTITY_MOVED_AFTER_RESULT")
 
@@ -411,14 +363,9 @@ class ReviewJobResultTests(unittest.TestCase):
         ):
             with self.subTest(validity=validity):
                 job = advance_to_reviewing()
-                identity = result_identity(
-                    job,
-                    validity=validity,
-                    status=status,
-                    findings=0,
-                )
-                job = review_job.capture_result(job, 3, raw_result(job, identity, validity))
-                job = review_job.validate_captured_result(job, 4, live())
+                identity = result_identity(job, validity=validity, status=status, findings=0)
+                job = capture(job, raw_result(job, identity, validity))
+                job = review_job.validate_captured_result(job, job["revision"], live())
                 self.assertEqual(job["outcome"], validity)
                 self.assertEqual(job["outcome_code"], code)
 
@@ -426,27 +373,14 @@ class ReviewJobResultTests(unittest.TestCase):
 class ReviewJobPublicationAndReturnTests(unittest.TestCase):
     def test_head_move_between_result_validation_and_publication_reclassifies_stale(self):
         job = advance_to_result_validated()
-        job = review_job.claim_publication(
-            job,
-            job["revision"],
-            "publish-0001",
-            live(head=MOVED_HEAD),
-        )
+        job = review_job.claim_publication(job, job["revision"], "publish-0001", live(head=MOVED_HEAD))
         self.assertEqual(job["state"], "PUBLICATION_CLAIMED")
         self.assertEqual(job["outcome"], "STALE")
-        self.assertEqual(
-            job["outcome_code"],
-            "SOURCE_IDENTITY_MOVED_BEFORE_PUBLICATION",
-        )
+        self.assertEqual(job["outcome_code"], "SOURCE_IDENTITY_MOVED_BEFORE_PUBLICATION")
 
     def test_head_move_after_publication_before_return_reclassifies_stale(self):
         job = advance_to_result_validated()
-        job = review_job.claim_publication(
-            job,
-            job["revision"],
-            "publish-0001",
-            live(),
-        )
+        job = review_job.claim_publication(job, job["revision"], "publish-0001", live())
         job = review_job.record_publication(
             job,
             job["revision"],
@@ -454,73 +388,47 @@ class ReviewJobPublicationAndReturnTests(unittest.TestCase):
             "https://github.com/BogdanAIP/MimiSeek-review/issues/200#issuecomment-2000",
             job["result_sha256"],
         )
-        job = review_job.claim_return_delivery(
-            job,
-            job["revision"],
-            "return-0001",
-            live(head=MOVED_HEAD),
-        )
+        job = review_job.claim_return_delivery(job, job["revision"], "return-0001", live(head=MOVED_HEAD))
         self.assertEqual(job["state"], "RETURN_PENDING")
         self.assertEqual(job["outcome"], "STALE")
-        self.assertEqual(
-            job["outcome_code"],
-            "SOURCE_IDENTITY_MOVED_BEFORE_RETURN",
-        )
+        self.assertEqual(job["outcome_code"], "SOURCE_IDENTITY_MOVED_BEFORE_RETURN")
 
     def test_end_to_end_local_state_flow_reaches_done_once(self):
         job = advance_to_result_validated()
-        job = review_job.claim_publication(job, 5, "publish-0001", live())
+        job = review_job.claim_publication(job, job["revision"], "publish-0001", live())
         job = review_job.record_publication(
             job,
-            6,
+            job["revision"],
             "publish-0001",
             "https://github.com/BogdanAIP/MimiSeek-review/issues/200#issuecomment-2000",
             job["result_sha256"],
         )
-        job = review_job.claim_return_delivery(job, 7, "return-0001", live())
+        job = review_job.claim_return_delivery(job, job["revision"], "return-0001", live())
         job = review_job.record_return_delivered(
             job,
-            8,
+            job["revision"],
             "return-0001",
             "https://github.com/BogdanAIP/MimiSeek-review/issues/200#issuecomment-2001",
         )
-        job = review_job.complete_job(job, 9)
+        job = review_job.complete_job(job, job["revision"])
         self.assertEqual(job["state"], "DONE")
-        self.assertEqual(job["revision"], 10)
-
         repeated = review_job.complete_job(job, job["revision"])
         self.assertEqual(repeated, job)
 
     def test_ambiguous_publication_requires_reconciliation_before_retry(self):
         job = advance_to_result_validated()
-        job = review_job.claim_publication(job, 5, "publish-0001", live())
-        job = review_job.mark_publication_unknown(job, 6, "publish-0001")
-
+        job = review_job.claim_publication(job, job["revision"], "publish-0001", live())
+        job = review_job.mark_publication_unknown(job, job["revision"], "publish-0001")
         with self.assertRaises(review_job.ReviewJobTransitionError):
-            review_job.claim_publication(
-                job,
-                job["revision"],
-                "publish-0001",
-                live(),
-            )
-
-        job = review_job.resolve_publication_absent(
-            job,
-            job["revision"],
-            "publish-0001",
-        )
-        job = review_job.claim_publication(
-            job,
-            job["revision"],
-            "publish-0001",
-            live(),
-        )
+            review_job.claim_publication(job, job["revision"], "publish-0001", live())
+        job = review_job.resolve_publication_absent(job, job["revision"], "publish-0001")
+        job = review_job.claim_publication(job, job["revision"], "publish-0001", live())
         self.assertEqual(job["state"], "PUBLICATION_CLAIMED")
 
     def test_ambiguous_publication_can_reconcile_to_exact_result(self):
         job = advance_to_result_validated()
-        job = review_job.claim_publication(job, 5, "publish-0001", live())
-        job = review_job.mark_publication_unknown(job, 6, "publish-0001")
+        job = review_job.claim_publication(job, job["revision"], "publish-0001", live())
+        job = review_job.mark_publication_unknown(job, job["revision"], "publish-0001")
         job = review_job.record_publication(
             job,
             job["revision"],
@@ -532,11 +440,11 @@ class ReviewJobPublicationAndReturnTests(unittest.TestCase):
 
     def test_wrong_published_digest_fails_closed(self):
         job = advance_to_result_validated()
-        job = review_job.claim_publication(job, 5, "publish-0001", live())
+        job = review_job.claim_publication(job, job["revision"], "publish-0001", live())
         with self.assertRaises(review_job.ReviewJobConflictError):
             review_job.record_publication(
                 job,
-                6,
+                job["revision"],
                 "publish-0001",
                 "https://github.com/BogdanAIP/MimiSeek-review/issues/200#issuecomment-2000",
                 "f" * 64,
@@ -544,56 +452,35 @@ class ReviewJobPublicationAndReturnTests(unittest.TestCase):
 
     def test_ambiguous_return_requires_reconciliation_before_retry(self):
         job = advance_to_result_validated()
-        job = review_job.claim_publication(job, 5, "publish-0001", live())
+        job = review_job.claim_publication(job, job["revision"], "publish-0001", live())
         job = review_job.record_publication(
             job,
-            6,
+            job["revision"],
             "publish-0001",
             "https://github.com/BogdanAIP/MimiSeek-review/issues/200#issuecomment-2000",
             job["result_sha256"],
         )
-        job = review_job.claim_return_delivery(job, 7, "return-0001", live())
-        job = review_job.mark_return_unknown(job, 8, "return-0001")
-
+        job = review_job.claim_return_delivery(job, job["revision"], "return-0001", live())
+        job = review_job.mark_return_unknown(job, job["revision"], "return-0001")
         with self.assertRaises(review_job.ReviewJobTransitionError):
-            review_job.claim_return_delivery(
-                job,
-                job["revision"],
-                "return-0001",
-                live(),
-            )
-
-        job = review_job.resolve_return_absent(
-            job,
-            job["revision"],
-            "return-0001",
-        )
-        job = review_job.claim_return_delivery(
-            job,
-            job["revision"],
-            "return-0001",
-            live(),
-        )
+            review_job.claim_return_delivery(job, job["revision"], "return-0001", live())
+        job = review_job.resolve_return_absent(job, job["revision"], "return-0001")
+        job = review_job.claim_return_delivery(job, job["revision"], "return-0001", live())
         self.assertEqual(job["state"], "RETURN_PENDING")
 
     def test_failure_is_explicit_and_can_be_persisted_and_returned(self):
-        job = review_job.set_failure_outcome(
-            make_job(),
-            0,
-            "EXECUTOR_UNAVAILABLE",
-        )
+        job = review_job.set_failure_outcome(make_job(), 0, "EXECUTOR_UNAVAILABLE")
         self.assertEqual(job["outcome"], "FAILED")
         self.assertEqual(job["outcome_code"], "EXECUTOR_UNAVAILABLE")
         self.assertIsNone(job["result_sha256"])
-
-        job = review_job.claim_publication(job, 1, "publish-failure", live())
+        job = review_job.claim_publication(job, job["revision"], "publish-failure", live())
         job = review_job.record_publication(
             job,
-            2,
+            job["revision"],
             "publish-failure",
             "https://github.com/BogdanAIP/MimiSeek-review/issues/300#issuecomment-3000",
         )
-        job = review_job.claim_return_delivery(job, 3, "return-failure", live())
+        job = review_job.claim_return_delivery(job, job["revision"], "return-failure", live())
         self.assertEqual(job["state"], "RETURN_PENDING")
 
 

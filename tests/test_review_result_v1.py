@@ -10,6 +10,8 @@ BASE = "a" * 40
 HEAD = "b" * 40
 LAUNCH_CAPABILITY = "d" * 40
 RETURN_CAPABILITY = "e" * 40
+EXECUTION_REF = "private-execution-ref"
+OTHER_EXECUTION_REF = "other-private-execution-ref"
 
 
 def make_job():
@@ -48,7 +50,7 @@ def reviewing_job():
     job = make_job()
     job = review_job_state.validate_request(job, 0, live())
     job = review_job_state.claim_launch(job, 1, "launch-0001", live())
-    return review_job_state.mark_reviewing(job, 2, "launch-0001", "private-execution-ref")
+    return review_job_state.mark_reviewing(job, 2, "launch-0001", EXECUTION_REF)
 
 
 def payload(job, **overrides):
@@ -88,14 +90,19 @@ class ReviewResultV1Tests(unittest.TestCase):
         self.assertEqual(digest, hashlib.sha256(text.encode("utf-8")).hexdigest())
         self.assertNotIn("report", metadata)
 
-    def test_safe_capture_uses_parsed_metadata_and_exact_raw_digest(self):
+    def test_safe_capture_uses_parsed_metadata_exact_bytes_and_execution(self):
         job = reviewing_job()
         text = raw(job, status="FINDINGS", reported_findings=2, report="Two findings.")
-        captured = review_result_v1.capture_review_result_v1(job, 3, text)
+        captured = review_result_v1.capture_review_result_v1(job, 3, EXECUTION_REF, text)
         self.assertEqual(captured["result_identity"]["status"], "FINDINGS")
         self.assertEqual(captured["result_identity"]["reported_findings"], 2)
         self.assertEqual(captured["result_sha256"], hashlib.sha256(text.encode("utf-8")).hexdigest())
         self.assertNotIn("Two findings.", json.dumps(captured))
+
+    def test_safe_capture_rejects_wrong_observed_execution(self):
+        job = reviewing_job()
+        with self.assertRaisesRegex(review_job_state.ReviewJobConflictError, "external execution"):
+            review_result_v1.capture_review_result_v1(job, 3, OTHER_EXECUTION_REF, raw(job))
 
     def test_malformed_truncated_or_non_object_payload_fails_closed(self):
         job = reviewing_job()
