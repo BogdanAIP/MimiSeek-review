@@ -61,11 +61,19 @@ class ReviewJobCoordinationBoundaryTests(unittest.TestCase):
         skill = _read(".agents/skills/mimiseek-run/SKILL.md")
 
         self.assertIn(
-            "Track R — Independent review-job coordination — AUTHORIZED, IMPLEMENTATION PENDING",
+            "Track R — Independent review-job coordination — IN PROGRESS",
             roadmap,
         )
         self.assertIn(
-            "Review-job local foundation: `REVIEW_JOB_V1` public schema/state-machine/validation implemented; durable GitHub ledger/publication adapter and external CAP/session integration remain pending",
+            "Review-job local foundation: accepted PR #16 implements the `REVIEW_JOB_V1` public schema/state-machine/validation boundary",
+            current,
+        )
+        self.assertIn(
+            "Review-job durability slice in this tree: MimiSeek-owned GitHub ledger/publication adapter implemented",
+            current,
+        )
+        self.assertIn(
+            "physical production enablement and external CAP/session integration remain pending acceptance/separate verification",
             current,
         )
         self.assertIn(
