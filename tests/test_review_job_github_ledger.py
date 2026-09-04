@@ -3,6 +3,7 @@ import json
 import socket
 import unittest
 import urllib.error
+from pathlib import Path
 from unittest import mock
 
 from tools import review_job_github_ledger as ledger
@@ -169,42 +170,23 @@ class FakeLedgerBackend:
 def persist_to_publication_claim(book):
     job = make_job()
     book.persist_job(job)
-
     job = review_job_state.validate_request(job, job["revision"], live())
     book.persist_job(job)
-
-    job = review_job_state.claim_launch(
-        job, job["revision"], "launch-0001", live()
-    )
+    job = review_job_state.claim_launch(job, job["revision"], "launch-0001", live())
     book.persist_job(job)
-
     job = review_job_state.mark_reviewing(
-        job,
-        job["revision"],
-        "launch-0001",
-        EXECUTION,
+        job, job["revision"], "launch-0001", EXECUTION
     )
     book.persist_job(job)
-
     raw = raw_result(job)
     job = review_job_state.capture_result(
-        job,
-        job["revision"],
-        EXECUTION,
-        raw,
+        job, job["revision"], EXECUTION, raw
     )
     book.persist_job(job)
-
-    job = review_job_state.validate_captured_result(
-        job, job["revision"], live()
-    )
+    job = review_job_state.validate_captured_result(job, job["revision"], live())
     book.persist_job(job)
-
     job = review_job_state.claim_publication(
-        job,
-        job["revision"],
-        "publish-0001",
-        live(),
+        job, job["revision"], "publish-0001", live()
     )
     book.persist_job(job)
     return job, raw
@@ -214,10 +196,8 @@ class LedgerInitializationTests(unittest.TestCase):
     def test_initialization_is_isolated_and_idempotent(self):
         backend = FakeLedgerBackend()
         book = ledger.ReviewJobGitHubLedger(backend)
-
         first = book.ensure_initialized()
         second = book.ensure_initialized()
-
         self.assertEqual(first, second)
         marker = backend.read_text(ledger.LEDGER_MARKER_PATH, first)
         self.assertIsNotNone(marker)
@@ -231,16 +211,10 @@ class LedgerInitializationTests(unittest.TestCase):
         backend = FakeLedgerBackend()
         marker_blob = backend.create_blob('{"schema":"OTHER"}\n')
         tree = backend.create_tree(
-            base_tree_sha=None,
-            entries={ledger.LEDGER_MARKER_PATH: marker_blob},
+            base_tree_sha=None, entries={ledger.LEDGER_MARKER_PATH: marker_blob}
         )
-        commit = backend.create_commit(
-            message="wrong",
-            tree_sha=tree,
-            parent_sha=None,
-        )
+        commit = backend.create_commit(message="wrong", tree_sha=tree, parent_sha=None)
         backend.create_ref(ledger.DEFAULT_LEDGER_BRANCH, commit)
-
         with self.assertRaises(ledger.ReviewJobLedgerValidationError):
             ledger.ReviewJobGitHubLedger(backend).ensure_initialized()
 
@@ -249,28 +223,22 @@ class LedgerStateTests(unittest.TestCase):
     def test_first_snapshot_must_be_revision_zero_and_transitions_are_exactly_one(self):
         backend = FakeLedgerBackend()
         book = ledger.ReviewJobGitHubLedger(backend)
-
         job = make_job()
         first = book.persist_job(job)
         self.assertTrue(first.changed)
-
         repeated = book.persist_job(job)
         self.assertFalse(repeated.changed)
         self.assertEqual(repeated.head_sha, first.head_sha)
-
         validated = review_job_state.validate_request(job, 0, live())
         written = book.persist_job(validated)
         self.assertEqual(written.job["revision"], 1)
-
         jumped = review_job_state.claim_launch(
             validated, validated["revision"], "launch-0001", live()
         )
         jumped = review_job_state.mark_launch_unknown(
             jumped, jumped["revision"], "launch-0001"
         )
-        with self.assertRaisesRegex(
-            ledger.ReviewJobLedgerConflictError, "exactly one"
-        ):
+        with self.assertRaisesRegex(ledger.ReviewJobLedgerConflictError, "exactly one"):
             book.persist_job(jumped)
 
     def test_same_revision_different_state_is_conflict(self):
@@ -280,13 +248,8 @@ class LedgerStateTests(unittest.TestCase):
         book.persist_job(job)
         validated = review_job_state.validate_request(job, 0, live())
         book.persist_job(validated)
-
-        launch_a = review_job_state.claim_launch(
-            validated, 1, "launch-a", live()
-        )
-        launch_b = review_job_state.claim_launch(
-            validated, 1, "launch-b", live()
-        )
+        launch_a = review_job_state.claim_launch(validated, 1, "launch-a", live())
+        launch_b = review_job_state.claim_launch(validated, 1, "launch-b", live())
         book.persist_job(launch_a)
         with self.assertRaisesRegex(
             ledger.ReviewJobLedgerConflictError, "same ledger revision"
@@ -298,11 +261,9 @@ class LedgerStateTests(unittest.TestCase):
         book = ledger.ReviewJobGitHubLedger(backend)
         job = make_job()
         book.persist_job(job)
-
         validated = review_job_state.validate_request(job, 0, live())
         backend.next_update = "definite_concurrent"
         written = book.persist_job(validated)
-
         self.assertEqual(written.job, validated)
         self.assertEqual(book.load_job(job["job_id"]), validated)
 
@@ -312,14 +273,12 @@ class LedgerPublicationTests(unittest.TestCase):
         backend = FakeLedgerBackend()
         book = ledger.ReviewJobGitHubLedger(backend)
         job, raw = persist_to_publication_claim(book)
-
         written = book.publish_result(
             job,
             expected_revision=job["revision"],
             claim_id="publish-0001",
             raw_result_text=raw,
         )
-
         self.assertEqual(written.job["state"], "RESULT_PERSISTED")
         self.assertRegex(
             written.job["result_ref"],
@@ -338,16 +297,12 @@ class LedgerPublicationTests(unittest.TestCase):
             hashlib.sha256(result_file.text.encode("utf-8")).hexdigest(),
             job["result_sha256"],
         )
-        self.assertEqual(
-            job_file.text,
-            review_job_state.serialize_job(written.job),
-        )
+        self.assertEqual(job_file.text, review_job_state.serialize_job(written.job))
 
     def test_publication_rejects_non_exact_result_bytes(self):
         backend = FakeLedgerBackend()
         book = ledger.ReviewJobGitHubLedger(backend)
         job, raw = persist_to_publication_claim(book)
-
         changed = raw.replace("No findings.", "Different exact bytes.")
         with self.assertRaises(
             (ledger.ReviewJobLedgerConflictError, review_job_state.ReviewJobConflictError)
@@ -362,7 +317,6 @@ class LedgerPublicationTests(unittest.TestCase):
     def test_publication_requires_claim_state_already_durable(self):
         backend = FakeLedgerBackend()
         book = ledger.ReviewJobGitHubLedger(backend)
-
         job = make_job()
         book.persist_job(job)
         job = review_job_state.validate_request(job, 0, live())
@@ -379,10 +333,9 @@ class LedgerPublicationTests(unittest.TestCase):
         claimed_not_persisted = review_job_state.claim_publication(
             job, 5, "publish-0001", live()
         )
-
         with self.assertRaisesRegex(
             ledger.ReviewJobLedgerConflictError,
-            "claim must be durable",
+            "does not exactly match publication claim state",
         ):
             book.publish_result(
                 claimed_not_persisted,
@@ -395,7 +348,6 @@ class LedgerPublicationTests(unittest.TestCase):
         backend = FakeLedgerBackend()
         book = ledger.ReviewJobGitHubLedger(backend)
         job, raw = persist_to_publication_claim(book)
-
         commits_before = backend.commit_counter
         backend.next_update = "ambiguous_applied"
         written = book.publish_result(
@@ -404,7 +356,6 @@ class LedgerPublicationTests(unittest.TestCase):
             claim_id="publish-0001",
             raw_result_text=raw,
         )
-
         self.assertEqual(written.job["state"], "RESULT_PERSISTED")
         self.assertEqual(book.load_job(job["job_id"]), written.job)
         self.assertEqual(backend.commit_counter, commits_before + 1)
@@ -413,7 +364,6 @@ class LedgerPublicationTests(unittest.TestCase):
         backend = FakeLedgerBackend()
         book = ledger.ReviewJobGitHubLedger(backend)
         job, raw = persist_to_publication_claim(book)
-
         backend.next_update = "ambiguous_not_applied"
         unknown_write = book.publish_result(
             job,
@@ -423,12 +373,8 @@ class LedgerPublicationTests(unittest.TestCase):
         )
         unknown = unknown_write.job
         self.assertEqual(unknown["state"], "PUBLICATION_UNKNOWN")
-
-        result_path = (
-            f"{ledger.LEDGER_ROOT}/jobs/{job['job_id']}/review-result.json"
-        )
+        result_path = f"{ledger.LEDGER_ROOT}/jobs/{job['job_id']}/review-result.json"
         self.assertIsNone(backend.read_text(result_path, unknown_write.head_sha))
-
         with self.assertRaises(review_job_state.ReviewJobTransitionError):
             book.publish_result(
                 unknown,
@@ -436,7 +382,6 @@ class LedgerPublicationTests(unittest.TestCase):
                 claim_id="publish-0001",
                 raw_result_text=raw,
             )
-
         reconciliation = book.reconcile_publication(
             unknown,
             expected_revision=unknown["revision"],
@@ -445,7 +390,6 @@ class LedgerPublicationTests(unittest.TestCase):
         )
         self.assertEqual(reconciliation.status, "ABSENT_PROVEN")
         self.assertEqual(reconciliation.job["state"], "RESULT_VALIDATED")
-
         reclaimed = review_job_state.claim_publication(
             reconciliation.job,
             reconciliation.job["revision"],
@@ -466,19 +410,14 @@ class LedgerPublicationTests(unittest.TestCase):
         book = ledger.ReviewJobGitHubLedger(backend)
         job = make_job()
         book.persist_job(job)
-
         failed = review_job_state.set_failure_outcome(
             job, job["revision"], "EXECUTOR_UNAVAILABLE"
         )
         book.persist_job(failed)
         claimed = review_job_state.claim_publication(
-            failed,
-            failed["revision"],
-            "publish-failure",
-            live(),
+            failed, failed["revision"], "publish-failure", live()
         )
         book.persist_job(claimed)
-
         persisted = book.publish_result(
             claimed,
             expected_revision=claimed["revision"],
@@ -487,9 +426,7 @@ class LedgerPublicationTests(unittest.TestCase):
         )
         self.assertEqual(persisted.job["state"], "RESULT_PERSISTED")
         self.assertIsNone(persisted.job["result_sha256"])
-        outcome_path = (
-            f"{ledger.LEDGER_ROOT}/jobs/{job['job_id']}/outcome.json"
-        )
+        outcome_path = f"{ledger.LEDGER_ROOT}/jobs/{job['job_id']}/outcome.json"
         outcome = backend.read_text(outcome_path, persisted.head_sha)
         data = json.loads(outcome.text)
         self.assertEqual(data["schema"], "REVIEW_JOB_OUTCOME_V1")
@@ -501,7 +438,7 @@ class LedgerPublicationTests(unittest.TestCase):
 
     def test_outcome_schema_matches_bounded_resultless_artifact(self):
         schema = json.loads(
-            open("schemas/review-job-outcome-v1.schema.json", encoding="utf-8").read()
+            Path("schemas/review-job-outcome-v1.schema.json").read_text(encoding="utf-8")
         )
         self.assertFalse(schema["additionalProperties"])
         self.assertEqual(
@@ -526,20 +463,17 @@ class LedgerPublicationTests(unittest.TestCase):
 class RestBackendFailureClassificationTests(unittest.TestCase):
     def test_ref_update_timeout_is_ambiguous(self):
         backend = ledger.GitHubRestLedgerBackend(
-            "BogdanAIP/MimiSeek-review",
-            "secret-token",
+            "BogdanAIP/MimiSeek-review", "secret-token"
         )
         with mock.patch(
-            "urllib.request.urlopen",
-            side_effect=socket.timeout("timeout"),
+            "urllib.request.urlopen", side_effect=socket.timeout("timeout")
         ):
             with self.assertRaises(ledger.ReviewJobLedgerAmbiguousWrite):
                 backend.update_ref(ledger.DEFAULT_LEDGER_BRANCH, "f" * 40)
 
     def test_ref_update_422_is_definite_conflict(self):
         backend = ledger.GitHubRestLedgerBackend(
-            "BogdanAIP/MimiSeek-review",
-            "secret-token",
+            "BogdanAIP/MimiSeek-review", "secret-token"
         )
         error = urllib.error.HTTPError(
             url="https://api.github.com/",
