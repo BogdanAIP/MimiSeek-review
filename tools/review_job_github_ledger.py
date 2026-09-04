@@ -7,6 +7,7 @@ from tools import review_job_state
 
 
 MIMISEEK_LEDGER_REPOSITORY = "BogdanAIP/MimiSeek-review"
+CANONICAL_GITHUB_API_BASE = "https://api.github.com"
 
 LEDGER_SCHEMA = _core.LEDGER_SCHEMA
 OUTCOME_SCHEMA = _core.OUTCOME_SCHEMA
@@ -53,10 +54,11 @@ _ALLOWED_PERSISTED_STATE_TRANSITIONS = {
 class ReviewJobGitHubLedger(_core.ReviewJobGitHubLedger):
     """Supported MimiSeek-owned durable review-job ledger boundary.
 
-    The facade adds two invariants on top of the internal Git mechanics:
-    authoritative writes are restricted to the MimiSeek repository, and durable
-    history cannot skip state-machine lifecycle states merely by presenting a
-    separately valid future snapshot with the next revision number.
+    The facade adds invariants on top of the internal Git mechanics:
+    authoritative writes are restricted to the MimiSeek repository and the
+    canonical public GitHub API authority, and durable history cannot skip
+    state-machine lifecycle states merely by presenting a separately valid
+    future snapshot with the next revision number.
     """
 
     def __init__(
@@ -68,6 +70,11 @@ class ReviewJobGitHubLedger(_core.ReviewJobGitHubLedger):
         if backend.repository != MIMISEEK_LEDGER_REPOSITORY:
             raise ReviewJobLedgerValidationError(
                 "review-job ledger backend must target the MimiSeek-owned repository"
+            )
+        backend_api_base = getattr(backend, "api_base", CANONICAL_GITHUB_API_BASE)
+        if backend_api_base != CANONICAL_GITHUB_API_BASE:
+            raise ReviewJobLedgerValidationError(
+                "review-job ledger backend must use the canonical GitHub API authority"
             )
         super().__init__(backend, branch=branch)
 
@@ -102,11 +109,13 @@ class ReviewJobGitHubLedger(_core.ReviewJobGitHubLedger):
 
 
 class GitHubRestLedgerBackend(_core.GitHubRestLedgerBackend):
-    """GitHub REST backend permanently scoped to MimiSeek-owned publication.
+    """GitHub REST backend permanently scoped to canonical MimiSeek publication.
 
     The two-argument compatibility form is accepted only when its repository is
-    the exact MimiSeek repository; callers cannot use this supported backend to
-    redirect ledger writes into a consumer/source repository.
+    the exact MimiSeek repository. The supported constructor intentionally does
+    not expose the private core's ``api_base`` injection point: production
+    credentials and writes always target ``https://api.github.com`` so the
+    canonical result locator and the actual storage authority cannot diverge.
     """
 
     def __init__(
@@ -114,7 +123,6 @@ class GitHubRestLedgerBackend(_core.GitHubRestLedgerBackend):
         repository_or_token: str,
         token: str | None = None,
         *,
-        api_base: str = "https://api.github.com",
         timeout: float = 30.0,
     ) -> None:
         if token is None:
@@ -126,6 +134,6 @@ class GitHubRestLedgerBackend(_core.GitHubRestLedgerBackend):
         super().__init__(
             MIMISEEK_LEDGER_REPOSITORY,
             token,
-            api_base=api_base,
+            api_base=CANONICAL_GITHUB_API_BASE,
             timeout=timeout,
         )
