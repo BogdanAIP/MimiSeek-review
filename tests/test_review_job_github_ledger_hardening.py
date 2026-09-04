@@ -127,6 +127,11 @@ class WrongRepositoryBackend:
     repository = "BogdanAIP/uv-studio"
 
 
+class WrongApiAuthorityBackend:
+    repository = ledger.MIMISEEK_LEDGER_REPOSITORY
+    api_base = "https://attacker.invalid"
+
+
 class LedgerOwnershipTests(unittest.TestCase):
     def test_supported_ledger_rejects_consumer_repository_backend(self):
         with self.assertRaisesRegex(
@@ -134,6 +139,13 @@ class LedgerOwnershipTests(unittest.TestCase):
             "MimiSeek-owned repository",
         ):
             ledger.ReviewJobGitHubLedger(WrongRepositoryBackend())
+
+    def test_supported_ledger_rejects_noncanonical_api_authority_backend(self):
+        with self.assertRaisesRegex(
+            ledger.ReviewJobLedgerValidationError,
+            "canonical GitHub API authority",
+        ):
+            ledger.ReviewJobGitHubLedger(WrongApiAuthorityBackend())
 
     def test_supported_rest_backend_rejects_non_mimiseek_repository(self):
         with self.assertRaisesRegex(
@@ -148,6 +160,14 @@ class LedgerOwnershipTests(unittest.TestCase):
     def test_supported_rest_backend_single_token_form_is_mimiseek_scoped(self):
         backend = ledger.GitHubRestLedgerBackend("token")
         self.assertEqual(backend.repository, ledger.MIMISEEK_LEDGER_REPOSITORY)
+        self.assertEqual(backend.api_base, ledger.CANONICAL_GITHUB_API_BASE)
+
+    def test_supported_rest_backend_cannot_override_api_authority(self):
+        with self.assertRaises(TypeError):
+            ledger.GitHubRestLedgerBackend(
+                "token",
+                api_base="https://attacker.invalid",
+            )
 
 
 class LedgerOrdinaryWriteAmbiguityTests(unittest.TestCase):
