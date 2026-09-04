@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from typing import Any, Mapping
+
 from tools import _review_job_github_ledger_core as _core
+from tools import review_job_state
 
 
 MIMISEEK_LEDGER_REPOSITORY = "BogdanAIP/MimiSeek-review"
@@ -22,13 +25,38 @@ LedgerWrite = _core.LedgerWrite
 PublicationReconciliation = _core.PublicationReconciliation
 ReviewJobLedgerBackend = _core.ReviewJobLedgerBackend
 
+_ALLOWED_PERSISTED_STATE_TRANSITIONS = {
+    ("REQUESTED", "VALIDATED"),
+    ("REQUESTED", "RESULT_VALIDATED"),
+    ("VALIDATED", "LAUNCH_CLAIMED"),
+    ("VALIDATED", "RESULT_VALIDATED"),
+    ("LAUNCH_CLAIMED", "LAUNCH_UNKNOWN"),
+    ("LAUNCH_CLAIMED", "REVIEWING"),
+    ("LAUNCH_UNKNOWN", "VALIDATED"),
+    ("LAUNCH_UNKNOWN", "REVIEWING"),
+    ("REVIEWING", "RESULT_RECEIVED"),
+    ("RESULT_RECEIVED", "RESULT_VALIDATED"),
+    ("RESULT_VALIDATED", "PUBLICATION_CLAIMED"),
+    ("PUBLICATION_CLAIMED", "PUBLICATION_UNKNOWN"),
+    ("PUBLICATION_CLAIMED", "RESULT_PERSISTED"),
+    ("PUBLICATION_UNKNOWN", "RESULT_VALIDATED"),
+    ("PUBLICATION_UNKNOWN", "RESULT_PERSISTED"),
+    ("RESULT_PERSISTED", "RETURN_PENDING"),
+    ("RETURN_PENDING", "RETURN_UNKNOWN"),
+    ("RETURN_PENDING", "RETURN_DELIVERED"),
+    ("RETURN_UNKNOWN", "RETURN_PENDING"),
+    ("RETURN_UNKNOWN", "RETURN_DELIVERED"),
+    ("RETURN_DELIVERED", "DONE"),
+}
+
 
 class ReviewJobGitHubLedger(_core.ReviewJobGitHubLedger):
     """Supported MimiSeek-owned durable review-job ledger boundary.
 
-    The accepted Track R contract keeps authoritative coordination writes inside
-    MimiSeek. A backend naming any consumer/source repository is rejected before
-    the adapter can initialize or mutate a ledger branch.
+    The facade adds two invariants on top of the internal Git mechanics:
+    authoritative writes are restricted to the MimiSeek repository, and durable
+    history cannot skip state-machine lifecycle states merely by presenting a
+    separately valid future snapshot with the next revision number.
     """
 
     def __init__(
@@ -42,6 +70,35 @@ class ReviewJobGitHubLedger(_core.ReviewJobGitHubLedger):
                 "review-job ledger backend must target the MimiSeek-owned repository"
             )
         super().__init__(backend, branch=branch)
+
+    def persist_job(
+        self,
+        value: Mapping[str, Any],
+        *,
+        max_definite_conflict_retries: int = 2,
+    ) -> LedgerWrite:
+        desired = review_job_state.validate_job(value)
+        head = self.ensure_initialized()
+        existing = self.load_job(desired["job_id"], ref=head)
+
+        if existing is None:
+            if desired["revision"] != 0 or desired["state"] != "REQUESTED":
+                raise ReviewJobLedgerConflictError(
+                    "first durable snapshot must be REQUESTED at revision 0"
+                )
+        elif existing == desired:
+            return LedgerWrite(head, existing, False)
+        elif desired["revision"] == existing["revision"] + 1:
+            transition = (existing["state"], desired["state"])
+            if transition not in _ALLOWED_PERSISTED_STATE_TRANSITIONS:
+                raise ReviewJobLedgerConflictError(
+                    "durable review-job state transition is not allowed"
+                )
+
+        return super().persist_job(
+            desired,
+            max_definite_conflict_retries=max_definite_conflict_retries,
+        )
 
 
 class GitHubRestLedgerBackend(_core.GitHubRestLedgerBackend):
