@@ -1,0 +1,286 @@
+{
+  "$id": "https://github.com/BogdanAIP/MimiSeek-review/schemas/review-job-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Structural public schema. State-specific invariants, deterministic identity/job_id derivation, exact result correlation, stale classification, idempotence and no-blind-retry rules are enforced by tools/review_job_state.py.",
+  "properties": {
+    "base_sha": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "executor_source": {
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "external_execution_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "head_sha": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "identity_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "job_id": {
+      "pattern": "^rj_[0-9a-f]{32}$",
+      "type": "string"
+    },
+    "launch_capability_ref": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "launch_claim_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "outcome": {
+      "enum": [
+        null,
+        "PASS",
+        "FINDINGS",
+        "STALE",
+        "ABSTAIN",
+        "FAILED"
+      ]
+    },
+    "outcome_code": {
+      "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "pr_number": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "publication_claim_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "repository": {
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "repository_id": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "request_ref": {
+      "pattern": "^https://(github\\.com|api\\.github\\.com)/",
+      "type": "string"
+    },
+    "result_identity": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "base_sha": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "head_sha": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "job_id": {
+              "pattern": "^rj_[0-9a-f]{32}$",
+              "type": "string"
+            },
+            "pr_number": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "reported_findings": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "repository": {
+              "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+              "type": "string"
+            },
+            "review_context": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "review_mode": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "review_policy_ref": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "reviewer_profile": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "reviewer_source": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "schema": {
+              "const": "REVIEW_RESULT_V1"
+            },
+            "status": {
+              "enum": [
+                "PASS",
+                "FINDINGS",
+                "ABSTAIN"
+              ]
+            },
+            "validity": {
+              "enum": [
+                "CURRENT",
+                "STALE",
+                "ABSTAIN"
+              ]
+            }
+          },
+          "required": [
+            "schema",
+            "job_id",
+            "repository",
+            "pr_number",
+            "base_sha",
+            "head_sha",
+            "review_policy_ref",
+            "reviewer_profile",
+            "reviewer_source",
+            "review_context",
+            "review_mode",
+            "validity",
+            "status",
+            "reported_findings"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "result_ref": {
+      "pattern": "^https://(github\\.com|api\\.github\\.com)/",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "result_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "return_capability_ref": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "return_delivery_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "return_receipt_ref": {
+      "pattern": "^https://(github\\.com|api\\.github\\.com)/",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "review_context": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "review_mode": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "review_policy_ref": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "reviewer_profile": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "reviewer_source": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "schema": {
+      "const": "REVIEW_JOB_V1"
+    },
+    "state": {
+      "enum": [
+        "DONE",
+        "LAUNCH_CLAIMED",
+        "LAUNCH_UNKNOWN",
+        "PUBLICATION_CLAIMED",
+        "PUBLICATION_UNKNOWN",
+        "REQUESTED",
+        "RESULT_PERSISTED",
+        "RESULT_RECEIVED",
+        "RESULT_VALIDATED",
+        "RETURN_DELIVERED",
+        "RETURN_PENDING",
+        "RETURN_UNKNOWN",
+        "REVIEWING",
+        "VALIDATED"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "job_id",
+    "repository_id",
+    "repository",
+    "pr_number",
+    "base_sha",
+    "head_sha",
+    "review_policy_ref",
+    "reviewer_profile",
+    "reviewer_source",
+    "review_context",
+    "review_mode",
+    "request_ref",
+    "executor_source",
+    "launch_capability_ref",
+    "return_capability_ref",
+    "identity_sha256",
+    "state",
+    "revision",
+    "launch_claim_id",
+    "external_execution_sha256",
+    "result_identity",
+    "result_sha256",
+    "publication_claim_id",
+    "result_ref",
+    "return_delivery_id",
+    "return_receipt_ref",
+    "outcome",
+    "outcome_code"
+  ],
+  "title": "MimiSeek REVIEW_JOB_V1 public record",
+  "type": "object"
+}
