@@ -47,13 +47,13 @@ class ReviewJobCoordinationBoundaryTests(unittest.TestCase):
         self.assertIn("must never contain a raw browser tab identifier", integration)
         self.assertIn("source GitHub App remains read-only", integration)
 
-    def test_track_r_local_foundation_is_real_but_external_runtime_is_pending(self) -> None:
+    def test_track_r_local_foundation_is_real_but_overall_runtime_is_pending(self) -> None:
         roadmap = _read("docs/ROADMAP.md")
         current = _read("docs/CURRENT_STATE.md")
         skill = _read(".agents/skills/mimiseek-run/SKILL.md")
 
         self.assertIn(
-            "Track R — Independent review-job coordination — AUTHORIZED, LOCAL STATE FOUNDATION IMPLEMENTED; LEDGER/EXTERNAL INTEGRATION PENDING",
+            "Track R — Independent review-job coordination — AUTHORIZED, IMPLEMENTATION PENDING",
             roadmap,
         )
         self.assertIn(
@@ -65,7 +65,7 @@ class ReviewJobCoordinationBoundaryTests(unittest.TestCase):
             skill,
         )
         self.assertIn(
-            "no live external launch/wake integration until exact accepted generic CAP/session capabilities are independently resolved",
+            "live external launch/wake remains blocked until separately accepted/verified generic external session capabilities are resolved",
             current,
         )
 
