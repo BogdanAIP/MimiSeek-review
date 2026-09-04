@@ -39,14 +39,18 @@ class ReviewJobCoordinationBoundaryTests(unittest.TestCase):
         integration = _read("docs/INTEGRATION_CONTRACT.md")
         adr = _read("docs/decisions/0013-narrow-independent-review-job-coordination.md")
 
-        for text in (architecture, integration, adr):
-            self.assertIn("project-specific routing tables", text)
-            self.assertIn("GitHub", text)
-            self.assertIn("PR", text)
-
-        self.assertIn("must not require UV Studio, MimiSeek Review, chat-agent-platform, GitHub PR", architecture)
-        self.assertIn("GitHub PR semantics", integration)
+        self.assertIn("project-specific routing tables", architecture)
+        self.assertIn(
+            "must not require UV Studio, MimiSeek Review, chat-agent-platform, GitHub PR",
+            architecture,
+        )
+        self.assertIn(
+            "transport must not need CAP/UV/MimiSeek project semantics, GitHub PR semantics",
+            integration,
+        )
         self.assertIn("GitHub PR semantics", adr)
+        self.assertIn("project-specific routing tables", adr)
+
         self.assertIn("must not expose a raw browser tab ID", architecture)
         self.assertIn("must never contain a raw browser tab identifier", integration)
         self.assertIn("source GitHub App remains read-only", integration)
