@@ -270,7 +270,7 @@ Accepted PR #9 establishes:
 
 1. Exact head `64ee3a99c7bc9bf78115f4d7ab774c659a010cf4`
    - fresh independent review: `CURRENT FINDINGS` (1 P1);
-   - defect: the declared PR #123 resulting commit was not uniquely bound; actual PR HEAD `09c58c4bc286a639662cd77432a54c3f08438ad7` could satisfy the old result predicates in place of intended result `e8bda851e9d810d0e007826693540ec1d4c71053`;
+   - defect: the declared PR #123 resulting commit was not uniquely bound; actual PR HEAD `09c58c4bc286a639662cd77432a54c3f08438ad7` could satisfy the old parent/tree/commit→PR predicates in place of intended result `e8bda851e9d810d0e007826693540ec1d4c71053`;
    - result became STALE when HEAD moved.
 
 2. Remediation on final head `2fd1254d915363d6eb4720adacfebbce555e5ef9`
