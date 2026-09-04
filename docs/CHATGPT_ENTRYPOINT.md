@@ -4,7 +4,7 @@
 
 The repository is the durable source of truth. Installed ChatGPT skills are stable entry points into the current repository-owned process; they must not duplicate a frozen copy of the whole implementation lifecycle.
 
-MimiSeek Review exposes two user-facing workflows.
+MimiSeek Review exposes two user-facing workflows. Track R independent-review job coordination is a runtime/control-plane capability of MimiSeek, not a third promotion authority role.
 
 ## 1. «Запусти Мимисик» — `mimiseek-review-run`
 
@@ -15,10 +15,20 @@ A fresh chat invokes this skill to reconstruct the live project from GitHub and 
 That means:
 
 - while MimiSeek Review is still being built, continue the current development/bootstrap stage according to `CURRENT_STATE`, `ROADMAP`, governance and acceptance evidence;
+- when Track R is accepted but incomplete, continue the next MimiSeek-side review-job implementation slice without pretending separately governed CAP/session capabilities are already accepted;
+- once Track R is operational and an explicit governed review request exists, the run-side system may coordinate the bounded review job defined by `ARCHITECTURE.md` and `INTEGRATION_CONTRACT.md`, while consumer adjudication/fix/re-review/merge authority remains outside MimiSeek;
 - once the reviewer-learning pipeline is operational, execute the governed collect/learn/candidate/regression side of that pipeline;
-- never pretend a later lifecycle phase exists when the repository says prerequisites are still incomplete.
+- never pretend a later lifecycle phase or external capability exists when the repository says prerequisites are still incomplete.
 
-The run skill does not self-promote a reviewer candidate when the lifecycle requires independent evaluation, and it does not bypass consumer-project governance.
+The run skill does not self-promote a reviewer candidate when the lifecycle requires independent evaluation, does not bypass consumer-project governance, and does not turn a Track R review `PASS` into consumer merge or MimiSeek promotion authority.
+
+## Track R request boundary
+
+Track R does not mean that every open PR is automatically review-authorized.
+
+A real review job requires an explicit governed request/trigger bound to exact repository/PR/BASE/HEAD/`review_policy_ref` identity. Once the runtime exists, MimiSeek may coordinate that job through a generic session/execution substrate and persist the result durably, but the originating consumer workflow remains responsible for all project-specific consequences.
+
+Private browser/ChatGPT/session authority is not repository-visible routing data. Public review-job records may carry only the safe durable identity/result state allowed by the integration contract.
 
 ## 2. «Обнови Мимисик» — `mimiseek-review-update`
 
@@ -36,9 +46,11 @@ The update chat:
 
 A distribution-only retry never invents or repeats promotion: it revalidates the already-promoted stable identity and durable pending-distribution authority before touching a consumer.
 
+Track R is not a substitute for this role. An ordinary independent review job does not evaluate/promote a reviewer candidate or authorize stable distribution.
+
 ## Why two chats
 
-The split keeps all consequence-bearing update authority out of the run/development conversation and preserves independent promotion judgment without requiring the run chat to create another ChatGPT context automatically.
+The split keeps all consequence-bearing reviewer-update authority out of the run/development conversation and preserves independent promotion judgment without requiring the run chat to create another ChatGPT context automatically.
 
 ```text
 Chat A: «Запусти Мимисик»
@@ -47,7 +59,9 @@ recover live repository state
         ↓
 continue current canonical MimiSeek work
         ↓
-when operational: collect → learn → candidate → regression
+when Track R operational: coordinate explicit review jobs within narrow boundary
+        ↓
+when evolution operational: collect → learn → candidate → regression
         ↓
 freeze independent-update state when eligible
 
@@ -73,7 +87,7 @@ A later deferred retry is another **NEW CHAT** invoking the same update role aga
 
 Installing, inspecting, or discussing a skill is not authorization for repository mutation.
 
-The skills perform real work only when the user explicitly asks to run/continue MimiSeek Review or explicitly asks to update MimiSeek Review.
+The skills perform real work only when the user explicitly asks to run/continue MimiSeek Review or explicitly asks to update MimiSeek Review. A Track R review job independently requires its governed explicit review request/trigger.
 
 Do not invent demonstration tasks or fake project state. A requested simulation stays read-only unless the user separately requests a real run.
 
@@ -81,4 +95,4 @@ Do not invent demonstration tasks or fake project state. A requested simulation 
 
 Every invocation must resolve the exact repository and current GitHub evidence rather than relying on previous-chat memory.
 
-Changes in implementation details belong in repository-owned documents and code. The installed skills should remain stable launch contracts so reviewer evolution does not require reinstalling a ChatGPT skill after every project change.
+Changes in implementation details belong in repository-owned documents and code. The installed skills should remain stable launch contracts so reviewer evolution or Track R implementation does not require reinstalling a ChatGPT skill after every project change.
