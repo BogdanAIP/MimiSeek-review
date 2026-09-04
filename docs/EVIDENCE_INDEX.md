@@ -537,6 +537,66 @@ Accepted PR #15 establishes:
 
 Post-merge development of PR #16 discovered that `tests/test_review_job_coordination_boundary.py` in the accepted #15 HEAD used pytest-style free functions while repository CI invokes `python -m unittest discover`, so that newly added file was not executed by the #15 unit job. This index does not retroactively claim otherwise. The exact #15 architecture was still independently reviewed semantically and accepted under its BASE-governed process; PR #16 converts that boundary test to real `unittest.TestCase` discovery and exercises it as new development evidence.
 
+### Accepted review-job local state foundation — PR #16
+
+PR #16 — `Track R: add REVIEW_JOB_V1 local state foundation` implemented the first MimiSeek-local Track R runtime foundation under accepted ADR 0013 without calling CAP/session runtime or modifying a consumer repository.
+
+Acceptance identity:
+
+- BASE: `ca16428e66d2f9e4d5de2e359e0e369a4f334fce`
+- accepted exact PR HEAD: `da0ab45a3758fecbf347371c96f8308ec1902d91`
+- `review_policy_ref`: `ca16428e66d2f9e4d5de2e359e0e369a4f334fce`
+- changed files: `10`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- durable GitHub terminal-result comment id: `5543673541`
+- exact-head/current-base CI run: `33893841665`
+- CI state: `PASS`
+- accepted literal-head / PR-merge Git tree: `4c880e21dce591b3fe99291734a9faab0ed658d2`
+- merge commit on `main`: `e8b1600b4560fea0c3d82ab47690a6b76f75ec28`
+
+No review timestamp is recorded here because the received terminal `REVIEW_RESULT_V1` did not provide one; the later GitHub comment timestamp is publication evidence, not a manufactured reviewer timestamp.
+
+The terminal result was persisted as top-level PR comment `5543673541` before merge without moving the reviewed HEAD. The merge used `expected_head_sha=da0ab45a3758fecbf347371c96f8308ec1902d91`; the resulting merge commit records the accepted exact head, exact-head CI run, and durable terminal-result pointer.
+
+Accepted PR #16 establishes:
+
+- strict public `REVIEW_JOB_V1` and `REVIEW_RESULT_V1` machine boundaries;
+- deterministic immutable repository/PR/BASE/HEAD/`review_policy_ref`/reviewer/executor-capability job identity plus optimistic revision fencing;
+- explicit launch/result/publication/return lifecycle with `*_UNKNOWN` states for ambiguous side effects and no-blind-retry semantics;
+- exact result parsing and SHA-256 binding to the same result bytes, including malformed/truncated/duplicate-key rejection;
+- exact external-execution correlation at the supported result-capture boundary while persisting only a non-authorizing execution fingerprint;
+- durable-state invariants requiring launch/execution provenance for result-bearing recovered states;
+- generic failure fencing that cannot bypass unresolved/active launch reconciliation;
+- exact duplicate-versus-conflicting result behavior and post-result live source-currentness checks;
+- public/private session boundary preserving consumer development/adjudication/re-review/merge authority and keeping raw ChatGPT/browser/session capability data outside the public job record;
+- conversion of the PR #15 coordination-boundary assertions to actual `unittest.TestCase` discovery.
+
+PR #16 did **not** implement a durable GitHub ledger/publication adapter, external fresh-worker launch/result transport, existing-session return/wake delivery, or consumer-side remediation/merge orchestration. Those remained separate Track R work after the accepted local state foundation.
+
+#### PR #16 review/remediation chronology
+
+1. Exact head `45ba39af838d72b03ee5f4db240a788c039a5555`
+   - fresh independent review: `CURRENT FINDINGS` (2 HIGH);
+   - defects: state capture allowed semantic result metadata to diverge from exact hashed bytes, and post-result recovered states could lose launch/execution provenance;
+   - both were remediated and the result became stale when HEAD moved.
+
+2. Exact head `e72a2512d5d2ee39207ca8c0ac092539c7741cae`
+   - fresh independent review: `CURRENT FINDINGS` (2 HIGH);
+   - the prior two findings were confirmed remediated;
+   - new defects: captured result was not yet correlated to the exact external execution delivery, and generic failure could bypass an unresolved launch ambiguity fence;
+   - both were remediated and the result became stale when HEAD moved.
+
+3. Final head `da0ab45a3758fecbf347371c96f8308ec1902d91`
+   - supported result capture requires the observed execution correlation and exact raw result bytes;
+   - supported generic failure cannot terminate claimed/unknown/active launch states;
+   - exact-head/current-base CI `33893841665`: PASS;
+   - fresh independent terminal review: `CURRENT PASS`, 0 findings;
+   - durable terminal result persisted before merge as comment `5543673541`.
+
 ## Later stages
 
 Add entries only when evidence exists. Do not pre-fill imagined CI/review IDs.
