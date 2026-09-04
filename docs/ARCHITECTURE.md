@@ -2,32 +2,57 @@
 
 ## System boundary
 
-MimiSeek Review is a standalone reviewer-improvement and release system.
+MimiSeek Review is a standalone reviewer-improvement and release system with a bounded independent-review job control plane.
 
 CAP, UV, and future repositories are:
 
 - future/current consumers of the promoted stable reviewer;
 - producers of real review/outcome evidence even before first MimiSeek installation when provenance is sufficient;
-- owners of their own development, review/fix loop, architecture truth, and project-specific policy.
+- owners of their own development, review/fix loop, architecture truth, project-specific policy, finding adjudication, remediation, acceptance, and merge consequences.
 
-MimiSeek Review does **not** own or orchestrate the ordinary PR review loop in those repositories.
+MimiSeek Review does **not** own those ordinary project workflows. It may, however, coordinate an explicitly requested independent review job for an immutable repository/PR/BASE/HEAD/policy identity and return the durable result to the originating project workflow.
 
-## Bootstrap versus operational architecture
+This narrow coordination authority is project-neutral. It does not authorize MimiSeek to decide how consumer code is fixed or whether a consumer PR merges.
 
-The architecture below describes the target operational reviewer-evolution system. `docs/CURRENT_STATE.md` and `docs/ROADMAP.md` determine which components actually exist now.
+## Two separate operational loops
 
-During bootstrap, native skill `mimiseek-review-run` is a repository-driven development entry point: it reconstructs live repository state and continues the next accepted implementation step. It must not simulate missing collector/learner/regression/distribution components.
+MimiSeek has two distinct loops that must not be conflated.
 
-Stage 1 may create a non-authoritative baseline seed, but that seed is neither stable nor distributable. The first stable is created only through the same frozen-candidate + fresh independent `PROMOTE` path used for later versions; first consumer installation is performed only through the same safe-distribution gate used for later updates.
+### Fast independent-review job loop
 
-Once the required components are implemented and accepted, the same run role enters the operational flow below.
+```text
+originating project chat
+      |
+      | explicit review request for exact PR/HEAD
+      v
+MIMISEEK REVIEW-JOB CONTROL PLANE
+      |
+      | generic fresh-worker request
+      v
+GENERIC SESSION / EXECUTION SUBSTRATE (for example CAP)
+      |
+      v
+FRESH TEMPORARY CHAT REVIEWER
+      |
+      | REVIEW_RESULT_V1
+      v
+MIMISEEK IDENTITY RECHECK + DURABLE RESULT
+      |
+      | generic return/wake delivery
+      v
+originating project chat
+      |
+      v
+consumer adjudication / fix / re-review / merge
+```
 
-## End-to-end operational architecture
+The generic session/execution substrate is not part of MimiSeek's semantic authority. It receives opaque session/worker references and bounded payloads. It must not require UV Studio, MimiSeek Review, chat-agent-platform, GitHub PR, `PASS`, or `FINDINGS` semantics.
+
+### Slow reviewer-evolution loop
 
 ```text
 CAP / UV / future projects
-  ordinary development + external/our reviews
-  adjudicated findings / PASS / fixes / exact identities
+  development + reviews + adjudicated outcomes
                     |
                     v
                CHAT A
@@ -75,9 +100,17 @@ CAP / UV / future projects
   DEFER_*        ─────→ consumer remains unchanged/pinned
 ```
 
-When no stable exists before evaluation, authoritative `PROMOTE` establishes the first stable; `REJECT`/`ABSTAIN` preserve `stable = none`.
+A `PASS` from the fast review-job loop is not candidate-promotion authority in the slow loop.
 
-A later deferred-distribution retry is another fresh `mimiseek-review-update` chat that starts from the already-authoritatively-promoted stable and durable `PENDING_DISTRIBUTION` state; it does not repeat or invent candidate promotion.
+## Bootstrap versus operational architecture
+
+The architecture describes target operational components. `docs/CURRENT_STATE.md` and `docs/ROADMAP.md` determine which components actually exist now.
+
+During bootstrap, native skill `mimiseek-review-run` is a repository-driven development entry point: it reconstructs live repository state and continues the next accepted implementation step. It must not simulate missing collector/learner/regression/distribution or review-job runtime components.
+
+Stage 1 may create a non-authoritative baseline seed, but that seed is neither stable nor distributable. The first stable is created only through the same frozen-candidate + fresh independent `PROMOTE` path used for later versions; first consumer installation is performed only through the same safe-distribution gate used for later updates.
+
+The review-job control plane is a cross-cutting capability and may be implemented independently of the baseline-seed lifecycle once its own architecture and external generic execution prerequisites are accepted. Its existence does not mark Stage 1, Stage 2, or later reviewer-evolution stages complete.
 
 Canonical repository workflow files remain:
 
@@ -85,6 +118,38 @@ Canonical repository workflow files remain:
 - `.agents/skills/mimiseek-update/SKILL.md` for native identity `mimiseek-review-update`.
 
 ## Logical components
+
+### Review-job control plane
+
+Owns only the cross-project coordination state for an explicitly requested independent review.
+
+Minimum authority:
+
+- resolve and freeze immutable repository/PR/BASE/HEAD/`review_policy_ref` identity;
+- create one durable immutable `REVIEW_JOB_V1` identity;
+- claim at most one fresh reviewer launch for that job;
+- send a bounded neutral review payload without expected-answer leakage through a generic execution substrate;
+- accept only a result correlated to the exact job and reviewer execution identity;
+- re-resolve live source PR identity after result capture;
+- classify moved/mismatched source state as stale rather than current;
+- persist the exact review result durably in MimiSeek-owned GitHub state without changing the reviewed consumer HEAD;
+- request one generic return/wake delivery to the originating project session;
+- leave consumer adjudication, fixes, re-review decisions, acceptance, and merge consequences outside MimiSeek authority.
+
+A public durable job record must not expose a raw browser tab ID, ChatGPT conversation capability, authentication secret, or other private session authority. Any return route must remain private to the generic transport or be opaque and non-authorizing by itself.
+
+The control plane must be idempotent across restart/retry and fail closed on ambiguous launch, result publication, stale source identity, wrong-job result, conflicting repeated result, or ambiguous return delivery. A repeated reconciliation of a completed immutable job is a no-op, not a second review.
+
+### Generic session/execution substrate boundary
+
+MimiSeek may depend on separately accepted generic capabilities such as:
+
+- launch a fresh qualified worker with bounded payload and exact correlation;
+- receive one correlated terminal worker result;
+- retain/recover an opaque route to an existing ChatGPT conversation;
+- deliver one bounded payload through that opaque route with one-shot/no-blind-resend/recovery semantics.
+
+The exact external API and implementation belong to the session/execution provider, not to MimiSeek. MimiSeek must not require project-specific routing tables or teach the transport GitHub/reviewer semantics.
 
 ### Stable reviewer artifact
 
@@ -106,11 +171,15 @@ Reads new structured review outcomes from registered consumer/evidence-producing
 
 The collector must be idempotent and must not infer missing adjudication as truth. It may import pre-MimiSeek review evidence when the actual reviewer source/version is explicit.
 
+The existing source GitHub App remains read-only. The review-job control plane must not widen source-repository permissions merely to publish results; durable coordination/result state belongs in MimiSeek-owned publication state unless a consumer independently persists a copy under its own authority.
+
 ### Outcome store
 
 Persists normalized review runs, findings, dispositions, exact identities, discovery source, and fix/verification evidence.
 
 Historical chronology remains in source repositories; this store is the canonical normalized learning input for MimiSeek.
+
+A review-job ledger/result is operational coordination evidence, not automatically an adjudicated learning outcome. It enters the normalized learning path only through the governed evidence/outcome contract.
 
 ### Learning event builder
 
@@ -156,6 +225,8 @@ During bootstrap, reconstructs live repository state and continues the next cano
 
 Once the operational evolution stages exist, it coordinates collection, normalization, learning-event derivation, learner execution, candidate creation, regression evaluation, and independent-update-state freeze.
 
+When the review-job track is implemented and its dependencies are proven, the run-side system may also operate the bounded review-job control plane for explicit requests. This does not grant consumer development/fix/merge authority.
+
 It cannot promote stable and cannot update consumer reviewer pins.
 
 ### Independent update role — `mimiseek-review-update`
@@ -195,6 +266,9 @@ Default mechanism is an auditable first-install/update PR/change. Running agent/
 
 ## Authority separation
 
+- Consumer repositories own review readiness, project policy, finding adjudication, remediation, re-review policy, terminal acceptance, and merge consequences.
+- MimiSeek review-job coordination may freeze identity, launch one independent reviewer through a generic substrate, validate/persist the result, and request a return wake; it may not decide the consumer consequence.
+- A review-job `PASS` is not merge authority and is not reviewer-candidate promotion authority.
 - Consumer review processes create source evidence but do not promote MimiSeek versions.
 - Stage 1 baseline seed is non-authoritative and non-distributable.
 - `mimiseek-review-run` may create/freeze a candidate once the operational pipeline exists, but cannot promote or distribute it.
@@ -204,7 +278,7 @@ Default mechanism is an auditable first-install/update PR/change. Running agent/
 - A consumer rollout target must already be proven as the current authoritatively promoted stable; baseline seeds and pending/rejected/abstained candidates cannot be distributed.
 - Global promotion does not itself prove any consumer is currently safe to update.
 - Consumer update safety is resolved per repository and fails closed when active-state safety or compatibility cannot be proven.
-- No bootstrap stage may bypass promotion or distribution authority merely to establish an initial stable or initial consumer pin.
+- No bootstrap stage or review-job path may bypass promotion or distribution authority merely to establish an initial stable or initial consumer pin.
 
 ## Generic versus project-specific knowledge
 
@@ -220,8 +294,12 @@ Project-specific example:
 
 Project-specific rules remain in the consumer repository's governing policy/overlay.
 
+The review-job control plane may carry exact project identity as data, but must not encode project-specific semantic decisions into generic orchestration or transport logic.
+
 ## Durable state principle
 
-Chat contexts are workers, not state stores. Canonical project state, reviewer baseline seed, reviewer versions, normalized evidence, learning events, candidate rationale, frozen independent-update state, evaluation results, consumer distribution state, and promotion history must be recoverable from Git/GitHub and structured persisted data.
+Chat contexts are workers, not state stores. Canonical project state, review-job identities/results, reviewer baseline seed, reviewer versions, normalized evidence, learning events, candidate rationale, frozen independent-update state, evaluation results, consumer distribution state, and promotion history must be recoverable from Git/GitHub and structured persisted data.
+
+Private session capabilities are an exception to public repository persistence: they must remain private transport state or opaque non-authorizing references. Public GitHub coordination records may identify a job/result but must not expose a usable private ChatGPT/browser authority.
 
 When a bootstrap/source artifact itself is access-controlled external evidence rather than repository state, its exact locator, version identity, digest, recovery contract, and fail-closed behavior must be owned by the repository so a fresh authorized chat can recover and authenticate it without prior-chat memory.

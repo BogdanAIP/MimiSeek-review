@@ -2,15 +2,43 @@
 
 ## Purpose
 
-MimiSeek Review is a standalone, multi-project **reviewer improvement and release system**.
+MimiSeek Review is a standalone, multi-project **reviewer improvement and release system** with a bounded cross-project independent-review coordination capability.
 
-Its job is not to run the normal review/fix loop inside CAP, UV, or another consumer repository. Those repositories continue to perform their own development and review workflows.
+It does **not** own the normal development/fix/merge loop inside CAP, UV, or another consumer repository. Those repositories continue to own review readiness, project-local policy, finding adjudication, remediation, re-review decisions, terminal acceptance, and merge consequences.
 
-MimiSeek Review consumes verified outcomes from those workflows, learns from them, produces a reviewer candidate, independently evaluates that candidate, and publishes a new stable reviewer only when the governed promotion policy authorizes it.
+When an explicitly requested immutable PR/HEAD needs an independent review, MimiSeek may coordinate that bounded review job: freeze exact identity, request one fresh reviewer worker through a generic session/execution substrate, validate the correlated result against live source state, persist the result durably, and request a return/wake delivery to the originating project chat. This coordination authority does not authorize MimiSeek to decide how consumer code is fixed or to merge a consumer PR.
+
+Separately, MimiSeek Review consumes verified outcomes from review workflows, learns from them, produces a reviewer candidate, independently evaluates that candidate, and publishes a new stable reviewer only when the governed promotion policy authorizes it.
 
 Before the first promotion, MimiSeek intentionally has **no stable reviewer**. Bootstrap may create historical data and a non-authoritative baseline seed, but the first stable must pass the same candidate → independent evaluation → `PROMOTE` authority path used for later versions. Likewise, the first CAP/UV installation must pass the same per-consumer safe-distribution gate used for later updates.
 
-The operational product loop is:
+## Independent review-job loop
+
+The bounded fast operational loop is separate from reviewer evolution:
+
+```text
+consumer project chat
+    ↓ explicit review request for exact PR/HEAD
+MimiSeek review-job control plane
+    ↓ generic fresh-worker request
+CAP / generic session-execution substrate
+    ↓
+fresh independent Temporary Chat reviewer
+    ↓ REVIEW_RESULT_V1
+MimiSeek exact-identity validation + durable GitHub result
+    ↓ generic return/wake delivery
+originating consumer project chat
+    ↓
+adjudicate / fix / re-review / merge under consumer authority
+```
+
+The review-job control plane is project-neutral. CAP or another generic session substrate must not need UV/MimiSeek/CAP-specific routing tables, GitHub PR semantics, or `PASS`/`FINDINGS` semantics. Private browser/session authority must not be published as ordinary GitHub job data.
+
+A review-job `PASS` is neither consumer merge authority nor MimiSeek reviewer-promotion authority.
+
+## Reviewer-evolution loop
+
+The reviewer-improvement/release loop remains:
 
 ```text
 consumer review outcomes
@@ -58,12 +86,14 @@ The goal is not to prove that one reviewer is universally better than another. C
 
 ## Consumers
 
-Initial consumers:
+Initial consumers/evidence producers:
 
 - `BogdanAIP/chat-agent-platform`
 - `BogdanAIP/uv-studio`
 
-Future repositories must be attachable without embedding CAP- or UV-specific assumptions in the generic reviewer.
+MimiSeek Review itself may also originate review jobs for its own repository-development PRs without making CAP aware that the destination is MimiSeek.
+
+Future repositories must be attachable without embedding CAP- or UV-specific assumptions in the generic reviewer or session transport.
 
 Registration as a consumer/evidence producer does not imply that MimiSeek is already installed. Before Stage 8, `consumer_installed = none` is a valid and expected state.
 
@@ -78,6 +108,8 @@ Native skill identity: `mimiseek-review-run`.
 Canonical repository workflow: `.agents/skills/mimiseek-run/SKILL.md`.
 
 The run chat reconstructs live repository state and continues the next canonical work. During bootstrap this means continuing MimiSeek Review implementation according to `CURRENT_STATE.md`, `ROADMAP.md`, and repository governance. Once the reviewer-learning machinery exists, the same entry point performs the governed collection/learning/candidate/regression half and freezes the state required for independent evaluation.
+
+When the review-job control plane is implemented and its external generic execution prerequisites are proven, the run-side system may also operate that bounded control plane for explicitly requested jobs. This does not grant the run chat consumer development/fix/merge authority.
 
 The run chat may not make its own candidate stable and may not treat a baseline seed or candidate as authority to update consumers.
 
@@ -109,10 +141,14 @@ See `docs/CHATGPT_ENTRYPOINT.md`, `docs/REVIEWER_LIFECYCLE.md`, and `docs/INTEGR
 10. **Distribution is auditable and safety-gated.** A promoted stable reviewer is propagated only through explicit versioned changes when each consumer's live state permits the update.
 11. **Running work is immutable.** An already-started agent/reviewer/procedure run remains bound to the reviewer version/source with which it started.
 12. **No bootstrap bypass.** The first stable and first consumer installation use the same promotion/distribution authorities as later versions.
+13. **Coordination is not ownership.** MimiSeek may coordinate an explicitly requested independent review job, but consumer repositories retain all project-specific development, adjudication, remediation, acceptance, and merge consequences.
+14. **Generic transport stays generic.** Review-job routing must not push repository/project/review semantics into CAP or another session substrate.
 
 ## Non-goals
 
-- Orchestrating the ordinary code-review/fix cycle inside every consumer repository.
+- Owning or automating consumer-specific development, finding adjudication, remediation, re-review policy, or merge decisions.
+- Hiding consumer review authority behind a MimiSeek `PASS`.
+- Hard-coding UV/CAP/MimiSeek project routing or review semantics into the generic session/execution substrate.
 - Training or fine-tuning model weights in the initial system.
 - Replacing consumer `AGENTS.md`, architecture owners, or acceptance policy.
 - Ranking Fresh ChatGPT versus Codex as the central objective.

@@ -416,7 +416,92 @@ Accepted PR #11 establishes:
    - exact-head/current-base CI `33785860217`: PASS;
    - fresh independent terminal review: `CURRENT PASS`, 0 findings, 14 rejected candidates.
 
-Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available. Material source commentary remains only partially reconciled; reviewer-policy refs, generic/project-specific classification, and baseline seed remain pending.
+### Accepted same-PR material-fix-baseline reconciliation — PR #13
+
+PR #13 — `Stage 1: reconcile UV #71 F058 fix baseline evidence` established the accepted bounded F058 same-PR material-fix-baseline evidence shape.
+
+Acceptance identity:
+
+- BASE: `552641edb5f76720d176dca67d347b51963aca65`
+- accepted exact PR HEAD: `6de0ba27b80be5760bce1cbf126a8061425caf34`
+- `review_policy_ref`: `552641edb5f76720d176dca67d347b51963aca65`
+- changed files: `7`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- durable GitHub terminal-result comment id: `5538687060`
+- exact-head/current-base CI run: `33857606647`
+- CI state: `PASS`
+- accepted literal-head / PR-merge Git tree: `45aab0e917e666ab65c82d952b5e93ac1afba749`
+- merge commit on `main`: `9197cde51c3b9ddd4004ce62f09f38c8b79589c1`
+
+The terminal result was persisted as top-level PR comment `5538687060` before merge without moving the reviewed HEAD. The merge used `expected_head_sha=6de0ba27b80be5760bce1cbf126a8061425caf34`; the resulting merge commit records the accepted exact head and terminal-result pointer.
+
+Accepted PR #13 establishes:
+
+- `data/bootstrap-commentary-fix-baseline-reconciliation.json` as a separate F058 governed layer;
+- exact original UV PR #71 Codex review/finding and owner-reply identities;
+- exact reviewed head `aafddd3b37476a65558d56755edd2ae440648b74` and owner-declared code-bearing baseline `9af22cdcbb60501dca968fd10f12dc1d40ee6482`;
+- exact contiguous four-commit reviewed→baseline sequence and exact four-file range inventory;
+- immutable baseline implementation/regression evidence for exact harness/Project Store/planner authority matching, including rejection of a foreign store with the same project ID;
+- explicit `SUPPORTED_SAME_PR_MATERIAL_FIX_BASELINE_EVIDENCE` semantics narrower than universal semantic correctness;
+- continued `global_commentary_reconciliation_complete=false` and explicit F057 pending status.
+
+#### PR #13 review/remediation chronology
+
+1. Exact head `0e912451ef728f65d585f0911058c5cfb913f011`
+   - fresh independent review: `CURRENT FINDINGS` (1);
+   - defect: `data/README.md` named the already-accepted F053/F054 verifier using a nonexistent hyphenated path rather than `tools/verify_bootstrap_commentary_fix_evidence_reconciliation.py`;
+   - substantive F058 evidence model otherwise passed;
+   - result became STALE when HEAD moved.
+
+2. Remediation on final head `6de0ba27b80be5760bce1cbf126a8061425caf34`
+   - net content delta from the previously reviewed head was exactly the one documentation-path correction;
+   - exact-head/current-base CI `33857606647`: PASS;
+   - literal HEAD and PR merge-ref tree both resolved to `45aab0e917e666ab65c82d952b5e93ac1afba749`;
+   - fresh independent terminal review: `CURRENT PASS`, 0 findings.
+
+Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available. Material source commentary remains only partially reconciled; F057 and other material commentary remain pending, reviewer-policy refs and generic/project-specific classification remain unresolved, and no baseline seed exists.
+
+## Track R — Independent review-job coordination
+
+### Accepted coordination-boundary research — PR #14
+
+PR #14 — `Research: define generic review-job coordination boundary` established an accepted non-authoritative research basis for deciding whether MimiSeek can coordinate independent review execution without taking ownership of consumer development/fix/merge workflows.
+
+Acceptance identity:
+
+- BASE: `9197cde51c3b9ddd4004ce62f09f38c8b79589c1`
+- accepted exact PR HEAD: `21f82632c835e21fa1ce28ad846111c1f7f61c56`
+- `review_policy_ref`: `9197cde51c3b9ddd4004ce62f09f38c8b79589c1`
+- changed files: `1`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- durable GitHub terminal-result comment id: `5540017840`
+- exact-head/current-base CI run: `33863052423`
+- CI state: `PASS`
+- accepted literal-head / PR-merge Git tree: `8346d7f4b84636936b9d5986e0f656fe28ad4424`
+- merge commit on `main`: `eb5c53dec64dbe169623c061afe05a19bdb15410`
+
+The terminal result was persisted as top-level PR comment `5540017840` before merge without moving the reviewed HEAD. The merge used `expected_head_sha=21f82632c835e21fa1ce28ad846111c1f7f61c56`; the resulting merge commit records the accepted exact head and terminal-result pointer.
+
+Accepted PR #14 establishes only research evidence:
+
+- the proposed narrow split keeps consumer readiness, local policy, finding adjudication, remediation, re-review and merge consequences with the consumer;
+- MimiSeek is only a candidate generic review-job coordinator;
+- CAP/session execution remains generic and must not acquire UV/MimiSeek/CAP project semantics, GitHub PR semantics, or PASS/FINDINGS meaning;
+- a fresh Temporary Chat remains the independent reviewer;
+- GitHub is proposed as durable review-job/result handoff while private session authority remains outside public job state;
+- exact job/result correlation, stale-head handling, idempotence, and no-blind-duplicate launch/wake are required;
+- the fast review-job loop remains separate from slow reviewer evolution/promotion;
+- the research itself changed no production authority and required a later governed `ACCEPT_NARROW | REJECT | DEFER` architecture decision.
+
+The architecture decision that follows this research is recorded separately by ADR 0013 and its own repository-development PR/acceptance evidence; PR #14 by itself is not that authority.
 
 ## Later stages
 

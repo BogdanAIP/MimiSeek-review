@@ -4,7 +4,7 @@
 
 Enable MimiSeek Review itself to be developed by ChatGPT across many disposable chats without depending on previous-chat memory.
 
-This document governs development of the MimiSeek improvement system. It does not own the ordinary review/fix loop of CAP, UV, or other consumer projects.
+This document governs development of the MimiSeek improvement system. It does not own the ordinary review/fix/merge loop of CAP, UV, or other consumer projects. Under the accepted narrow coordination boundary, MimiSeek may eventually coordinate an explicitly requested independent review job, but consumer project authority and consequences remain outside MimiSeek.
 
 ## Starting a new development chat
 
@@ -47,7 +47,34 @@ The terminal result itself must also be durable and independently resolvable. Pe
 
 After merge, `docs/EVIDENCE_INDEX.md` may index the accepted result, merge identity and other evidence without pretending that the post-merge index update retroactively created the independent review.
 
-Consumer repositories may use different local review sequences. MimiSeek only consumes their accepted structured outcomes through the integration contract.
+Consumer repositories may use different local review sequences. MimiSeek may consume their accepted structured outcomes and, once Track R is implemented, coordinate an explicitly requested bounded independent review job under `docs/INTEGRATION_CONTRACT.md`. It still does not own consumer finding adjudication, remediation, re-review policy, terminal acceptance, or merge consequences.
+
+## Track R review-job development versus consumer workflow
+
+Track R implementation is MimiSeek repository development, not permission to take over a consumer repository's workflow.
+
+The MimiSeek-side implementation may define and own:
+
+- immutable `REVIEW_JOB_V1` schema/state/result identity;
+- source identity validation before launch and after result capture;
+- idempotent launch/result/publication/return coordination state;
+- durable MimiSeek-owned GitHub result publication;
+- public/private boundary for return-session authority;
+- fail-closed stale/wrong-result/retry/concurrency handling.
+
+It must not assume that CAP or another session substrate capability exists merely because architecture permits using one. Before live integration, resolve the exact separately accepted external capability/version and verify that its semantics satisfy the generic transport contract.
+
+Consumer-side consequences remain consumer-owned:
+
+- declaring a particular PR/HEAD ready for review;
+- project-local policy selection/authority;
+- adjudicating findings;
+- modifying consumer code;
+- deciding whether another review is required after HEAD moves;
+- persisting consumer-local terminal evidence when required;
+- merging or otherwise accepting the consumer change.
+
+A Track R review job therefore ends by durably publishing the result and waking/returning control to the origin. It does not continue into consumer remediation/merge as MimiSeek authority.
 
 ## Repository development versus reviewer evolution
 
@@ -55,7 +82,9 @@ These are different workflows and must not be conflated.
 
 ### Developing MimiSeek Review itself
 
-While `docs/CURRENT_STATE.md` says the product is still in bootstrap or implementation, the run entry point reconstructs the repository and continues the next canonical roadmap work. It must not pretend that collector, learner, regression, promotion, or distribution machinery already exists when the repository says it does not.
+While `docs/CURRENT_STATE.md` says the product is still in bootstrap or implementation, the run entry point reconstructs the repository and continues the next canonical roadmap work. When the roadmap explicitly authorizes a parallel Track R slice, that slice may proceed without pretending the ordered reviewer-evolution stage sequence is complete.
+
+The run chat must not pretend that collector, learner, regression, promotion, distribution, or review-job runtime machinery already exists when the repository says it does not.
 
 ### Operating the reviewer-evolution product
 
@@ -83,6 +112,8 @@ DEFER_*       → leave consumer pinned and persist distribution state
 ```
 
 Every real `mimiseek-review-update` invocation uses a new independent ChatGPT chat. A later deferred-distribution reconciliation is a separate fresh update invocation that reconstructs the already-authoritatively-promoted current stable and durable `PENDING_DISTRIBUTION` state; it does not create or re-promote a candidate.
+
+Track R is separate from this promotion/update flow. A review-job `PASS` is review evidence for one exact target; it is not `PROMOTE`, does not create a stable reviewer, and does not authorize consumer installation.
 
 Canonical repository workflow files are `.agents/skills/mimiseek-run/SKILL.md` and `.agents/skills/mimiseek-update/SKILL.md`. Their installed/native ChatGPT identities are documented in `docs/CHATGPT_ENTRYPOINT.md`.
 
@@ -154,4 +185,4 @@ A learner-generated reviewer candidate is a product artifact, not an accepted ch
 
 The learner may create candidate changes, but evaluation-policy authority and promotion evidence remain separate. A failure to obtain required fresh independent evaluation leaves the current stable reviewer unchanged.
 
-The same fail-closed principle applies to repository development: incomplete, stale, wrong-policy, non-durable, or ambiguously governed acceptance evidence leaves the PR unmerged.
+The same fail-closed principle applies to repository development and Track R coordination: incomplete, stale, wrong-policy, non-durable, ambiguously governed, wrong-job, or unresolved external-capability evidence leaves the transition unaccepted rather than guessed through.

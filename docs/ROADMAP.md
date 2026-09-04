@@ -1,6 +1,8 @@
 # Roadmap
 
-The roadmap is ordered. A stage is not complete merely because implementation exists; acceptance conditions must be satisfied.
+The reviewer-evolution stages are ordered. A stage is not complete merely because implementation exists; acceptance conditions must be satisfied.
+
+A separate cross-cutting **Track R — independent review-job coordination** may proceed in parallel with the ordered reviewer-evolution stages once its own prerequisites are accepted. Track R does not make any reviewer-evolution stage complete and cannot bypass candidate promotion or consumer distribution authority.
 
 ## Stage 0 — Continuous-development foundation — DONE
 
@@ -9,7 +11,7 @@ Goal: make the repository self-describing so any fresh development chat can cont
 Acceptance:
 
 - canonical product/current-state/roadmap/architecture/protocol owners exist and are mutually coherent;
-- MimiSeek is explicitly a reviewer-improvement/release system, not the owner of consumer PR review loops;
+- MimiSeek is explicitly a reviewer-improvement/release system, not the owner of consumer PR development/review/fix/merge loops;
 - standalone multi-project ownership is recorded;
 - the two ChatGPT workflow contracts exist in `.agents/skills/mimiseek-run/SKILL.md` and `.agents/skills/mimiseek-update/SKILL.md`;
 - the run workflow is repository-driven and continues bootstrap/development until later operational stages actually exist;
@@ -64,6 +66,66 @@ Acceptance:
 
 The early collector foundation is authorized only to stop evidence loss during bootstrap. It does **not** mean Stage 3 is complete.
 
+## Track R — Independent review-job coordination — AUTHORIZED, IMPLEMENTATION PENDING
+
+Goal: remove routine manual prompt/result shuttling for an explicitly requested independent review while preserving consumer project authority and keeping the session/execution substrate generic.
+
+Track R is a cross-cutting operational capability, not a reviewer-evolution stage. It may proceed in parallel with the remaining Stage 1 evidence work after the architecture decision is accepted.
+
+Target flow:
+
+```text
+originating project chat
+    ↓ explicit exact-identity review request
+MimiSeek REVIEW_JOB_V1 control plane
+    ↓
+generic CAP/session fresh-worker capability
+    ↓
+fresh Temporary Chat reviewer
+    ↓ REVIEW_RESULT_V1
+MimiSeek durable result + live identity recheck
+    ↓
+generic CAP/session return delivery
+    ↓
+originating project chat continues under its own policy
+```
+
+MimiSeek-side work:
+
+- define versioned immutable `REVIEW_JOB_V1` identity/state/result schemas;
+- implement a durable job ledger/publication path owned by MimiSeek;
+- keep raw/private ChatGPT/browser/session authority out of public GitHub records;
+- validate source repository/PR/BASE/HEAD/`review_policy_ref` before launch and again after result capture;
+- bind reviewer profile/source and exact external execution correlation;
+- represent explicit `STALE`, `ABSTAIN`, and failure outcomes rather than treating them as generic retryable errors;
+- guarantee idempotent launch/result/publication/return coordination at the MimiSeek layer;
+- persist the exact result without moving the reviewed consumer HEAD;
+- treat the consumer workflow as owner of adjudication, fixes, re-review decisions, terminal acceptance, and merge consequences;
+- keep review-job evidence distinct from adjudicated learning events until the normal evidence/outcome contract promotes it into the learning store.
+
+External prerequisites, verified rather than assumed:
+
+- a separately accepted generic fresh-worker/result capability from CAP or another session/execution substrate;
+- a separately accepted generic existing-session return-delivery capability with opaque route, restart recovery, one-shot/no-blind-resend semantics, and no project-specific routing tables;
+- exact capability/version identity so MimiSeek does not silently depend on moving external behavior.
+
+Track R acceptance:
+
+- canonical product/architecture/integration authority explicitly permits the narrow coordination boundary while preserving consumer ownership;
+- one immutable review job cannot be launched twice by crash/retry/concurrent claims;
+- wrong repository/PR/BASE/HEAD/policy/job/result correlation fails closed;
+- source HEAD movement is classified `STALE` after a live post-result recheck;
+- conflicting repeated results or ambiguous publication fail closed;
+- public GitHub state contains no usable private session capability;
+- the existing CAP/UV source GitHub App remains read-only; review-job/result publication does not require widening consumer source permissions;
+- a repeated reconciliation of an already-completed job is a no-op rather than a second review or second wake;
+- the generic transport contains no UV/CAP/MimiSeek project semantics and does not interpret PR/PASS/FINDINGS semantics;
+- one real end-to-end job is proven from each origin class used in routine development (UV, CAP, MimiSeek) after the external generic capabilities are accepted;
+- browser/runtime restart and ambiguous-delivery paths are physically exercised before the mechanism becomes routine acceptance infrastructure;
+- a review-job `PASS` grants neither consumer merge authority nor MimiSeek reviewer-promotion/distribution authority.
+
+Track R may operate before the first MimiSeek stable exists, but each job must explicitly bind the actual reviewer profile/source and the consumer's accepted policy authority. It must never invent a stable reviewer identity.
+
 ## Stage 2 — Consumer binding schema + evidence export contract
 
 Goal: make CAP and UV structurally ready to become consumers/evidence producers **without installing a MimiSeek reviewer yet**.
@@ -79,6 +141,8 @@ Acceptance:
 - already-running runs will remain bound to the reviewer version with which they started once MimiSeek is installed;
 - Stage 2 does not create or modify a CAP/UV MimiSeek pin merely to satisfy its acceptance criteria.
 
+Track R durable review-job results may later become one structured evidence source for Stage 2/3, but Track R implementation by itself does not satisfy Stage 2 acceptance because adjudication/export/binding requirements remain separate.
+
 ## Stage 3 — Collector + normalized outcome store
 
 Goal: turn the Stage 1 intake foundation plus Stage 2 structured exports into the complete operational collector/outcome store used by the run workflow.
@@ -90,9 +154,9 @@ Acceptance:
 - missing adjudication stays unknown;
 - a closed PR can be reconstructed into normalized review outcomes without chat history;
 - reviewer source/version remains explicit rather than assuming every imported run used MimiSeek;
-- bootstrap workbook records, overlapping raw GitHub intake, and structured consumer exports deduplicate without collapsing different exact HEADs;
+- bootstrap workbook records, overlapping raw GitHub intake, Track R review-job evidence where applicable, and structured consumer exports deduplicate without collapsing different exact HEADs;
 - operational records use their own versioned source-kind/source-identity contract instead of fabricating workbook `source_row` provenance;
-- the operational normalized outcome store, not the raw intake branch or bootstrap-v1 files, is the canonical learning input.
+- the operational normalized outcome store, not the raw intake branch, review-job ledger, or bootstrap-v1 files, is the canonical learning input.
 
 ## Stage 4 — Learning events
 
@@ -172,11 +236,11 @@ Acceptance:
 - `SAFE_TO_UPDATE` permits an auditable first-install/update PR/change;
 - `DEFER_*` leaves the consumer unchanged and records `PENDING_DISTRIBUTION`;
 - deferred consumers can be re-checked by a later fresh update invocation without creating or re-promoting a reviewer candidate;
-- no earlier stage is allowed to bypass this safe-distribution authority merely to create an initial consumer pin.
+- no earlier stage or Track R review job is allowed to bypass this safe-distribution authority merely to create an initial consumer pin.
 
 ## Stage 9 — Complete two-chat workflow
 
-Goal: the practical user workflow is fully operational:
+Goal: the practical reviewer-evolution user workflow is fully operational:
 
 ```text
 Chat A: run workflow
@@ -188,17 +252,19 @@ independent evaluation → PROMOTE/REJECT/ABSTAIN → safe distribution
 
 Acceptance:
 
-- no manual technical sequencing or prompt copying is required;
+- no manual technical sequencing or prompt copying is required inside the reviewer-evolution workflow except the deliberate new-chat boundary still governed here;
 - both workflows resume idempotently after interruption;
 - unchanged evidence produces safe `NO_CHANGE` or equivalent governed no-op state;
 - every mutation is traceable to an exact pipeline/update run;
 - failures leave current stable (or the intentional no-stable bootstrap state) and unsafe consumers unchanged.
 
-## Stage 10 — Optional automatic fresh-chat handoff
+Track R is separate: its purpose is automatic execution/return of ordinary independent review jobs, not promotion of a reviewer candidate.
 
-Goal: later remove even the user's manual action of opening the second chat by adding a proven executor that launches the update role in a genuinely fresh ChatGPT context.
+## Stage 10 — Optional automatic fresh-chat handoff for reviewer promotion/update
 
-This is an optimization, not a prerequisite for a working self-improvement system.
+Goal: later remove even the user's manual action of opening the **independent promotion/update chat** by adding a proven executor that launches `mimiseek-review-update` in a genuinely fresh ChatGPT context.
+
+This stage is about the reviewer-evolution promotion/update authority boundary. It is distinct from Track R, which may use a generic fresh reviewer worker earlier for ordinary exact-head review jobs.
 
 Acceptance:
 
