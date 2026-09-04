@@ -41,8 +41,12 @@ class ReviewJobCoordinationBoundaryTests(unittest.TestCase):
 
         for text in (architecture, integration, adr):
             self.assertIn("project-specific routing tables", text)
-            self.assertIn("GitHub PR semantics", text)
+            self.assertIn("GitHub", text)
+            self.assertIn("PR", text)
 
+        self.assertIn("must not require UV Studio, MimiSeek Review, chat-agent-platform, GitHub PR", architecture)
+        self.assertIn("GitHub PR semantics", integration)
+        self.assertIn("GitHub PR semantics", adr)
         self.assertIn("must not expose a raw browser tab ID", architecture)
         self.assertIn("must never contain a raw browser tab identifier", integration)
         self.assertIn("source GitHub App remains read-only", integration)
@@ -61,7 +65,7 @@ class ReviewJobCoordinationBoundaryTests(unittest.TestCase):
             current,
         )
         self.assertIn(
-            "do not pretend separately governed CAP/session capabilities are already accepted",
+            "do not pretend external CAP/session prerequisites are already accepted",
             skill,
         )
         self.assertIn(
