@@ -1,3 +1,4 @@
+import unittest
 from pathlib import Path
 
 
@@ -8,59 +9,81 @@ def _read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_accept_narrow_decision_is_explicit_and_partial() -> None:
-    adr = _read("docs/decisions/0013-narrow-independent-review-job-coordination.md")
-    assert "Decision: **ACCEPT_NARROW**" in adr
-    assert "partially supersedes ADR 0006" in adr
-    assert "consumers own their development/review/fix/merge workflow" in adr
-    assert "review-job `PASS`" in adr
-    assert "neither consumer merge authority nor MimiSeek reviewer-candidate promotion/distribution authority" in adr
+class ReviewJobCoordinationBoundaryTests(unittest.TestCase):
+    def test_accept_narrow_decision_is_explicit_and_partial(self) -> None:
+        adr = _read("docs/decisions/0013-narrow-independent-review-job-coordination.md")
+        self.assertIn("Decision: **ACCEPT_NARROW**", adr)
+        self.assertIn("partially supersedes ADR 0006", adr)
+        self.assertIn("consumers own their development/review/fix/merge workflow", adr)
+        self.assertIn("review-job `PASS`", adr)
+        self.assertIn(
+            "neither consumer merge authority nor MimiSeek reviewer-candidate promotion/distribution authority",
+            adr,
+        )
+
+    def test_canonical_owners_preserve_consumer_authority(self) -> None:
+        product = _read("docs/PRODUCT.md")
+        architecture = _read("docs/ARCHITECTURE.md")
+        integration = _read("docs/INTEGRATION_CONTRACT.md")
+        protocol = _read("docs/DEVELOPMENT_PROTOCOL.md")
+        skill = _read(".agents/skills/mimiseek-run/SKILL.md")
+
+        self.assertIn("does **not** own the normal development/fix/merge loop", product)
+        self.assertIn("Consumer repositories own review readiness", architecture)
+        self.assertIn("finding adjudication", integration)
+        self.assertIn("consumer project authority and consequences remain outside MimiSeek", protocol)
+        self.assertIn("merge a consumer PR because a reviewer returned `PASS`", skill)
+
+    def test_transport_boundary_stays_generic_and_private(self) -> None:
+        architecture = _read("docs/ARCHITECTURE.md")
+        integration = _read("docs/INTEGRATION_CONTRACT.md")
+        adr = _read("docs/decisions/0013-narrow-independent-review-job-coordination.md")
+
+        for text in (architecture, integration, adr):
+            self.assertIn("project-specific routing tables", text)
+            self.assertIn("GitHub PR semantics", text)
+
+        self.assertIn("must not expose a raw browser tab ID", architecture)
+        self.assertIn("must never contain a raw browser tab identifier", integration)
+        self.assertIn("source GitHub App remains read-only", integration)
+
+    def test_track_r_local_foundation_is_real_but_external_runtime_is_pending(self) -> None:
+        roadmap = _read("docs/ROADMAP.md")
+        current = _read("docs/CURRENT_STATE.md")
+        skill = _read(".agents/skills/mimiseek-run/SKILL.md")
+
+        self.assertIn(
+            "Track R — Independent review-job coordination — AUTHORIZED, LOCAL STATE FOUNDATION IMPLEMENTED; LEDGER/EXTERNAL INTEGRATION PENDING",
+            roadmap,
+        )
+        self.assertIn(
+            "Review-job local foundation: `REVIEW_JOB_V1` public schema/state-machine/validation implemented; durable GitHub ledger/publication adapter and external CAP/session integration remain pending",
+            current,
+        )
+        self.assertIn(
+            "do not pretend separately governed CAP/session capabilities are already accepted",
+            skill,
+        )
+        self.assertIn(
+            "no live external launch/wake integration until exact accepted generic CAP/session capabilities are independently resolved",
+            current,
+        )
+
+    def test_review_job_and_reviewer_evolution_authorities_remain_separate(self) -> None:
+        product = _read("docs/PRODUCT.md")
+        roadmap = _read("docs/ROADMAP.md")
+        integration = _read("docs/INTEGRATION_CONTRACT.md")
+
+        self.assertIn(
+            "A review-job `PASS` is neither consumer merge authority nor MimiSeek reviewer-promotion authority",
+            product,
+        )
+        self.assertIn("does not make any reviewer-evolution stage complete", roadmap)
+        self.assertIn(
+            "A job `PASS` cannot advance `mimiseek_stable` or `consumer_installed`",
+            integration,
+        )
 
 
-def test_canonical_owners_preserve_consumer_authority() -> None:
-    product = _read("docs/PRODUCT.md")
-    architecture = _read("docs/ARCHITECTURE.md")
-    integration = _read("docs/INTEGRATION_CONTRACT.md")
-    protocol = _read("docs/DEVELOPMENT_PROTOCOL.md")
-    skill = _read(".agents/skills/mimiseek-run/SKILL.md")
-
-    assert "does **not** own the normal development/fix/merge loop" in product
-    assert "Consumer repositories own review readiness" in architecture
-    assert "finding adjudication" in integration
-    assert "consumer project authority and consequences remain outside MimiSeek" in protocol
-    assert "merge a consumer PR because a reviewer returned `PASS`" in skill
-
-
-def test_transport_boundary_stays_generic_and_private() -> None:
-    architecture = _read("docs/ARCHITECTURE.md")
-    integration = _read("docs/INTEGRATION_CONTRACT.md")
-    adr = _read("docs/decisions/0013-narrow-independent-review-job-coordination.md")
-
-    for text in (architecture, integration, adr):
-        assert "project-specific routing tables" in text
-        assert "GitHub PR semantics" in text
-
-    assert "must not expose a raw browser tab ID" in architecture
-    assert "must never contain a raw browser tab identifier" in integration
-    assert "source GitHub App remains read-only" in integration
-
-
-def test_track_r_is_authorized_but_runtime_is_still_pending() -> None:
-    roadmap = _read("docs/ROADMAP.md")
-    current = _read("docs/CURRENT_STATE.md")
-    skill = _read(".agents/skills/mimiseek-run/SKILL.md")
-
-    assert "Track R — Independent review-job coordination — AUTHORIZED, IMPLEMENTATION PENDING" in roadmap
-    assert "Review-job coordination architecture: `ACCEPT_NARROW` selected by ADR 0013; MimiSeek runtime implementation remains pending" in current
-    assert "do not pretend separately governed CAP/session capabilities are already accepted" in skill
-    assert "no live external launch/wake integration until exact accepted generic CAP/session capabilities are independently resolved" in current
-
-
-def test_review_job_and_reviewer_evolution_authorities_remain_separate() -> None:
-    product = _read("docs/PRODUCT.md")
-    roadmap = _read("docs/ROADMAP.md")
-    integration = _read("docs/INTEGRATION_CONTRACT.md")
-
-    assert "A review-job `PASS` is neither consumer merge authority nor MimiSeek reviewer-promotion authority" in product
-    assert "does not make any reviewer-evolution stage complete" in roadmap
-    assert "A job `PASS` cannot advance `mimiseek_stable` or `consumer_installed`" in integration
+if __name__ == "__main__":
+    unittest.main()
