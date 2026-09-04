@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BogdanAIP/MimiSeek-review/schemas/review-job-outcome-v1.schema.json",
+  "title": "REVIEW_JOB_OUTCOME_V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "job_id",
+    "identity_sha256",
+    "repository",
+    "pr_number",
+    "base_sha",
+    "head_sha",
+    "review_policy_ref",
+    "revision",
+    "publication_claim_id",
+    "outcome",
+    "outcome_code"
+  ],
+  "properties": {
+    "schema": {"const": "REVIEW_JOB_OUTCOME_V1"},
+    "job_id": {"type": "string", "pattern": "^rj_[0-9a-f]{32}$"},
+    "identity_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+    "pr_number": {"type": "integer", "minimum": 1},
+    "base_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "head_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "review_policy_ref": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "revision": {"type": "integer", "minimum": 0},
+    "publication_claim_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "outcome": {"enum": ["STALE", "FAILED"]},
+    "outcome_code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+    }
+  }
+}

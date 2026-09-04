@@ -18,7 +18,8 @@ Last synchronized: 2026-09-04
 - Stage 1 collector clean no-op and large-PR support: accepted and merged
 - Review-job coordination research: accepted in PR #14
 - Review-job coordination architecture: `ACCEPT_NARROW` selected by ADR 0013
-- Review-job local foundation: `REVIEW_JOB_V1` public schema/state-machine/validation implemented; durable GitHub ledger/publication adapter and external CAP/session integration remain pending
+- Review-job local foundation: accepted PR #16 implements the `REVIEW_JOB_V1` public schema/state-machine/validation boundary
+- Review-job durability slice in this tree: MimiSeek-owned GitHub ledger/publication adapter implemented with revision/identity fencing, immutable exact-result blob publication, and explicit ambiguous-publication reconciliation; physical production enablement and external CAP/session integration remain pending acceptance/separate verification
 - Track R implementation may proceed in parallel with remaining Stage 1 work, but live external launch/wake remains blocked until separately accepted/verified generic external session capabilities are resolved
 - Stable reviewer version: **not established yet**
 - Bootstrap baseline seed: none
@@ -92,11 +93,15 @@ originating project chat continues
 
 Consumer/project authority remains outside MimiSeek: the origin decides readiness, local policy, finding adjudication, remediation, re-review, terminal acceptance, and merge consequences.
 
-The first MimiSeek-local Track R foundation now consists of `schemas/review-job-v1.schema.json` plus `tools/review_job_state.py`. It defines the exact public record shape, deterministic immutable job identity, revision/CAS-style mutation checks, exact `REVIEW_RESULT_V1` correlation, explicit `STALE`/`ABSTAIN`/`FAILED` outcomes, result-content digests, and launch/publication/return claim states including `*_UNKNOWN` reconciliation states that forbid blind duplicate retry. This is a local coordination foundation, not a live external executor.
+The first accepted MimiSeek-local Track R foundation consists of `schemas/review-job-v1.schema.json` plus the supported `tools/review_job_state.py` boundary. It defines the exact public record shape, deterministic immutable job identity, revision/CAS-style mutation checks, exact `REVIEW_RESULT_V1` and external-execution correlation, explicit `STALE`/`ABSTAIN`/`FAILED` outcomes, result-content digests, and launch/publication/return claim states including `*_UNKNOWN` reconciliation states that forbid blind duplicate retry. This is a local coordination foundation, not a live external executor.
 
 The public record contains only durable GitHub-safe identity/state. Raw external execution/session references are not persisted; when an external execution reference must be correlated, the local state stores only its SHA-256 fingerprint. The schema rejects undeclared fields, and public durable locators are constrained to GitHub-owned references. A usable ChatGPT/browser/session capability must remain outside the public record.
 
-A durable MimiSeek-owned GitHub ledger/publication adapter is still pending. The current state machine models publication claims, ambiguity and durable result locators, but this slice does not itself create the GitHub ledger or publish review results. Likewise, no CAP/session call is made by this slice.
+This tree adds the next MimiSeek-owned durability layer: `tools/review_job_github_ledger.py` is the supported repository-scoped facade over the private ledger implementation. It only accepts `BogdanAIP/MimiSeek-review` as the authoritative ledger repository. The adapter uses an isolated `mimiseek-review-jobs-v1` branch marker, persists canonical per-job `REVIEW_JOB_V1` snapshots with exact one-revision progression, stores exact reviewer-result bytes as immutable Git blobs, and commits the result artifact plus resulting `RESULT_PERSISTED` job snapshot atomically in one tree commit. Result-less pre-launch `STALE`/`FAILED` publication uses bounded `REVIEW_JOB_OUTCOME_V1` rather than fabricating reviewer bytes.
+
+Ledger ref movement is non-force. Definite concurrent branch movement is treated as a CAS conflict and re-read before any retry. A mutating ref request whose outcome is ambiguous is never treated as success by assumption: exact observed state may prove an ordinary snapshot write applied; result publication either proves the exact result commit visible or durably fences the claim as `PUBLICATION_UNKNOWN`. The unknown fence and the original candidate publication are sibling commits, so only one can remain a fast-forward successor. Reconciliation must then prove the exact result already persisted or prove the fenced artifact absent before returning to `RESULT_VALIDATED` and permitting a new explicit publication claim.
+
+The adapter does not initialize a live production ledger branch merely because the code exists, does not create an external reviewer execution, and does not perform return/wake delivery. Physical MimiSeek-owned ledger enablement/recovery evidence and external CAP/session integration remain separate acceptance work.
 
 External execution remains a separately governed dependency. Before live launch/return integration, MimiSeek must independently verify exact accepted generic external capabilities for:
 
@@ -105,7 +110,7 @@ External execution remains a separately governed dependency. Before live launch/
 - restart/recovery and one-shot/no-blind-resend semantics;
 - no project-specific routing tables or PR/PASS/FINDINGS interpretation inside transport.
 
-The existing CAP/UV source GitHub App stays read-only. Review-job/result publication must use MimiSeek-owned GitHub state and must not require widening source permissions. Private ChatGPT/browser/session capabilities must not be written to public job records.
+The existing CAP/UV source GitHub App stays read-only. The supported ledger backend is scoped to MimiSeek's own repository and must not be redirected to a consumer/source repository. Private ChatGPT/browser/session capabilities and GitHub authentication tokens must not be written to public job records or ledger artifacts.
 
 Track R does not create a stable reviewer, does not install MimiSeek in consumers, and does not make a review `PASS` merge or promotion authority.
 
@@ -139,7 +144,7 @@ GitHub-native Codex reviews, PR comments, review comments, commits, and owner ad
 
 Fresh ordinary-ChatGPT terminal reviews that existed only inside ChatGPT and were never durably exported into the consumer PR cannot be reconstructed from GitHub alone. Stage 2 must define/implement structured consumer evidence export so future fresh terminal results are also captured automatically. Historical chat-only gaps must remain explicit rather than being inferred from absence.
 
-Track R durable review-job results will reduce future chat-only result loss once the ledger/publication adapter is implemented, but they are not automatically adjudicated learning outcomes and do not replace Stage 2/3 evidence/export/normalization requirements.
+Once this ledger/publication adapter is accepted and physically enabled, Track R durable review-job results can reduce future chat-only result loss. Those results are still source review evidence, not automatically adjudicated learning outcomes, and they do not replace Stage 2/3 evidence/export/normalization requirements.
 
 Authenticated workbook commentary can contain material fix/adjudication hints. Structural commit reconciliation is not enough to promote those hints. Accepted F050/F051, F052, F053/F054, and F058 slices demonstrate bounded patterns for preserving explicit unknowns, binding positive follow-up claims, binding exact-head clean re-review chains, binding exact same-PR fix commits, and binding owner-declared multi-commit code-bearing baselines without silently converting any of them into universal semantic correctness. The rest of the material commentary corpus still needs the same treatment.
 
@@ -158,15 +163,15 @@ Continue in this order where dependencies allow parallel preparation:
 
 ### Track R independent-review coordination
 
-After acceptance of the local `REVIEW_JOB_V1` foundation, continue with MimiSeek-owned durability before external execution:
+After acceptance of this ledger/publication implementation slice:
 
-1. implement a durable GitHub ledger/publication adapter for review-job state and exact result content without moving the reviewed consumer HEAD;
-2. make ledger writes revision/identity-bound and reconcile ambiguous publication instead of overwriting or blindly retrying;
-3. keep private return/session authority outside the public ledger;
-4. only after exact accepted generic CAP/session capabilities are independently resolved, add the external launch/result and return/wake adapters against those immutable capability identities;
-5. then run the required physical E2E/restart/ambiguous-delivery acceptance experiments before treating Track R as routine review infrastructure.
+1. enable and verify the isolated MimiSeek-owned ledger path under separately governed MimiSeek write authority, including physical exact-result publication, concurrent-CAS behavior, restart recovery, and ambiguous-applied/absent reconciliation without touching a consumer repository;
+2. independently resolve the exact accepted generic session/execution capability identities for fresh qualified worker launch/result correlation and existing-session return delivery;
+3. only then add the external launch/result adapter and the private-route return/wake adapter against those immutable external capability identities;
+4. keep private return/session authority outside the public ledger and keep CAP/UV source GitHub access read-only;
+5. run the required cross-origin physical E2E/restart/ambiguous-delivery experiments before treating Track R as routine review infrastructure.
 
-The local foundation does not satisfy those remaining Track R acceptance gates by itself.
+The accepted local state foundation plus this proposed durability adapter do not satisfy those later external/physical acceptance gates by themselves.
 
 Stage 2 then adds structured consumer evidence export/binding, including durable fresh ordinary-ChatGPT result export. Stage 3 later completes the normalized operational collector/outcome-store contract and owns operational outcome schemas rather than appending records to bootstrap-v1 files.
 
@@ -189,6 +194,8 @@ All repository changes continue through normal post-bootstrap branch/PR acceptan
 - First-promotion evaluation must later define fixed absolute requirements without fabricating a nonexistent stable comparison.
 - Consumer safe-window detection must not infer safety from silence or absence of visible GitHub activity.
 - Review-job retries/recovery must not create duplicate reviewer launches or duplicate origin wakes.
-- A public review-job ledger must never leak a usable private ChatGPT/browser/session capability.
+- A public review-job ledger must never leak a usable private ChatGPT/browser/session capability or GitHub authentication token.
+- The supported durable ledger path must remain MimiSeek-owned; redirecting publication into a consumer/source repository is outside Track R authority.
+- Before routine use, physical ledger branch/ref behavior must be verified under MimiSeek-owned credentials; code-level CAS tests alone are not external durability evidence.
 - MimiSeek must not silently depend on an unaccepted or moving external CAP/session runtime contract.
 - Track R must not grow into consumer-specific development orchestration or treat reviewer PASS as merge/promotion authority.

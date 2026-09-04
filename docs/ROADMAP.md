@@ -66,11 +66,13 @@ Acceptance:
 
 The early collector foundation is authorized only to stop evidence loss during bootstrap. It does **not** mean Stage 3 is complete.
 
-## Track R — Independent review-job coordination — AUTHORIZED, IMPLEMENTATION PENDING
+## Track R — Independent review-job coordination — IN PROGRESS
 
 Goal: remove routine manual prompt/result shuttling for an explicitly requested independent review while preserving consumer project authority and keeping the session/execution substrate generic.
 
 Track R is a cross-cutting operational capability, not a reviewer-evolution stage. It may proceed in parallel with the remaining Stage 1 evidence work after the architecture decision is accepted.
+
+Accepted PR #16 established the first MimiSeek-local `REVIEW_JOB_V1` state-machine/result-correlation foundation. The durability slice proposed in the current development tree adds the MimiSeek-owned GitHub ledger/publication adapter. Neither implementation alone authorizes live external CAP/session launch or return delivery, and code-level ledger tests are not a substitute for later physical GitHub durability evidence.
 
 Target flow:
 
@@ -102,6 +104,12 @@ MimiSeek-side work:
 - persist the exact result without moving the reviewed consumer HEAD;
 - treat the consumer workflow as owner of adjudication, fixes, re-review decisions, terminal acceptance, and merge consequences;
 - keep review-job evidence distinct from adjudicated learning events until the normal evidence/outcome contract promotes it into the learning store.
+
+Current Track R implementation boundary:
+
+- accepted: immutable local job/state/result boundary from PR #16;
+- proposed in the current ledger slice: MimiSeek-repository-scoped durable job snapshots, immutable exact-result Git blob publication, revision/CAS fencing, bounded result-less outcome publication, and explicit ambiguous-publication reconciliation;
+- still pending after this slice: physical production ledger enablement/recovery evidence, exact accepted generic external capability identities, launch/result adapter, private-route return/wake adapter, and cross-origin physical E2E/restart/ambiguous-delivery evidence.
 
 External prerequisites, verified rather than assumed:
 
