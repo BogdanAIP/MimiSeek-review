@@ -503,6 +503,40 @@ Accepted PR #14 establishes only research evidence:
 
 The architecture decision that follows this research is recorded separately by ADR 0013 and its own repository-development PR/acceptance evidence; PR #14 by itself is not that authority.
 
+### Accepted narrow review-job coordination architecture — PR #15
+
+PR #15 — `Architecture: accept narrow independent review-job coordination` selected `ACCEPT_NARROW` and synchronized the canonical MimiSeek product/architecture/integration/development/roadmap boundary without implementing the review-job runtime or changing any consumer repository.
+
+Acceptance identity:
+
+- BASE: `eb5c53dec64dbe169623c061afe05a19bdb15410`
+- accepted exact PR HEAD: `1cea12430d2eb19b08ab6f53a00ecccc036e0982`
+- `review_policy_ref`: `eb5c53dec64dbe169623c061afe05a19bdb15410`
+- changed files: `12`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- durable GitHub terminal-result comment id: `5541238884`
+- exact-head/current-base CI run: `33870791675`
+- CI state: `PASS`
+- accepted literal-head / PR-merge Git tree: `fa408fd9adc6bb7d46dd8e455783d58cf7644fdd`
+- merge commit on `main`: `ca16428e66d2f9e4d5de2e359e0e369a4f334fce`
+
+The terminal result was persisted as top-level PR comment `5541238884` before merge without moving the reviewed HEAD. The merge used `expected_head_sha=1cea12430d2eb19b08ab6f53a00ecccc036e0982`; the resulting merge commit records the accepted exact head and terminal-result pointer.
+
+Accepted PR #15 establishes:
+
+- ADR 0013 `ACCEPT_NARROW` as the canonical authority permitting explicitly requested, immutable, project-neutral independent-review job coordination;
+- continued consumer ownership of review readiness, project-local policy, finding adjudication, remediation, re-review, terminal acceptance, and merge consequences;
+- a generic CAP/session boundary that must not acquire UV/CAP/MimiSeek project routing, GitHub PR, or `PASS`/`FINDINGS` semantics;
+- public/private return-route separation and continued read-only CAP/UV source-App permissions;
+- Track R as a cross-cutting implementation path distinct from reviewer evolution/promotion/distribution;
+- no claim that generic external fresh-worker or existing-session return-delivery capabilities are already accepted, and no live external launch/wake authority before those exact prerequisites are independently resolved.
+
+Post-merge development of PR #16 discovered that `tests/test_review_job_coordination_boundary.py` in the accepted #15 HEAD used pytest-style free functions while repository CI invokes `python -m unittest discover`, so that newly added file was not executed by the #15 unit job. This index does not retroactively claim otherwise. The exact #15 architecture was still independently reviewed semantically and accepted under its BASE-governed process; PR #16 converts that boundary test to real `unittest.TestCase` discovery and exercises it as new development evidence.
+
 ## Later stages
 
 Add entries only when evidence exists. Do not pre-fill imagined CI/review IDs.

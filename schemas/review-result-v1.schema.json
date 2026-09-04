@@ -1,0 +1,42 @@
+{
+  "$id": "https://github.com/BogdanAIP/MimiSeek-review/schemas/review-result-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MimiSeek REVIEW_RESULT_V1 worker payload",
+  "description": "Exact worker-result envelope. MimiSeek derives status/identity from these same bytes before hashing and publication; transport must not supply semantic metadata out of band.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "REVIEW_RESULT_V1"},
+    "job_id": {"type": "string", "pattern": "^rj_[0-9a-f]{32}$"},
+    "repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+    "pr_number": {"type": "integer", "minimum": 1},
+    "base_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "head_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "review_policy_ref": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "reviewer_profile": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},
+    "reviewer_source": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},
+    "review_context": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},
+    "review_mode": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},
+    "validity": {"enum": ["CURRENT", "STALE", "ABSTAIN"]},
+    "status": {"enum": ["PASS", "FINDINGS", "ABSTAIN"]},
+    "reported_findings": {"type": "integer", "minimum": 0},
+    "report": {"type": "string", "minLength": 1}
+  },
+  "required": [
+    "schema",
+    "job_id",
+    "repository",
+    "pr_number",
+    "base_sha",
+    "head_sha",
+    "review_policy_ref",
+    "reviewer_profile",
+    "reviewer_source",
+    "review_context",
+    "review_mode",
+    "validity",
+    "status",
+    "reported_findings",
+    "report"
+  ]
+}
