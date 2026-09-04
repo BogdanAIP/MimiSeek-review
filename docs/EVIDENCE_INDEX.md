@@ -365,6 +365,57 @@ Accepted PR #12 establishes:
 
 The quiet-window attempt that motivated this PR first failed closed on live UV PR #89 with `declared=274 collected=250` and published nothing. The accepted repair then physically exercised that real 274-commit topology. The physical proof remains bounded evidence of the observed no-op interval and does not make the intake branch canonical adjudicated truth or claim universal completeness for every future GitHub topology.
 
+### Accepted same-PR material-fix evidence reconciliation — PR #11
+
+PR #11 — `Stage 1: reconcile UV #71 material fix evidence` established the accepted bounded F053/F054 same-PR material-fix evidence shape without turning owner prose, ancestry, tests, or later reviewer silence into universal semantic correctness.
+
+Acceptance identity:
+
+- BASE: `8f31ddae0b5bc36dbd62b9e3c07eaae7d212c125`
+- accepted exact PR HEAD: `ced90521b6551b7a2f1f9d2c91e995fa289b722e`
+- `review_policy_ref`: `8f31ddae0b5bc36dbd62b9e3c07eaae7d212c125`
+- changed files: `7`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- rejected candidates: `14`
+- review timestamp: `2026-09-03T20:19:52+02:00`
+- durable GitHub terminal-result comment id: `5530313338`
+- exact-head/current-base CI run: `33785860217`
+- CI state: `PASS`
+- accepted literal-head / PR-merge Git tree: `884b851f18fe29c01827508de8e579d7c8b5b211`
+- merge commit on `main`: `552641edb5f76720d176dca67d347b51963aca65`
+
+The terminal result was persisted as top-level PR comment `5530313338` before merge without moving the reviewed HEAD. The merge used `expected_head_sha=ced90521b6551b7a2f1f9d2c91e995fa289b722e`; the resulting merge commit records the accepted exact head and terminal-result pointer.
+
+Accepted PR #11 establishes:
+
+- `data/bootstrap-commentary-fix-evidence-reconciliation.json` as a separate F053/F054 governed layer tied to the authenticated workbook digest and normalized source rows;
+- exact original Codex review/finding identity for each entry and historical-head binding through the exact review submission plus `original_commit_id`;
+- bounded acceptance of GitHub's mutable historical inline-comment relocation only when current `commit_id` equals the original reviewed head or live final PR head;
+- exact owner reply/thread/actor/PR/full-SHA binding;
+- exact same-PR fix-commit membership and reviewed→fix ancestry;
+- exact fix-commit changed-file inventory and immutable fix-head implementation/regression assertions;
+- explicit `SUPPORTED_SAME_PR_MATERIAL_FIX_EVIDENCE` semantics narrower than universal semantic correctness;
+- continued `global_commentary_reconciliation_complete=false`.
+
+#### PR #11 review/remediation chronology
+
+1. Exact head `d0bdffccfaa6a39dc588006aaf0507115c0b2910`
+   - fresh independent review: `CURRENT FINDINGS` (1 acceptance blocker);
+   - semantic F053/F054 evidence model otherwise passed;
+   - blocker: after PR #12 moved accepted `main`, the PR branch remained divergent, so pull-request CI exercised a synthetic merge tree different from literal accepted HEAD and exact-head CI was not proven;
+   - result became STALE when HEAD moved.
+
+2. Remediation on final head `ced90521b6551b7a2f1f9d2c91e995fa289b722e`
+   - accepted `main=8f31ddae0b5bc36dbd62b9e3c07eaae7d212c125` was merged into the PR branch without changing the seven-file BASE..HEAD content scope;
+   - BASE became the exact merge base, compare status `ahead`, and `behind_by=0`;
+   - literal HEAD Git tree and GitHub PR synthetic merge-ref tree both resolved exactly to `884b851f18fe29c01827508de8e579d7c8b5b211`;
+   - exact-head/current-base CI `33785860217`: PASS;
+   - fresh independent terminal review: `CURRENT PASS`, 0 findings, 14 rejected candidates.
+
 Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available. Material source commentary remains only partially reconciled; reviewer-policy refs, generic/project-specific classification, and baseline seed remain pending.
 
 ## Later stages
