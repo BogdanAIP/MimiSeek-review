@@ -7,14 +7,18 @@ Last synchronized: 2026-09-04
 - Project: MimiSeek Review
 - Repository: `BogdanAIP/MimiSeek-review`
 - Stable branch: `main`
-- Development status: Stage 1 in progress — authenticated collector active, first backfill durable, structural BUGGY/FIXED/VERIFIED provenance accepted, bounded F050/F051, F052, and F053/F054 source-commentary reconciliations accepted, clean unchanged-source collector no-op and large-PR commit collection accepted, and the next bounded UV #71 F058 material-fix-baseline slice is under development; remaining source-commentary reconciliation, reviewer-policy refs, classification, and baseline seed remain pending
+- Development status: Stage 1 in progress — authenticated collector active, first backfill durable, structural BUGGY/FIXED/VERIFIED provenance accepted, bounded F050/F051, F052, F053/F054, and F058 source-commentary reconciliations accepted, clean unchanged-source collector no-op and large-PR commit collection accepted; remaining source-commentary reconciliation, reviewer-policy refs, classification, and baseline seed remain pending
 - Stage 0 implementation foundation: accepted and merged
 - Stage 1 bootstrap-data/evidence-intake foundation: accepted and merged
 - Stage 1 structural bootstrap commit provenance: accepted and merged
 - Stage 1 first bounded source-commentary reconciliation (F050/F051): accepted and merged
 - Stage 1 exact-head clean re-review reconciliation (F052): accepted and merged
 - Stage 1 same-PR material-fix evidence reconciliation (F053/F054): accepted and merged
+- Stage 1 same-PR material-fix-baseline reconciliation (F058): accepted and merged
 - Stage 1 collector clean no-op and large-PR support: accepted and merged
+- Review-job coordination research: accepted in PR #14
+- Review-job coordination architecture: `ACCEPT_NARROW` selected by ADR 0013; MimiSeek runtime implementation remains pending
+- Track R implementation may proceed in parallel with remaining Stage 1 work, but only against separately accepted/verified generic external session capabilities
 - Stable reviewer version: **not established yet**
 - Bootstrap baseline seed: none
 - Candidate reviewer version: none
@@ -55,15 +59,50 @@ Accepted PR #12 closes the previously pending clean collector no-op gate and the
 
 Accepted PR #11 establishes the bounded same-PR material-fix evidence shape for UV PR #71 findings F053/F054. Each entry binds the exact original Codex review/finding, exact owner reply naming the full same-PR fix commit, reviewed→fix descent, source-PR membership, exact fix-commit changed-file inventory, and immutable implementation/regression content materially corresponding to the authenticated source Note. GitHub may relocate an old inline review comment's mutable current `commit_id`; the accepted identity model binds historical authority through the exact review submission plus `original_commit_id` and allows a current relocation only to the original reviewed head or live final PR head. Later reviewer silence is not used as proof of repair, and `SUPPORTED_SAME_PR_MATERIAL_FIX_EVIDENCE` remains narrower than universal semantic correctness.
 
-The current proposed bounded continuation covers only UV PR #71 finding F058 from reviewed head `aafddd3b37476a65558d56755edd2ae440648b74`. Its authenticated Note says `Fixed with exact harness/store/planner authority checks.` The exact owner reply names code-bearing baseline `9af22cdcbb60501dca968fd10f12dc1d40ee6482`, but that named baseline is the end of a four-commit reviewed→baseline range rather than one implementation commit. The proposed `SUPPORTED_SAME_PR_MATERIAL_FIX_BASELINE_EVIDENCE` shape therefore binds the exact original Codex finding/thread, exact owner reply and baseline SHA, exact ordered reviewed→baseline commit sequence, exact range changed-file inventory, source-PR membership/ancestry, and immutable baseline-head implementation/regression content. It deliberately does not pretend the named baseline commit itself is the implementation commit and does not infer semantic correctness from owner prose, ancestry, tests, CI, or later reviewer silence.
+Accepted PR #13 establishes the bounded same-PR material-fix-baseline evidence shape for UV PR #71 finding F058 from reviewed head `aafddd3b37476a65558d56755edd2ae440648b74`. Its authenticated Note says `Fixed with exact harness/store/planner authority checks.` The exact owner reply names code-bearing baseline `9af22cdcbb60501dca968fd10f12dc1d40ee6482`, which is the end of a four-commit reviewed→baseline range rather than one implementation commit. `SUPPORTED_SAME_PR_MATERIAL_FIX_BASELINE_EVIDENCE` therefore binds the exact original Codex finding/thread, exact owner reply and baseline SHA, exact ordered reviewed→baseline commit sequence, exact range changed-file inventory, source-PR membership/ancestry, and immutable baseline-head implementation/regression content. It deliberately does not pretend the named baseline commit itself is the implementation commit and does not infer universal semantic correctness from owner prose, ancestry, tests, CI, or later reviewer silence.
 
-F057 is deliberately not included in this slice. Its authenticated Note spans both the complete typed-delegation matching fix and a later stronger namespace-reservation review cycle, so it remains pending until that multi-review progression can be reconciled without collapsing distinct reviewed heads into one claim.
+F057 is deliberately not included in that slice. Its authenticated Note spans both the complete typed-delegation matching fix and a later stronger namespace-reservation review cycle, so it remains pending until that multi-review progression can be reconciled without collapsing distinct reviewed heads into one claim.
 
-All accepted/proposed commentary slices explicitly report that global source-commentary reconciliation is incomplete. Other material source-commentary/disposition assertions still require governed reconciliation before baseline derivation.
+All accepted commentary slices explicitly report that global source-commentary reconciliation is incomplete. Other material source-commentary/disposition assertions still require governed reconciliation before baseline derivation.
 
 Stage 1 is therefore still incomplete. Material source-commentary/disposition reconciliation is only partially covered, CAP/UV accepted reviewer-policy refs are unresolved here, generic-versus-project-specific classification is unfinished, and no baseline seed exists.
 
 It also does not create learning events, a candidate, a stable reviewer, promotion authority, distribution authority, or consumer installation. The Stage 1 intake foundation remains non-authoritative source preservation, not the completed Stage 3 normalized outcome store.
+
+## Review-job coordination boundary
+
+Accepted research PR #14 established that the desired automated review flow can be separated from consumer development authority if the split is narrow and explicit. ADR 0013 selects `ACCEPT_NARROW` for that architecture.
+
+The authorized fast loop is:
+
+```text
+originating project chat
+    ↓ explicit exact-identity review request
+MimiSeek review-job control plane
+    ↓ generic execution request
+CAP / generic session substrate
+    ↓
+fresh Temporary Chat reviewer
+    ↓ REVIEW_RESULT_V1
+MimiSeek live identity recheck + durable GitHub result
+    ↓ generic return/wake delivery
+originating project chat continues
+```
+
+Consumer/project authority remains outside MimiSeek: the origin decides readiness, local policy, finding adjudication, remediation, re-review, terminal acceptance, and merge consequences.
+
+MimiSeek may own immutable `REVIEW_JOB_V1` identity/state/result coordination, but runtime does not exist yet. The first MimiSeek implementation slice should therefore be the local durable schema/state-machine/validation foundation; it must not pretend external CAP capabilities are already accepted or invoke project-specific transport behavior.
+
+External execution remains a separately governed dependency. Before live launch/return integration, MimiSeek must independently verify exact accepted generic external capabilities for:
+
+- fresh qualified worker launch + correlated result;
+- opaque existing-session return delivery;
+- restart/recovery and one-shot/no-blind-resend semantics;
+- no project-specific routing tables or PR/PASS/FINDINGS interpretation inside transport.
+
+The existing CAP/UV source GitHub App stays read-only. Review-job/result publication must use MimiSeek-owned GitHub state and must not require widening source permissions. Private ChatGPT/browser/session capabilities must not be written to public job records.
+
+Track R does not create a stable reviewer, does not install MimiSeek in consumers, and does not make a review `PASS` merge or promotion authority.
 
 ## Canonical ref boundary
 
@@ -95,16 +134,33 @@ GitHub-native Codex reviews, PR comments, review comments, commits, and owner ad
 
 Fresh ordinary-ChatGPT terminal reviews that existed only inside ChatGPT and were never durably exported into the consumer PR cannot be reconstructed from GitHub alone. Stage 2 must define/implement structured consumer evidence export so future fresh terminal results are also captured automatically. Historical chat-only gaps must remain explicit rather than being inferred from absence.
 
-Authenticated workbook commentary can contain material fix/adjudication hints. Structural commit reconciliation is not enough to promote those hints. Accepted F050/F051, F052, and F053/F054 plus the proposed F058 slice demonstrate bounded patterns for preserving explicit unknowns, binding positive follow-up claims, binding exact-head clean re-review chains, binding exact same-PR fix commits, and binding owner-declared multi-commit code-bearing baselines without silently converting any of them into universal semantic correctness. The rest of the material commentary corpus still needs the same treatment.
+Track R durable review-job results will reduce future chat-only result loss once implemented, but they are not automatically adjudicated learning outcomes and do not replace Stage 2/3 evidence/export/normalization requirements.
+
+Authenticated workbook commentary can contain material fix/adjudication hints. Structural commit reconciliation is not enough to promote those hints. Accepted F050/F051, F052, F053/F054, and F058 slices demonstrate bounded patterns for preserving explicit unknowns, binding positive follow-up claims, binding exact-head clean re-review chains, binding exact same-PR fix commits, and binding owner-declared multi-commit code-bearing baselines without silently converting any of them into universal semantic correctness. The rest of the material commentary corpus still needs the same treatment.
 
 ## Next canonical action
 
-Continue Stage 1, in this order where dependencies allow parallel preparation:
+Two workstreams may proceed in parallel without changing each other's authority.
+
+### Stage 1 reviewer-evolution foundation
+
+Continue in this order where dependencies allow parallel preparation:
 
 1. continue material source-commentary/disposition reconciliation on top of the accepted structural BUGGY/FIXED/VERIFIED provenance layer, preserving explicit unknowns where evidence is insufficient and never converting remediation or clean-review evidence into semantic correctness by implication;
 2. resolve exact accepted CAP/UV reviewer-policy refs;
 3. classify generic versus project-specific rules;
 4. only after the evidence set is current and reconciled, derive an immutable reusable **baseline seed** that is explicitly not stable and not distributable.
+
+### Track R independent-review coordination
+
+Implement the MimiSeek-local `REVIEW_JOB_V1` foundation first:
+
+1. versioned public job schema with immutable repository/PR/BASE/HEAD/`review_policy_ref` identity and explicit reviewer profile/source;
+2. durable state machine and result-content identity;
+3. fail-closed validation for identity mutation, wrong/conflicting results, stale post-result source state, and duplicate/retry semantics;
+4. explicit boundary keeping private return/session authority out of public GitHub state;
+5. tests for crash/retry/concurrency/idempotence at the MimiSeek layer;
+6. no live external launch/wake integration until exact accepted generic CAP/session capabilities are independently resolved.
 
 Stage 2 then adds structured consumer evidence export/binding, including durable fresh ordinary-ChatGPT result export. Stage 3 later completes the normalized operational collector/outcome-store contract and owns operational outcome schemas rather than appending records to bootstrap-v1 files.
 
@@ -126,3 +182,7 @@ All repository changes continue through normal post-bootstrap branch/PR acceptan
 - Historical outcomes are selection-biased; they are learning/regression evidence, not a neutral leaderboard.
 - First-promotion evaluation must later define fixed absolute requirements without fabricating a nonexistent stable comparison.
 - Consumer safe-window detection must not infer safety from silence or absence of visible GitHub activity.
+- Review-job retries/recovery must not create duplicate reviewer launches or duplicate origin wakes.
+- A public review-job ledger must never leak a usable private ChatGPT/browser/session capability.
+- MimiSeek must not silently depend on an unaccepted or moving external CAP/session runtime contract.
+- Track R must not grow into consumer-specific development orchestration or treat reviewer PASS as merge/promotion authority.
