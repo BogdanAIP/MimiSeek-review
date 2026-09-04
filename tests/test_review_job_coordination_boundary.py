@@ -53,7 +53,7 @@ class ReviewJobCoordinationBoundaryTests(unittest.TestCase):
 
         self.assertIn("must not expose a raw browser tab ID", architecture)
         self.assertIn("must never contain a raw browser tab identifier", integration)
-        self.assertIn("source GitHub App remains read-only", integration)
+        self.assertIn("keeps the existing CAP/UV source GitHub App read-only", integration)
 
     def test_track_r_local_foundation_is_real_but_overall_runtime_is_pending(self) -> None:
         roadmap = _read("docs/ROADMAP.md")
