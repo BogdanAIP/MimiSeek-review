@@ -19,6 +19,8 @@ def capture_result(
     capability/reference is never persisted in the public REVIEW_JOB_V1 record.
     """
 
+    if not isinstance(observed_execution_ref, str):
+        raise TypeError("observed_execution_ref must be a string")
     current = validate_job(value)
     observed_execution_sha256 = fingerprint_external_reference(observed_execution_ref)
     if current["external_execution_sha256"] is None:
