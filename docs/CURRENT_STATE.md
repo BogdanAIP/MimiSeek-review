@@ -1,18 +1,19 @@
 # Current State
 
-Last synchronized: 2026-09-03
+Last synchronized: 2026-09-04
 
 ## Repository state
 
 - Project: MimiSeek Review
 - Repository: `BogdanAIP/MimiSeek-review`
 - Stable branch: `main`
-- Development status: Stage 1 in progress — authenticated collector active, first backfill durable, structural BUGGY/FIXED/VERIFIED provenance accepted, bounded F050/F051 and F052 source-commentary reconciliations accepted, clean unchanged-source collector no-op and large-PR commit collection accepted, and the next UV #71 material-fix slice is under development; remaining source-commentary reconciliation, reviewer-policy refs, classification, and baseline seed remain pending
+- Development status: Stage 1 in progress — authenticated collector active, first backfill durable, structural BUGGY/FIXED/VERIFIED provenance accepted, bounded F050/F051, F052, and F053/F054 source-commentary reconciliations accepted, clean unchanged-source collector no-op and large-PR commit collection accepted, and the next bounded UV #71 F058 material-fix-baseline slice is under development; remaining source-commentary reconciliation, reviewer-policy refs, classification, and baseline seed remain pending
 - Stage 0 implementation foundation: accepted and merged
 - Stage 1 bootstrap-data/evidence-intake foundation: accepted and merged
 - Stage 1 structural bootstrap commit provenance: accepted and merged
 - Stage 1 first bounded source-commentary reconciliation (F050/F051): accepted and merged
 - Stage 1 exact-head clean re-review reconciliation (F052): accepted and merged
+- Stage 1 same-PR material-fix evidence reconciliation (F053/F054): accepted and merged
 - Stage 1 collector clean no-op and large-PR support: accepted and merged
 - Stable reviewer version: **not established yet**
 - Bootstrap baseline seed: none
@@ -52,7 +53,11 @@ This F052 evidence does not claim that the final reviewed branch head itself bec
 
 Accepted PR #12 closes the previously pending clean collector no-op gate and the newly exposed large-PR commit-history boundary. For source PRs above GitHub's 250-commit pull-list cap, the collector now reads exact paginated BASE...HEAD comparison commits and fails closed on count, compare identity, duplicate SHAs, source movement, or failure to terminate at the exact PR HEAD. The existing post-read PR identity fence remains authoritative for mixed-head rejection. For unchanged source snapshots, durable per-repository watermark/state no longer advances merely because wall-clock time passed; retaining the prior watermark is conservative because the next scan rechecks at least the same overlap interval. A fresh independent exact-head review accepted a physical two-pass live CAP/UV run in which the first pass converged stale local evidence and a later second pass changed zero snapshots, zero durable state bytes, and zero files while the remote intake branch remained unchanged.
 
-The current proposed bounded continuation covers UV PR #71 findings F053/F054 from the same original reviewed head `238870958fb88a291cdfa3e2345d8c5d84821534`. Its proposed evidence shape is deliberately narrower than a semantic “fixed” verdict: it binds each exact original Codex finding, the exact owner reply naming the full same-PR fix commit, reviewed→fix descent, fix-commit membership and changed-file inventory, and immutable implementation/regression content materially corresponding to the authenticated source Note. GitHub currently relocates those historical inline comments' mutable `commit_id` to the later final PR head while preserving `original_commit_id` on the reviewed head, so the historical identity is bound through the exact review submission plus `original_commit_id`; arbitrary relocation commits remain rejected. Later reviewer silence is not used as proof of repair.
+Accepted PR #11 establishes the bounded same-PR material-fix evidence shape for UV PR #71 findings F053/F054. Each entry binds the exact original Codex review/finding, exact owner reply naming the full same-PR fix commit, reviewed→fix descent, source-PR membership, exact fix-commit changed-file inventory, and immutable implementation/regression content materially corresponding to the authenticated source Note. GitHub may relocate an old inline review comment's mutable current `commit_id`; the accepted identity model binds historical authority through the exact review submission plus `original_commit_id` and allows a current relocation only to the original reviewed head or live final PR head. Later reviewer silence is not used as proof of repair, and `SUPPORTED_SAME_PR_MATERIAL_FIX_EVIDENCE` remains narrower than universal semantic correctness.
+
+The current proposed bounded continuation covers only UV PR #71 finding F058 from reviewed head `aafddd3b37476a65558d56755edd2ae440648b74`. Its authenticated Note says `Fixed with exact harness/store/planner authority checks.` The exact owner reply names code-bearing baseline `9af22cdcbb60501dca968fd10f12dc1d40ee6482`, but that named baseline is the end of a four-commit reviewed→baseline range rather than one implementation commit. The proposed `SUPPORTED_SAME_PR_MATERIAL_FIX_BASELINE_EVIDENCE` shape therefore binds the exact original Codex finding/thread, exact owner reply and baseline SHA, exact ordered reviewed→baseline commit sequence, exact range changed-file inventory, source-PR membership/ancestry, and immutable baseline-head implementation/regression content. It deliberately does not pretend the named baseline commit itself is the implementation commit and does not infer semantic correctness from owner prose, ancestry, tests, CI, or later reviewer silence.
+
+F057 is deliberately not included in this slice. Its authenticated Note spans both the complete typed-delegation matching fix and a later stronger namespace-reservation review cycle, so it remains pending until that multi-review progression can be reconciled without collapsing distinct reviewed heads into one claim.
 
 All accepted/proposed commentary slices explicitly report that global source-commentary reconciliation is incomplete. Other material source-commentary/disposition assertions still require governed reconciliation before baseline derivation.
 
@@ -90,7 +95,7 @@ GitHub-native Codex reviews, PR comments, review comments, commits, and owner ad
 
 Fresh ordinary-ChatGPT terminal reviews that existed only inside ChatGPT and were never durably exported into the consumer PR cannot be reconstructed from GitHub alone. Stage 2 must define/implement structured consumer evidence export so future fresh terminal results are also captured automatically. Historical chat-only gaps must remain explicit rather than being inferred from absence.
 
-Authenticated workbook commentary can contain material fix/adjudication hints. Structural commit reconciliation is not enough to promote those hints. Accepted F050/F051 and F052 plus the proposed F053/F054 slice demonstrate bounded patterns for preserving explicit unknowns, binding positive follow-up claims, binding exact-head clean re-review chains, and binding same-PR material fix implementation/regression evidence without silently converting any of them into universal semantic correctness. The rest of the material commentary corpus still needs the same treatment.
+Authenticated workbook commentary can contain material fix/adjudication hints. Structural commit reconciliation is not enough to promote those hints. Accepted F050/F051, F052, and F053/F054 plus the proposed F058 slice demonstrate bounded patterns for preserving explicit unknowns, binding positive follow-up claims, binding exact-head clean re-review chains, binding exact same-PR fix commits, and binding owner-declared multi-commit code-bearing baselines without silently converting any of them into universal semantic correctness. The rest of the material commentary corpus still needs the same treatment.
 
 ## Next canonical action
 

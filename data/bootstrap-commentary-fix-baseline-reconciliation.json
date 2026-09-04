@@ -1,0 +1,90 @@
+{
+  "schema_version": "bootstrap_commentary_fix_baseline_reconciliation_v1",
+  "authority": "governed_reconciliation_of_authenticated_source_commentary",
+  "source_artifact_sha256": "6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a",
+  "coverage": {
+    "kind": "bounded_same_pr_material_fix_baseline_slice",
+    "source_sheet": "Findings",
+    "finding_ids": [
+      "F058"
+    ],
+    "complete_for_scope": true,
+    "global_commentary_reconciliation_complete": false
+  },
+  "entries": [
+    {
+      "finding_id": "F058",
+      "repository": "BogdanAIP/uv-studio",
+      "pr": 71,
+      "reviewed_head": "aafddd3b37476a65558d56755edd2ae440648b74",
+      "source_sheet": "Findings",
+      "source_row": 59,
+      "source_confirmed": "CONFIRMED",
+      "source_note": "Fixed with exact harness/store/planner authority checks.",
+      "kind": "supported_same_pr_material_fix_baseline_evidence",
+      "github_evidence": {
+        "codex_review_id": 5043917353,
+        "codex_review_comment_id": 3874358367,
+        "owner_reply_comment_id": 3874612625
+      },
+      "baseline_evidence": {
+        "baseline_head": "9af22cdcbb60501dca968fd10f12dc1d40ee6482",
+        "reviewed_to_baseline_commits": [
+          "981bc1a1c4e98d4cb9d98bc9a18ef319c459be57",
+          "07d52d21d0dcd6a3e1c9ee4e2e36d34a1ed998be",
+          "57518f8fd28744a0c3b3b3051c7093edeba53a06",
+          "9af22cdcbb60501dca968fd10f12dc1d40ee6482"
+        ],
+        "changed_files": [
+          "docs/architecture/CURRENT_ARCHITECTURE.md",
+          "docs/architecture/UV_STUDIO_V2_ARCHITECTURE_MAP.md",
+          "tests/test_agent_stage17_result_integrity.py",
+          "uv_studio/agent/stage17_provenance.py"
+        ],
+        "content_assertions": [
+          {
+            "path": "uv_studio/agent/stage17_provenance.py",
+            "required_present": [
+              "if not isinstance(task_coordinator, AgentSubagentTaskCoordinator):",
+              "task_coordinator.harness is not harness",
+              "task_coordinator.project_store is not harness.project_store",
+              "getattr(task_coordinator.plans, \"project_store\", None)",
+              "getattr(task_coordinator.tasks, \"project_store\", None)",
+              "Stage 17 task_coordinator must share the exact AgentHarness and Project Store authority",
+              "coordinator_planner = task_coordinator.planner",
+              "getattr(coordinator_planner, \"harness\", None) is not harness",
+              "Stage 17 task_coordinator planner must share the exact AgentHarness authority",
+              "requested_planner is not None and coordinator_planner is not requested_planner",
+              "Stage 17 task_coordinator must share the exact AgentPlanner authority",
+              "kwargs[\"planner\"] = coordinator_planner"
+            ],
+            "required_absent": []
+          },
+          {
+            "path": "tests/test_agent_stage17_result_integrity.py",
+            "required_present": [
+              "test_injected_task_coordinator_must_share_exact_harness_authority",
+              "foreign_store = ProjectStore",
+              "project_id=self.project.project_id",
+              "share the exact AgentHarness and Project Store authority",
+              "test_same_harness_injected_task_coordinator_shares_exact_planner",
+              "self.assertIs(coordinator.planner, task_coordinator.planner)"
+            ],
+            "required_absent": []
+          }
+        ]
+      },
+      "reconciliation_status": "SUPPORTED_SAME_PR_MATERIAL_FIX_BASELINE_EVIDENCE",
+      "authority_limit": "The evidence proves that the exact owner-declared same-PR code-bearing baseline contains exact harness/store/planner authority checks and focused regression evidence materially corresponding to F058. The baseline spans multiple commits after the reviewed head, so this claim binds the exact reviewed-to-baseline commit sequence and exact range inventory rather than pretending the named baseline commit itself is the implementation commit. It does not infer universal semantic fix correctness from owner prose, ancestry, tests, CI, or later reviewer silence."
+    }
+  ],
+  "rules": [
+    "bootstrap-v1 source projections remain immutable",
+    "authenticated source commentary is not promoted to truth merely because it exists",
+    "same-PR material-fix baseline evidence must bind the exact original Codex finding, exact owner reply thread, exact declared baseline head, exact reviewed-to-baseline commit sequence, exact range changed-file inventory, and immutable baseline-head content",
+    "a code-bearing baseline may span multiple commits and must not be misrepresented as one exact fix commit",
+    "later reviewer silence is not accepted as proof that an old defect is fixed",
+    "material fix-baseline evidence does not by itself prove universal semantic correctness",
+    "unreconciled source commentary remains pending before baseline derivation"
+  ]
+}
