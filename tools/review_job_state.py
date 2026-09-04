@@ -68,6 +68,7 @@ RESULT_KEYS = {
     "status",
     "reported_findings",
 }
+RAW_RESULT_KEYS = {*RESULT_KEYS, "report"}
 
 LIVE_KEYS = {
     "repository_id",
@@ -248,6 +249,33 @@ def validate_result_identity(job: Mapping[str, Any], value: Mapping[str, Any]) -
     return result
 
 
+def parse_result_payload(
+    job: Mapping[str, Any], raw_result_text: str
+) -> tuple[dict[str, Any], str, str]:
+    """Derive reviewer metadata, digest, and report from one exact payload."""
+
+    current = validate_job(job)
+    raw_result_text = _string(raw_result_text, "raw_result_text")
+    encoded = raw_result_text.encode("utf-8")
+    if len(encoded) > MAX_RESULT_BYTES:
+        raise ReviewJobValidationError("raw result exceeds size limit")
+    try:
+        payload = json.loads(raw_result_text, object_pairs_hook=_reject_duplicate_keys)
+    except ReviewJobValidationError:
+        raise
+    except json.JSONDecodeError as exc:
+        raise ReviewJobValidationError(f"invalid REVIEW_RESULT_V1 JSON: {exc.msg}") from exc
+    if not isinstance(payload, Mapping):
+        raise ReviewJobValidationError("REVIEW_RESULT_V1 payload must be a JSON object")
+    _exact_keys(payload, RAW_RESULT_KEYS, "REVIEW_RESULT_V1")
+    report = payload["report"]
+    if not isinstance(report, str) or not report.strip():
+        raise ReviewJobValidationError("REVIEW_RESULT_V1 report must be non-empty text")
+    metadata = {key: payload[key] for key in RESULT_KEYS}
+    metadata = validate_result_identity(current, metadata)
+    return metadata, hashlib.sha256(encoded).hexdigest(), report
+
+
 def _validate_live(value: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         raise ReviewJobValidationError("live identity must be an object")
@@ -342,6 +370,14 @@ def validate_job(value: Mapping[str, Any]) -> dict[str, Any]:
         _match(job["outcome_code"], CODE, "outcome_code")
     if job["result_identity"] is not None:
         job["result_identity"] = validate_result_identity(job, job["result_identity"])
+
+    if (job["result_identity"] is None) != (job["result_sha256"] is None):
+        raise ReviewJobValidationError("reviewer result identity and digest must be present together")
+    if job["result_identity"] is not None:
+        if job["launch_claim_id"] is None or job["external_execution_sha256"] is None:
+            raise ReviewJobValidationError(
+                "captured reviewer result requires launch and external execution provenance"
+            )
 
     state = job["state"]
     before_result = {"REQUESTED", "VALIDATED", "LAUNCH_CLAIMED", "LAUNCH_UNKNOWN", "REVIEWING"}
@@ -595,15 +631,10 @@ def resolve_launch_absent(
 def capture_result(
     value: Mapping[str, Any],
     expected_revision: int,
-    result_identity: Mapping[str, Any],
     raw_result_text: str,
 ) -> dict[str, Any]:
     current = validate_job(value)
-    result = validate_result_identity(current, result_identity)
-    raw_result_text = _string(raw_result_text, "raw_result_text")
-    if len(raw_result_text.encode("utf-8")) > MAX_RESULT_BYTES:
-        raise ReviewJobValidationError("raw result exceeds size limit")
-    digest = _digest_text(raw_result_text)
+    result, digest, _ = parse_result_payload(current, raw_result_text)
 
     def apply(job: dict[str, Any]) -> bool:
         _state(job, {"REVIEWING", "RESULT_RECEIVED"}, "capture_result")

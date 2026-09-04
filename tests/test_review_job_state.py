@@ -74,6 +74,12 @@ def result_identity(job, *, validity="CURRENT", status="PASS", findings=0):
     }
 
 
+def raw_result(job, identity=None, report="Terminal review result."):
+    payload = dict(identity or result_identity(job))
+    payload["report"] = report
+    return json.dumps(payload, sort_keys=True, ensure_ascii=False) + "\n"
+
+
 def advance_to_reviewing():
     job = make_job()
     job = review_job.validate_request(job, 0, live())
@@ -87,10 +93,11 @@ def advance_to_reviewing():
     return job
 
 
-def advance_to_result_validated(*, raw="raw terminal result", identity=None, live_state=None):
+def advance_to_result_validated(*, raw=None, identity=None, live_state=None):
     job = advance_to_reviewing()
     identity = identity or result_identity(job)
-    job = review_job.capture_result(job, 3, identity, raw)
+    raw = raw if raw is not None else raw_result(job, identity)
+    job = review_job.capture_result(job, 3, raw)
     job = review_job.validate_captured_result(job, 4, live_state or live())
     return job
 
@@ -187,6 +194,55 @@ class ReviewJobPrivacyAndSerializationTests(unittest.TestCase):
         ):
             review_job.deserialize_job(duplicate)
 
+    def test_captured_result_provenance_is_required_after_recovery(self):
+        snapshots = []
+        job = advance_to_result_validated()
+        snapshots.append(job)
+        job = review_job.claim_publication(job, job["revision"], "publish-0001", live())
+        job = review_job.record_publication(
+            job,
+            job["revision"],
+            "publish-0001",
+            "https://github.com/BogdanAIP/MimiSeek-review/issues/200#issuecomment-2000",
+            job["result_sha256"],
+        )
+        snapshots.append(job)
+        job = review_job.claim_return_delivery(job, job["revision"], "return-0001", live())
+        snapshots.append(job)
+        job = review_job.mark_return_unknown(job, job["revision"], "return-0001")
+        snapshots.append(job)
+        job = review_job.record_return_delivered(
+            job,
+            job["revision"],
+            "return-0001",
+            "https://github.com/BogdanAIP/MimiSeek-review/issues/200#issuecomment-2001",
+        )
+        snapshots.append(job)
+        job = review_job.complete_job(job, job["revision"])
+        snapshots.append(job)
+
+        self.assertEqual(
+            [snapshot["state"] for snapshot in snapshots],
+            [
+                "RESULT_VALIDATED",
+                "RESULT_PERSISTED",
+                "RETURN_PENDING",
+                "RETURN_UNKNOWN",
+                "RETURN_DELIVERED",
+                "DONE",
+            ],
+        )
+        for snapshot in snapshots:
+            for field in ("launch_claim_id", "external_execution_sha256"):
+                with self.subTest(state=snapshot["state"], field=field):
+                    corrupted = json.loads(review_job.serialize_job(snapshot))
+                    corrupted[field] = None
+                    with self.assertRaisesRegex(
+                        review_job.ReviewJobValidationError,
+                        "provenance",
+                    ):
+                        review_job.deserialize_job(json.dumps(corrupted))
+
     def test_machine_schema_has_exact_public_property_set(self):
         schema = json.loads(
             (ROOT / "schemas" / "review-job-v1.schema.json").read_text(encoding="utf-8")
@@ -281,9 +337,10 @@ class ReviewJobResultTests(unittest.TestCase):
     def test_current_findings_requires_positive_count(self):
         job = advance_to_reviewing()
         finding_result = result_identity(job, status="FINDINGS", findings=2)
-        job = review_job.capture_result(job, 3, finding_result, "two findings")
+        job = review_job.capture_result(job, 3, raw_result(job, finding_result, "Two findings."))
         job = review_job.validate_captured_result(job, 4, live())
         self.assertEqual(job["outcome"], "FINDINGS")
+        self.assertEqual(job["result_identity"], finding_result)
 
         bad = result_identity(job, status="FINDINGS", findings=0)
         with self.assertRaises(review_job.ReviewJobValidationError):
@@ -293,7 +350,19 @@ class ReviewJobResultTests(unittest.TestCase):
         job = advance_to_reviewing()
         bad = result_identity(job, status="PASS", findings=1)
         with self.assertRaises(review_job.ReviewJobValidationError):
-            review_job.capture_result(job, 3, bad, "bad result")
+            review_job.capture_result(job, 3, raw_result(job, bad, "Bad result."))
+
+    def test_capture_has_no_separate_metadata_channel(self):
+        job = advance_to_reviewing()
+        pass_metadata = result_identity(job)
+        findings_metadata = result_identity(job, status="FINDINGS", findings=1)
+        findings_bytes = raw_result(job, findings_metadata, "One finding.")
+        with self.assertRaises(TypeError):
+            review_job.capture_result(job, 3, pass_metadata, findings_bytes)
+
+        captured = review_job.capture_result(job, 3, findings_bytes)
+        self.assertEqual(captured["result_identity"]["status"], "FINDINGS")
+        self.assertEqual(captured["result_identity"]["reported_findings"], 1)
 
     def test_wrong_job_head_policy_or_job_id_fails_closed(self):
         for field, value in (
@@ -306,17 +375,17 @@ class ReviewJobResultTests(unittest.TestCase):
                 identity = result_identity(job)
                 identity[field] = value
                 with self.assertRaises(review_job.ReviewJobIdentityError):
-                    review_job.capture_result(job, 3, identity, "wrong identity")
+                    review_job.capture_result(job, 3, raw_result(job, identity, "Wrong identity."))
 
     def test_repeated_identical_result_is_noop_conflicting_result_is_rejected(self):
         job = advance_to_reviewing()
         identity = result_identity(job)
-        captured = review_job.capture_result(job, 3, identity, "same result")
+        text = raw_result(job, identity, "Same result.")
+        captured = review_job.capture_result(job, 3, text)
         repeated = review_job.capture_result(
             captured,
             captured["revision"],
-            identity,
-            "same result",
+            text,
         )
         self.assertEqual(repeated, captured)
 
@@ -324,14 +393,13 @@ class ReviewJobResultTests(unittest.TestCase):
             review_job.capture_result(
                 captured,
                 captured["revision"],
-                identity,
-                "different bytes",
+                raw_result(job, identity, "Different exact bytes."),
             )
 
     def test_live_head_move_after_pass_forces_stale(self):
         job = advance_to_reviewing()
         identity = result_identity(job)
-        job = review_job.capture_result(job, 3, identity, "pass on old head")
+        job = review_job.capture_result(job, 3, raw_result(job, identity, "Pass on old head."))
         job = review_job.validate_captured_result(job, 4, live(head=MOVED_HEAD))
         self.assertEqual(job["outcome"], "STALE")
         self.assertEqual(job["outcome_code"], "SOURCE_IDENTITY_MOVED_AFTER_RESULT")
@@ -349,7 +417,7 @@ class ReviewJobResultTests(unittest.TestCase):
                     status=status,
                     findings=0,
                 )
-                job = review_job.capture_result(job, 3, identity, validity)
+                job = review_job.capture_result(job, 3, raw_result(job, identity, validity))
                 job = review_job.validate_captured_result(job, 4, live())
                 self.assertEqual(job["outcome"], validity)
                 self.assertEqual(job["outcome_code"], code)
