@@ -94,7 +94,7 @@ Failure classes must generalize the mechanism rather than memorize one filename,
 
 `repository_search.status=BOUNDED_FOLLOW_UP` means closure is intentionally incomplete and `follow_up_refs` identify durable work that must finish it. A bounded follow-up must not be represented as complete merely because CI can validate the registry shape.
 
-Search declarations, `discovered_instances`, executable `guard_refs`, and `regression_refs` are repository-authority claims. The executable validator must resolve local repository-file references only against tracked regular files in the Git working tree/index. `.git` metadata, untracked checkout files, tracked symlinks, submodules, or paths resolving outside repository authority do not satisfy these claims.
+Search declarations, `discovered_instances`, executable `guard_refs`, and `regression_refs` are repository-authority claims. The executable validator must resolve local repository-file references only against tracked regular files in the exact checked-out Git `HEAD` tree. `.git` metadata, untracked or staged-only checkout files, tracked symlinks, submodules, or paths resolving outside repository authority do not satisfy these claims.
 
 CI can prove that declared machine references satisfy this bounded contract; it cannot by itself prove that a semantic repository-wide search was complete or that the failure-class mapping is correct. Fresh semantic review remains responsible for those claims.
 
@@ -133,6 +133,19 @@ When a fresh reviewer finds a material MimiSeek defect, development adjudication
 Known patterns supplement rather than replace open-ended semantic review. Absence of a matching pattern is never proof that a change is safe.
 
 Any repeat-prevention remediation that moves the PR HEAD has the same freshness consequence as any other consequence-bearing fix: previous terminal exact-head review evidence becomes stale and a fresh independent review is required.
+
+### Repository write hygiene
+
+A repository Contents write is consequence-bearing because it can move the exact reviewed HEAD even when the intended task is only housekeeping.
+
+Before a ChatGPT-driven MimiSeek repository file create/update:
+
+1. classify whether the intended effect is a repository byte change or only PR metadata/comment/thread housekeeping;
+2. use PR/comment/thread actions for non-file housekeeping rather than a repository Contents write;
+3. for replacement writes, fetch the current blob and compare the complete intended bytes; if they are byte-identical, do not invoke the Contents update action;
+4. when a repository content write is intentional, expect HEAD to move and treat previous exact-head CI/review evidence as stale.
+
+A byte-identical Contents write that nevertheless moves HEAD is a development process incident under `workflow.noop_head_mutation`. If it occurs, preserve the incident evidence and apply the normal repeat-prevention closure. This tool-selection boundary is currently external to repository code/CI, so `MANUAL_ONLY` is acceptable only while the execution substrate provides no machine-enforceable write-intent/no-op fence.
 
 ## Track R review-job development versus consumer workflow
 
@@ -193,7 +206,7 @@ PROMOTE only: global stable transition
 per-consumer live safe-update evaluation
     ↓
 SAFE_TO_UPDATE → auditable update change
-DEFER_*       → leave consumer pinned and persist distribution state
+DEFER_*       → leave consumer pinned
 ```
 
 Every real `mimiseek-review-update` invocation uses a new independent ChatGPT chat. A later deferred-distribution reconciliation is a separate fresh update invocation that reconstructs the already-authoritatively-promoted current stable and durable `PENDING_DISTRIBUTION` state; it does not create or re-promote a candidate.
