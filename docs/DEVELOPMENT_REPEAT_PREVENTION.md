@@ -26,7 +26,7 @@ Executable registry validator:
 
 `tools/validate_development_failure_patterns.py`
 
-The validator checks machine shape and local repository references. Current path authority is intentionally Git-bound: prevention refs, discovered instances, and search-scope matches resolve only to tracked regular files from the Git index; `.git` metadata, untracked checkout files, and tracked symlinks do not count as repository artifacts.
+The validator checks machine shape and local repository references. Current path authority is intentionally Git-bound: prevention refs, discovered instances, and search-scope matches resolve only to tracked regular files from the exact checked-out `HEAD` tree; `.git` metadata, untracked or staged-only checkout files, and tracked symlinks do not count as repository artifacts.
 
 ## Scope boundary
 
@@ -44,7 +44,7 @@ Any future use of these records as reviewer-learning input needs separately acce
 
 ## Current pattern inventory
 
-The initial accepted target state of PR #21 contains three self-development failure classes:
+The current PR #21 target state contains three self-development failure classes:
 
 - `DFP-0001` — `evidence.semantic_binding_missing`: claim-bearing free-form evidence can be identity-authenticated without binding the actual semantic body. Its repository search is currently `BOUNDED_FOLLOW_UP` because PR #21 found additional same-class commentary verifiers; durable closure is tracked in issue #22.
 - `DFP-0002` — `repository.reference_not_git_bound`: checkout filesystem existence can be mistaken for durable tracked repository authority.
@@ -59,7 +59,7 @@ The original PR #20 remediation hardened `tools/verify_bootstrap_commentary_auth
 - `tools/verify_bootstrap_commentary_fix_baseline_reconciliation.py`;
 - `tools/verify_bootstrap_commentary_fix_evidence_reconciliation.py`.
 
-Issue #22 records the bounded follow-up. The registry therefore exposes that incomplete search state instead of claiming repository-wide closure prematurely.
+Issue #22 records the bounded follow-up. The registry therefore exposes that incomplete search state instead of claiming repository-wide closure prematurely. Issue #22 must be resolved through a later accepted repository change before `DFP-0001.repository_search.status` can return to `COMPLETED`; the issue's mere existence is not evidence that the remaining verifiers are safe.
 
 ## Relationship to ordinary acceptance
 
