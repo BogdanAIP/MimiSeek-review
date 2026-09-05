@@ -41,11 +41,26 @@ def git(*args: str, cwd: Path) -> None:
     )
 
 
+def commit_fixture(root: Path, message: str) -> None:
+    git(
+        "-c",
+        "user.name=MimiSeek Test",
+        "-c",
+        "user.email=mimiseek-test@example.invalid",
+        "commit",
+        "-q",
+        "-m",
+        message,
+        cwd=root,
+    )
+
+
 def make_git_fixture(root: Path) -> None:
     git("init", "-q", cwd=root)
     for name in ("tracked.py", "guard.py", "regression.py"):
         (root / name).write_text(f"# {name}\n", encoding="utf-8")
     git("add", "tracked.py", "guard.py", "regression.py", cwd=root)
+    commit_fixture(root, "fixture")
 
 
 def fixture_pattern() -> dict:
@@ -116,7 +131,7 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         pattern["prevention"]["guard_refs"] = ["tools/does-not-exist.py"]
         with self.assertRaisesRegex(
             guard.DevelopmentFailurePatternError,
-            "not a tracked regular repository file",
+            "not a tracked regular file in exact HEAD",
         ):
             guard.validate_pattern(pattern, ROOT, "pattern")
 
@@ -172,7 +187,7 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         pattern["repository_search"]["searched_scope"] = ["no/such/family/*.py"]
         with self.assertRaisesRegex(
             guard.DevelopmentFailurePatternError,
-            "matches no tracked regular repository files",
+            "matches no tracked regular files in exact HEAD",
         ):
             guard.validate_pattern(pattern, ROOT, "pattern")
 
@@ -197,7 +212,21 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
             pattern["prevention"]["guard_refs"] = ["untracked.py"]
             with self.assertRaisesRegex(
                 guard.DevelopmentFailurePatternError,
-                "not a tracked regular repository file",
+                "not a tracked regular file in exact HEAD",
+            ):
+                guard.validate_pattern(pattern, root, "pattern")
+
+    def test_staged_but_uncommitted_file_cannot_satisfy_prevention_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            make_git_fixture(root)
+            (root / "staged.py").write_text("# staged only\n", encoding="utf-8")
+            git("add", "staged.py", cwd=root)
+            pattern = fixture_pattern()
+            pattern["prevention"]["guard_refs"] = ["staged.py"]
+            with self.assertRaisesRegex(
+                guard.DevelopmentFailurePatternError,
+                "not a tracked regular file in exact HEAD",
             ):
                 guard.validate_pattern(pattern, root, "pattern")
 
@@ -213,11 +242,12 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
             except (OSError, NotImplementedError) as exc:
                 self.skipTest(f"symlink unsupported: {exc}")
             git("add", "escape.py", cwd=root)
+            commit_fixture(root, "tracked symlink")
             pattern = fixture_pattern()
             pattern["prevention"]["guard_refs"] = ["escape.py"]
             with self.assertRaisesRegex(
                 guard.DevelopmentFailurePatternError,
-                "not a tracked regular repository file",
+                "not a tracked regular file in exact HEAD",
             ):
                 guard.validate_pattern(pattern, root, "pattern")
 
@@ -234,11 +264,12 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
             except (OSError, NotImplementedError) as exc:
                 self.skipTest(f"symlink unsupported: {exc}")
             git("add", "escape.py", cwd=root)
+            commit_fixture(root, "tracked symlink")
 
             for scope, expected in (
                 (".git/*", "must not reference .git metadata"),
-                ("untracked*.py", "matches no tracked regular repository files"),
-                ("escape*.py", "matches no tracked regular repository files"),
+                ("untracked*.py", "matches no tracked regular files in exact HEAD"),
+                ("escape*.py", "matches no tracked regular files in exact HEAD"),
             ):
                 with self.subTest(scope=scope):
                     pattern = fixture_pattern()
