@@ -4,7 +4,11 @@
 
 Enable MimiSeek Review itself to be developed by ChatGPT across many disposable chats without depending on previous-chat memory.
 
+Canonical owner for the MimiSeek cross-chat development process: this document.
+
 This document governs development of the MimiSeek improvement system. It does not own the ordinary review/fix/merge loop of CAP, UV, or other consumer projects. Under the accepted narrow coordination boundary, MimiSeek may eventually coordinate an explicitly requested independent review job, but consumer project authority and consequences remain outside MimiSeek.
+
+Supporting documents may explain or index this process, but they do not independently define normative cross-chat development rules. In particular, `docs/DEVELOPMENT_REPEAT_PREVENTION.md` is explanatory reference material only.
 
 ## Starting a new development chat
 
@@ -17,7 +21,13 @@ Follow `AGENTS.md`, then independently resolve live GitHub state. A new chat mus
 
 If those answers cannot be reconstructed from the repository, fix the canonical owners rather than creating a per-chat handoff note.
 
-Before material implementation, validate and inspect active self-development repeat-prevention patterns according to `docs/DEVELOPMENT_REPEAT_PREVENTION.md`. Known patterns are a risk scaffold, not an exhaustive checklist and not permission to skip open-ended engineering/review.
+Before material MimiSeek implementation, validate and inspect active self-development failure patterns:
+
+```text
+python tools/validate_development_failure_patterns.py --list-active
+```
+
+Compare their trigger conditions/applicable scope to the planned changed concepts. Known patterns are a risk scaffold, not an exhaustive checklist and not permission to skip open-ended engineering/review. A `BOUNDED_FOLLOW_UP` active pattern is unresolved process debt and its durable follow-up must remain visible; do not silently reinterpret it as complete.
 
 ## Normal repository implementation cycle
 
@@ -55,32 +65,74 @@ Consumer repositories may use different local review sequences. MimiSeek may con
 
 ## Development repeat prevention
 
-MimiSeek self-development uses the cross-cutting closed-loop process defined in `docs/DEVELOPMENT_REPEAT_PREVENTION.md` and the machine registry `data/development-failure-patterns.jsonl`.
+This section is the sole normative owner of MimiSeek self-development repeat prevention. Machine state lives in `data/development-failure-patterns.jsonl`; its schema identity is `DEVELOPMENT_FAILURE_PATTERN_V1`; the executable local validator is `tools/validate_development_failure_patterns.py`.
 
-Before material implementation, the development chat must run or otherwise equivalently inspect:
+The registry is self-development state only. It does not instantiate future reviewer-learning `DEFECT_PATTERN_V1`, consumer adjudication authority, Stage 4 learning events, baseline/candidate/stable reviewer state, distribution state, or `REVIEW_JOB_V1` / `REVIEW_RESULT_V1` semantics.
 
-```text
-python tools/validate_development_failure_patterns.py --list-active
-```
+### Eligible confirmed defects
 
-and compare active trigger conditions/applicable scope to the planned changed concepts.
+After this control is accepted, a material MimiSeek development defect is eligible for durable repeat-prevention closure only when repository-governed evidence establishes it strongly enough to remediate, for example an actionable fresh independent review finding or a reproducible durable CI/runtime incident with established root cause.
 
-After a material MimiSeek defect is confirmed and remediated, the remediation is not process-complete until the development workflow has:
+Rejected or unresolved reviewer assertions are not automatically failure patterns. Non-material editorial corrections need no pattern unless they expose a broader guardable mechanism.
+
+### Required closure
+
+After an eligible material defect is confirmed and remediated, the remediation is not process-complete until the development workflow has:
 
 1. identified the root cause below the immediate symptom;
-2. mapped the defect to an existing `failure_class` or created a new governed class;
-3. searched the applicable repository surface for other current instances of the same mechanism;
-4. fixed discovered instances or recorded bounded durable follow-up;
-5. added/strengthened executable prevention plus regression coverage when feasible, or recorded an explicit `MANUAL_ONLY` reason;
-6. recorded the origin/repeat/related occurrence in the durable registry.
+2. mapped the defect to an existing `failure_class` or created a new governed class at mechanism level;
+3. searched the applicable repository surface for other current instances of that same mechanism;
+4. fixed discovered instances or recorded a durable bounded follow-up;
+5. added or strengthened executable prevention plus regression/invariant coverage where feasible, otherwise recorded an explicit `MANUAL_ONLY` reason;
+6. recorded the durable origin/repeat/related occurrence in the registry when the occurrence model applies.
 
-If the mechanism already exists as an active failure class, do not create a duplicate pattern. Record a `REPEAT` occurrence and classify why the previous prevention failed (`NO_GUARD`, `GUARD_TOO_NARROW`, `GUARD_NOT_IN_CI`, `PATTERN_NOT_RETRIEVED`, `SCOPE_WRONG`, `NEW_VARIANT`, or `UNKNOWN_PENDING_ANALYSIS`).
+Failure classes must generalize the mechanism rather than memorize one filename, SHA, comment ID, or exact old answer. Conversely, materially different mechanisms must not be collapsed solely to avoid creating a new class.
 
-A repeat is therefore both a new code/process defect and evidence that the prior prevention loop was insufficient. The prevention mechanism itself must be strengthened when supported by the evidence.
+### Repository-wide search states
 
-Rejected/unresolved review assertions are not automatically failure patterns. The registry is MimiSeek self-development state only and does not instantiate future reviewer-learning `DEFECT_PATTERN_V1`, consumer adjudication authority, learning events, baseline/candidate/stable state, or distribution authority.
+`repository_search.status=COMPLETED` means the declared applicable search scope has been searched at the failure-mechanism level and no unresolved same-class current instance remains.
 
-Any repeat-prevention fix that moves the PR HEAD has the same freshness consequence as any other fix: prior terminal exact-head review evidence becomes stale and a fresh review is required.
+`repository_search.status=BOUNDED_FOLLOW_UP` means closure is intentionally incomplete and `follow_up_refs` identify durable work that must finish it. A bounded follow-up must not be represented as complete merely because CI can validate the registry shape.
+
+Search declarations, `discovered_instances`, executable `guard_refs`, and `regression_refs` are repository-authority claims. The executable validator must resolve local repository-file references only against tracked regular files in the Git working tree/index. `.git` metadata, untracked checkout files, tracked symlinks, submodules, or paths resolving outside repository authority do not satisfy these claims.
+
+CI can prove that declared machine references satisfy this bounded contract; it cannot by itself prove that a semantic repository-wide search was complete or that the failure-class mapping is correct. Fresh semantic review remains responsible for those claims.
+
+### Prevention
+
+Prefer the strongest feasible executable prevention: schema/state invariant, safe shared abstraction, regression/invariant test, static repository guard, CI verifier, or fail-closed identity/authority check.
+
+`prevention.kind=EXECUTABLE` requires at least one tracked regular-file guard reference and at least one tracked regular-file regression reference.
+
+`prevention.kind=MANUAL_ONLY` is exceptional. It carries no executable guard/regression references and requires a concrete explanation of why automation is genuinely unavailable or disproportionate. It is not a shortcut for skipping a feasible protection.
+
+### Repeat identity
+
+One stable `failure_class` has one pattern identity. Do not create a second pattern merely because the same established mechanism appears in another file or PR.
+
+The first occurrence is `ORIGIN`. A later established same-class defect is `REPEAT`; a materially connected but not-established-same-class occurrence may be `RELATED`.
+
+A `REPEAT` must classify why prior prevention did not stop recurrence using one of:
+
+- `NO_GUARD`;
+- `GUARD_TOO_NARROW`;
+- `GUARD_NOT_IN_CI`;
+- `PATTERN_NOT_RETRIEVED`;
+- `SCOPE_WRONG`;
+- `NEW_VARIANT`;
+- `UNKNOWN_PENDING_ANALYSIS`.
+
+`UNKNOWN_PENDING_ANALYSIS` is a temporary fail-closed classification, not permission to finish remediation without determining whether the prevention loop itself needs strengthening.
+
+A repeat is therefore both a new code/process defect and evidence that the prior prevention loop was insufficient.
+
+### Review-time use
+
+When a fresh reviewer finds a material MimiSeek defect, development adjudication must check whether an active `failure_class` already describes the mechanism. If yes, determine whether the occurrence is `REPEAT` or only `RELATED`, why prior prevention/retrieval/scope did not catch it, and whether the prevention needs strengthening repository-wide.
+
+Known patterns supplement rather than replace open-ended semantic review. Absence of a matching pattern is never proof that a change is safe.
+
+Any repeat-prevention remediation that moves the PR HEAD has the same freshness consequence as any other consequence-bearing fix: previous terminal exact-head review evidence becomes stale and a fresh independent review is required.
 
 ## Track R review-job development versus consumer workflow
 
