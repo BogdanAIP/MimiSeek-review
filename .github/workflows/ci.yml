@@ -130,3 +130,9 @@ jobs:
           GITHUB_API_URL: ${{ github.api_url }}
           MIMISEEK_GITHUB_TOKEN: ${{ steps.source-token.outputs.token }}
         run: python tools/verify_bootstrap_commentary_fix_baseline_reconciliation.py
+
+      - name: Verify bounded bootstrap multi-review progression reconciliation
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          MIMISEEK_GITHUB_TOKEN: ${{ steps.source-token.outputs.token }}
+        run: python tools/verify_bootstrap_commentary_multi_review_progression_reconciliation.py
