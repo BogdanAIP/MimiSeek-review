@@ -47,7 +47,7 @@ The following remain accepted constraints rather than open research questions:
 
 ## 2. Why one unified plan is needed
 
-The earlier research addressed three questions:
+The earlier research addressed three questions.
 
 ### PR #6 — context and capabilities
 
@@ -464,9 +464,15 @@ The surface set must be derived from the concrete target rather than a universal
 
 ### 6.4 Candidate `FINDING_V1`
 
+A finding must be namespaced by immutable review identity. A bare local token such as `F001` is not globally unique and must never be used alone as canonical machine identity.
+
+Research-only candidate:
+
 ```text
 FINDING_V1
 
+review_identity
+finding_ref
 finding_id
 severity
 category
@@ -486,6 +492,14 @@ runtime_evidence[]
 uncertainty
 falsification_summary
 ```
+
+Identity rules for later schema work:
+
+- `review_identity` binds the finding to one immutable review execution/result identity;
+- `finding_id` may remain a short local display identifier such as `F001`, but is unique only within that immutable review identity;
+- `finding_ref` is the globally unambiguous immutable reference used by ingestion, adjudication links, remediation links, correlation, falsification, and orchestration;
+- an implementation may derive `finding_ref` from a governed composite such as `(review_identity, finding_id)` or use another globally unique immutable representation, but the exact encoding is future schema work;
+- historical IDs in canonical learning data and local IDs emitted by other review runs must never alias merely because their short labels match.
 
 Do not store private chain-of-thought. Store bounded rationale and evidence sufficient to reconstruct the claim.
 
@@ -523,16 +537,18 @@ Question:
 
 > What happened to each finding across adjudication, remediation, new HEADs, and re-review?
 
-### 7.1 Separate authorities
+### 7.1 Separate authorities and namespaces
 
-Do not collapse reviewer assertion, consumer adjudication, and remediation evidence into one state machine.
+Do not collapse reviewer assertion, falsification/challenge outcome, consumer adjudication, and remediation evidence into one state machine or one shared enum namespace.
 
-Reviewer/challenge assertion concepts may include:
+Primary-review assertion state and candidate challenge state are distinct concepts. A future machine schema should use explicit state type/authority and preferably namespaced enum values.
+
+Illustrative challenge outcomes:
 
 ```text
-SUPPORTED
-REJECTED
-UNRESOLVED
+CHALLENGE_SUPPORTED
+CHALLENGE_REFUTED
+CHALLENGE_UNRESOLVED
 ```
 
 Consumer-governed disposition may include:
@@ -553,30 +569,33 @@ REREVIEW_REQUIRED
 NO_LONGER_REPRODUCED
 ```
 
-MimiSeek must not declare a consumer-owned semantic defect `FIXED` merely because implementation changed or a reviewer stopped reproducing it.
+A challenge outcome must not be confused with consumer adjudication merely because both describe disagreement. MimiSeek must not declare a consumer-owned semantic defect `FIXED` merely because implementation changed or a reviewer stopped reproducing it.
 
 ### 7.2 Finding history across heads
 
 The system should be able to preserve chains such as:
 
 ```text
-HEAD A
-  F001 reported
+review A / HEAD A
+  finding_ref = <review-A>::F001
+  local finding_id = F001
   consumer disposition = CONFIRMED
 
 HEAD B
   remediation evidence exists
   prior exact-head review is stale for acceptance
 
-fresh review of HEAD B
-  F001 no longer reproduced
+review B / HEAD B
+  prior finding_ref no longer reproduced
 ```
 
-Review of HEAD A never accepts HEAD B.
+Review of HEAD A never accepts HEAD B. Reusing local token `F001` in another review does not imply identity or same root cause.
 
 ### 7.3 Finding correlation
 
 Long-lived PRs need help recognizing potentially related findings across cycles.
+
+Correlation operates on immutable `finding_ref` values, not bare local IDs.
 
 A future `finding_fingerprint` may use normalized hints such as:
 
@@ -747,20 +766,20 @@ Decision: `ACCEPT_NARROW | DEFER | REJECT`.
 
 Question:
 
-> After a strong single-reviewer baseline exists, can targeted challenges and additional asymmetric passes improve quality without changing atomic V1 semantics, using voting, or creating unbounded recursion?
+> After a strong single-reviewer baseline exists and pattern/counterexample research has been evaluated, can targeted challenges and additional asymmetric passes improve quality without changing atomic V1 semantics, using voting, or creating unbounded recursion?
 
 ### 9.1 Finding falsification concept
 
-A consequential candidate finding may receive an adversarial challenge:
+A consequential candidate finding identified by immutable `finding_ref` may receive an adversarial challenge:
 
-> Try to prove F001 false. Find the strongest valid path under which the claimed invariant is actually preserved.
+> Try to prove this exact finding false. Find the strongest valid path under which the claimed invariant is actually preserved.
 
-Candidate-level challenge outcomes may conceptually be:
+Illustrative candidate-level challenge outcomes:
 
 ```text
-SUPPORTED
-REJECTED
-UNRESOLVED
+CHALLENGE_SUPPORTED
+CHALLENGE_REFUTED
+CHALLENGE_UNRESOLVED
 ```
 
 The falsifier is **not** asked to review the entire PR again and is not asked to agree with the primary reviewer.
@@ -797,15 +816,7 @@ ABSTAIN
 
 This research does **not** reinterpret those values as candidate-finding challenge outcomes.
 
-A falsifier has a narrower semantic task. Therefore:
-
-```text
-SUPPORTED
-REJECTED
-UNRESOLVED
-```
-
-are not valid substitutes for current `REVIEW_RESULT_V1` terminal semantics.
+A falsifier has a narrower semantic task. Therefore `CHALLENGE_SUPPORTED`, `CHALLENGE_REFUTED`, and `CHALLENGE_UNRESOLVED` are not valid substitutes for current `REVIEW_RESULT_V1` terminal semantics.
 
 Likewise, putting an orchestration-critical falsification outcome only into free-form `report` text would not provide a typed machine-verifiable result contract for future aggregation.
 
@@ -826,12 +837,13 @@ Names above are illustrative, not selected architecture.
 
 Any accepted design must preserve at least:
 
-- immutable review-target and candidate-finding identity;
+- immutable review-target identity;
+- immutable candidate-finding `finding_ref` identity;
 - immutable strategy/role identity where applicable;
 - one subordinate execution -> one typed correlated result;
 - durable/recoverable result identity where required;
 - fail-closed malformed, stale, wrong-finding, wrong-target, or conflicting results;
-- candidate-level challenge state remaining separate from consumer adjudication;
+- challenge state remaining separate from consumer adjudication;
 - no silent reinterpretation of current `REVIEW_JOB_V1` / `REVIEW_RESULT_V1`.
 
 Until that contract is separately accepted and implemented:
@@ -858,7 +870,7 @@ review_jobs:
   J3 gap/coverage whole-review pass
 
 optional_typed_challenges:
-  C1 falsify F001
+  C1 falsify <finding_ref>
 
 aggregation_policy
 final_procedure_state
@@ -889,7 +901,7 @@ max_targeted_passes_per_surface = 1
 max_falsification_attempts_per_finding = 1
 ```
 
-Persistent material disagreement becomes `UNRESOLVED` rather than recursive worker spawning.
+Persistent material disagreement becomes an explicitly typed unresolved state rather than recursive worker spawning.
 
 If unresolved uncertainty is release-critical, consumer governing policy may require a terminal `ABSTAIN` from the applicable whole-review acceptance path. The orchestrator itself does not invent consumer acceptance consequences.
 
@@ -931,7 +943,7 @@ Decision: `ACCEPT_NARROW | DEFER | REJECT`.
 
 Question:
 
-> After a strong single-reviewer baseline exists and subordinate result contracts are valid, does a higher `REVIEW_RUN_V1` with asymmetric roles materially improve quality per unit cost/latency?
+> After a strong single-reviewer baseline exists, K1 has established the role of reusable adversarial knowledge, and subordinate result contracts are valid, does a higher `REVIEW_RUN_V1` with asymmetric roles materially improve quality per unit cost/latency?
 
 Decision: `ACCEPT_NARROW | DEFER | REJECT`.
 
@@ -983,6 +995,8 @@ CRITICAL
   multiple distinct bounded semantic paths
   explicit coverage closure or unresolved outcome
 ```
+
+These categories are semantic-risk categories, not file-type categories. An authority/security change cannot become `LOW` merely because it is documentation-only.
 
 This must be measured rather than accepted because the categories sound reasonable.
 
@@ -1222,30 +1236,11 @@ If Q2 is accepted:
 - finding lifecycle;
 - consumer disposition links;
 - remediation/re-review relations;
+- globally unambiguous `finding_ref` plus local finding IDs;
 - correlation hints;
 - false-positive/miss causal classification.
 
-### Phase 5 — falsification research and contract
-
-Measure falsification value on research-only typed artifacts where appropriate.
-
-For production use, Q3 also requires a separately accepted typed falsification execution/result contract.
-
-Do not encode:
-
-```text
-SUPPORTED / REJECTED / UNRESOLVED
-```
-
-as:
-
-```text
-PASS / FINDINGS / ABSTAIN
-```
-
-and do not launch a falsifier as ordinary current `REVIEW_JOB_V1` merely to reuse existing transport.
-
-### Phase 6 — defect-pattern and counterexample memory
+### Phase 5 — defect-pattern and counterexample memory
 
 If K1 is accepted:
 
@@ -1253,13 +1248,22 @@ If K1 is accepted:
 - attach adversarial scenarios without expected-answer leakage;
 - evaluate on replay/holdout evidence.
 
+### Phase 6 — falsification research and contract
+
+After Phase 5 establishes the reusable adversarial-knowledge layer, measure falsification value on research-only typed artifacts where appropriate.
+
+For production use, Q3 also requires a separately accepted typed falsification execution/result contract.
+
+Do not encode challenge states as current whole-review terminal states, and do not launch a falsifier as ordinary current `REVIEW_JOB_V1` merely to reuse existing transport.
+
 ### Phase 7 — review-run orchestration
 
 Only after:
 
 - E0 passes;
 - a strong single-reviewer path is established;
-- the relevant semantic-observability layers are accepted where needed; and
+- the relevant semantic-observability layers are accepted where needed;
+- K1 has resolved the reusable pattern/counterexample layer as required by this dependency order; and
 - every subordinate execution role has an accepted compatible typed result contract.
 
 Then S1 may evaluate:
@@ -1311,10 +1315,12 @@ Expected relationships:
 - silent context truncation is incompatible with authoritative PASS;
 - graph/search/index results are retrieval mechanisms, not source truth;
 - candidate findings should be evidence-backed and falsifiable;
+- machine finding identity must be globally unambiguous through immutable review scoping rather than bare local IDs;
 - false positives are first-class quality failures;
 - reviewer quality and execution-transport reliability must be measured separately;
 - one current review job remains one fresh whole-review execution/result;
 - current `REVIEW_RESULT_V1` semantics are not repurposed for narrower challenge roles;
+- challenge-state and consumer-adjudication namespaces remain distinct;
 - reviewer agreement is not ground truth;
 - context strategy, reviewer methodology, and orchestration strategy should be independently identifiable.
 
@@ -1325,9 +1331,10 @@ Expected relationships:
 - value/need of structural graph/index;
 - value/need of bounded runnable tests/static tools;
 - exact `REVIEW_PLAN`, `REVIEW_COVERAGE`, and `FINDING_V1` schemas;
+- exact encoding/derivation of globally unique `finding_ref`;
 - exact finding correlation/fingerprint algorithm;
 - falsification trigger policy;
-- **exact typed falsification execution/result contract and its relationship to current `REVIEW_JOB_V1` / `REVIEW_RESULT_V1`;**
+- exact typed falsification execution/result contract and its relationship to current `REVIEW_JOB_V1` / `REVIEW_RESULT_V1`;
 - exact defect-pattern representation;
 - whether/when `REVIEW_RUN_V1` materially improves quality;
 - which subordinate roles are compatible with current review-job semantics and which require separate typed contracts;
@@ -1342,7 +1349,8 @@ This research plan does not authorize:
 - changing current `REVIEW_JOB_V1` semantics;
 - changing current `REVIEW_RESULT_V1` terminal semantics;
 - turning one review job into a worker/result/voting pool;
-- encoding candidate-level `SUPPORTED / REJECTED / UNRESOLVED` as current `REVIEW_RESULT_V1` `PASS / FINDINGS / ABSTAIN`;
+- using a bare local `finding_id` such as `F001` as global machine identity across independent reviews;
+- encoding candidate-level challenge states as current `REVIEW_RESULT_V1` `PASS / FINDINGS / ABSTAIN`;
 - hiding an orchestration-critical falsification result only in free-form report text;
 - launching an independent falsifier as ordinary `REVIEW_JOB_V1` before a compatible typed challenge contract is separately accepted;
 - a universal fixed semantic checklist;
