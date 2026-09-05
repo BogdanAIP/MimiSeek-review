@@ -257,6 +257,10 @@ def validate_pattern(value: Any, root: Path, label: str, *, tracked: set[str] | 
     pending_unknown = [o for o in occurrences if o["relation"] == "REPEAT" and o["prevention_failure_reason"] == "UNKNOWN_PENDING_ANALYSIS"]
     if pending_unknown and search["status"] != "BOUNDED_FOLLOW_UP":
         raise DevelopmentFailurePatternError(f"{label} UNKNOWN_PENDING_ANALYSIS requires BOUNDED_FOLLOW_UP")
+    if pattern["status"] == "RETIRED" and (search["status"] == "BOUNDED_FOLLOW_UP" or pending_unknown):
+        raise DevelopmentFailurePatternError(
+            f"{label} RETIRED pattern cannot hide unresolved follow-up or pending repeat analysis"
+        )
     return pattern
 
 
