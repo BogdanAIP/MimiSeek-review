@@ -112,7 +112,8 @@
                 "_RESERVED_ACTION_OUTPUT_FIELDS",
                 "_RESERVED_SKILL_OUTPUT_FIELDS",
                 "def _validate_reserved_proposal_outputs",
-                "planned canonical output collides with the reserved functional-subagent delegation namespace",
+                "planned canonical output collides with the reserved",
+                "functional-subagent delegation namespace",
                 "_validate_reserved_proposal_outputs(base.proposals)",
                 "_validate_reserved_proposal_outputs(result.proposals)"
               ],
