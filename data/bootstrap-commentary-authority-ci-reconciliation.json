@@ -62,7 +62,8 @@
             "path": "docs/architecture/UV_STUDIO_V2_ARCHITECTURE_MAP.md",
             "required_present": [
               "active-review third Agent layer",
-              "Stage 17: functional Subagents                     [active review]",
+              "Stage 17: functional Subagents",
+              "[active review]",
               "## 8. Agent Harness layer 3 — Stage 17 ACTIVE REVIEW",
               "Classification: **ACTIVE REVIEW**, not `NEXT` and not yet merged."
             ],
