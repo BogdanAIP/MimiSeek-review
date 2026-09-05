@@ -1,0 +1,161 @@
+{
+  "schema_version": "bootstrap_commentary_authority_ci_reconciliation_v1",
+  "authority": "governed_reconciliation_of_authenticated_source_commentary",
+  "source_artifact_sha256": "6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a",
+  "coverage": {
+    "kind": "bounded_same_pr_authority_and_exact_head_ci_slice",
+    "source_sheet": "Findings",
+    "finding_ids": [
+      "F055",
+      "F056"
+    ],
+    "complete_for_scope": true,
+    "global_commentary_reconciliation_complete": false
+  },
+  "entries": [
+    {
+      "finding_id": "F055",
+      "repository": "BogdanAIP/uv-studio",
+      "pr": 71,
+      "reviewed_head": "aafddd3b37476a65558d56755edd2ae440648b74",
+      "source_sheet": "Findings",
+      "source_row": 56,
+      "source_confirmed": "CONFIRMED",
+      "source_note": "Current architecture authorities were synchronized to active review state.",
+      "kind": "supported_same_pr_authority_sync_evidence",
+      "github_evidence": {
+        "codex_review_id": 5043917353,
+        "codex_review_comment_id": 3874358302,
+        "owner_reply_comment_id": 3874609972
+      },
+      "authority_sync_evidence": {
+        "code_docs_head": "9af22cdcbb60501dca968fd10f12dc1d40ee6482",
+        "metadata_head": "10643bd160c65b8d8df690266390725d5d0dd6eb",
+        "reviewed_to_code_docs_commits": [
+          "981bc1a1c4e98d4cb9d98bc9a18ef319c459be57",
+          "07d52d21d0dcd6a3e1c9ee4e2e36d34a1ed998be",
+          "57518f8fd28744a0c3b3b3051c7093edeba53a06",
+          "9af22cdcbb60501dca968fd10f12dc1d40ee6482"
+        ],
+        "reviewed_to_code_docs_changed_files": [
+          "docs/architecture/CURRENT_ARCHITECTURE.md",
+          "docs/architecture/UV_STUDIO_V2_ARCHITECTURE_MAP.md",
+          "tests/test_agent_stage17_result_integrity.py",
+          "uv_studio/agent/stage17_provenance.py"
+        ],
+        "code_docs_content_assertions": [
+          {
+            "path": "docs/architecture/CURRENT_ARCHITECTURE.md",
+            "required_present": [
+              "[Stage 17 active review]",
+              "## Agent Harness layer 3 — Stage 17 active review",
+              "This is **active review implementation, not merged functionality**.",
+              "The repository is currently in Stage 17 review, not lifecycle-idle.",
+              "background Agent execution                      [later layer 4]"
+            ],
+            "required_absent": [
+              "functional Subagents                            [next D-066 layer 3]",
+              "The repository is lifecycle-idle after Stage 16 closure."
+            ]
+          },
+          {
+            "path": "docs/architecture/UV_STUDIO_V2_ARCHITECTURE_MAP.md",
+            "required_present": [
+              "active-review third Agent layer",
+              "Stage 17: functional Subagents                     [active review]",
+              "## 8. Agent Harness layer 3 — Stage 17 ACTIVE REVIEW",
+              "Classification: **ACTIVE REVIEW**, not `NEXT` and not yet merged."
+            ],
+            "required_absent": []
+          }
+        ],
+        "metadata_content_assertions": [
+          {
+            "path": "project-context/PROJECT_STATE.md",
+            "required_present": [
+              "Stage 17 is in review on branch `stage-17/agent-functional-subagents`, PR #71.",
+              "The current code-bearing review baseline is exact head `9af22cdcbb60501dca968fd10f12dc1d40ee6482`.",
+              "PR CI #3488 (`33101350599`) passed all five permanent jobs on that exact head"
+            ],
+            "required_absent": []
+          }
+        ]
+      },
+      "reconciliation_status": "SUPPORTED_SAME_PR_AUTHORITY_SYNC_EVIDENCE",
+      "authority_limit": "The evidence supports only the authenticated F055 source-note claim that the named current architecture authorities and metadata were synchronized from the reviewed unstarted/idle description to the owner-declared active-review state on exact same-PR heads. It does not make those historical documents current authority today and does not infer universal semantic correctness from owner prose, ancestry, CI, or later reviewer silence."
+    },
+    {
+      "finding_id": "F056",
+      "repository": "BogdanAIP/uv-studio",
+      "pr": 71,
+      "reviewed_head": "aafddd3b37476a65558d56755edd2ae440648b74",
+      "source_sheet": "Findings",
+      "source_row": 57,
+      "source_confirmed": "CONFIRMED",
+      "source_note": "Exact code-bearing and metadata-head CI evidence was rerun and recorded.",
+      "kind": "supported_exact_head_ci_refresh_evidence",
+      "github_evidence": {
+        "codex_review_id": 5043917353,
+        "codex_review_comment_id": 3874358316,
+        "owner_reply_comment_id": 3874610894
+      },
+      "exact_head_ci_evidence": {
+        "code_head": "9af22cdcbb60501dca968fd10f12dc1d40ee6482",
+        "metadata_head": "10643bd160c65b8d8df690266390725d5d0dd6eb",
+        "code_to_metadata_commits": [
+          "10643bd160c65b8d8df690266390725d5d0dd6eb"
+        ],
+        "code_to_metadata_changed_files": [
+          "project-context/PROJECT_STATE.md"
+        ],
+        "workflow_id": 331109076,
+        "expected_jobs": [
+          "app-baseline (ubuntu-latest)",
+          "app-baseline (windows-latest)",
+          "bootstrap (ubuntu-latest, 3.11)",
+          "bootstrap (windows-latest, 3.11)",
+          "development-context"
+        ],
+        "runs": [
+          {
+            "role": "code_head",
+            "run_id": 33101350599,
+            "run_number": 3488,
+            "head_sha": "9af22cdcbb60501dca968fd10f12dc1d40ee6482"
+          },
+          {
+            "role": "metadata_head",
+            "run_id": 33102045907,
+            "run_number": 3490,
+            "head_sha": "10643bd160c65b8d8df690266390725d5d0dd6eb"
+          }
+        ],
+        "metadata_content_assertions": [
+          {
+            "path": "project-context/PROJECT_STATE.md",
+            "required_present": [
+              "The current code-bearing review baseline is exact head `9af22cdcbb60501dca968fd10f12dc1d40ee6482`.",
+              "PR CI #3488 (`33101350599`) passed all five permanent jobs on that exact head",
+              "This metadata update records the resulting exact-head evidence; its own exact head must still pass the declared checks before merge."
+            ],
+            "required_absent": [
+              "The final draft implementation head `dc973c90ac20ab7bac2d4145f58c5df4d69f663c` passed PR CI #3469"
+            ]
+          }
+        ]
+      },
+      "reconciliation_status": "SUPPORTED_EXACT_HEAD_CI_REFRESH_EVIDENCE",
+      "authority_limit": "The evidence supports only the authenticated F056 source-note claim that the declared five-job PR CI was rerun successfully on the exact code-bearing head and again on the exact metadata head, and that the metadata record names the refreshed code-head evidence. CI is execution evidence, not semantic fix proof, and this status does not make later reviewer silence or owner prose correctness authority."
+    }
+  ],
+  "rules": [
+    "bootstrap-v1 source projections remain immutable",
+    "F055 and F056 remain distinct findings even though they share one reviewed head and one original Codex review",
+    "authenticated source commentary is not promoted to truth merely because it exists",
+    "authority synchronization evidence must bind exact historical review/comment/reply identities, exact same-PR Git ranges, and immutable content on the declared heads",
+    "exact-head CI evidence must bind each historical Actions run to the exact repository, workflow, PR event, run number, head SHA, completed-success state, and exact expected successful job set",
+    "historical Actions evidence may be read from the public GitHub API without widening the CAP/UV source GitHub App permissions",
+    "CI success is execution evidence and does not prove universal semantic correctness",
+    "unreconciled source commentary remains pending before baseline derivation"
+  ]
+}
