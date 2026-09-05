@@ -206,7 +206,7 @@ PROMOTE only: global stable transition
 per-consumer live safe-update evaluation
     ↓
 SAFE_TO_UPDATE → auditable update change
-DEFER_*       → leave consumer pinned
+DEFER_*       → leave consumer pinned and persist distribution state
 ```
 
 Every real `mimiseek-review-update` invocation uses a new independent ChatGPT chat. A later deferred-distribution reconciliation is a separate fresh update invocation that reconstructs the already-authoritatively-promoted current stable and durable `PENDING_DISTRIBUTION` state; it does not create or re-promote a candidate.
