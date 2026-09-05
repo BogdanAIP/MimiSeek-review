@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+import collect_github_evidence as collector
 from collect_github_evidence import parse_z
 import verify_bootstrap_commentary_multi_review_progression_stage_evidence as stage
 from verify_bootstrap_commentary_multi_review_progression_stage_evidence import *  # noqa: F401,F403
@@ -19,6 +20,82 @@ def _timestamp(value: Any, label: str, errors: list[str]):
     except Exception as exc:
         errors.append(f"{label}: timestamp is unavailable or invalid: {exc}")
         return None
+
+
+def _resolve_exact_pr_commit_sequence(
+    client: stage.base.GitHubClient,
+    entry: dict[str, Any],
+    snapshot: dict[str, Any],
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    repository = entry["repository"]
+    pr_number = entry["pr"]
+    owner, name = collector.split_repository(repository)
+    prefix = f"/repos/{owner}/{name}"
+    expected_snapshot_pr = snapshot.get("pull_request")
+    if not isinstance(expected_snapshot_pr, dict):
+        return [], ["progression: snapshot pull-request identity is unavailable"]
+
+    try:
+        pr_before = collector._validate_pr_source_identity(
+            client.get(f"{prefix}/pulls/{pr_number}"),
+            repository,
+            pr_number,
+        )
+    except Exception as exc:
+        return [], [f"progression: exact source PR identity pre-read failed: {exc}"]
+
+    if collector.compact_pr(pr_before) != expected_snapshot_pr:
+        errors.append("progression: exact source PR identity moved since evidence snapshot")
+
+    commits: list[dict[str, Any]] = []
+    try:
+        commits = collector._collect_complete_pr_commits(
+            client,
+            prefix,
+            pr_number,
+            pr_before,
+        )
+    except Exception as exc:
+        errors.append(f"progression: exact source PR commit sequence collection failed: {exc}")
+
+    try:
+        pr_after = collector._validate_pr_source_identity(
+            client.get(f"{prefix}/pulls/{pr_number}"),
+            repository,
+            pr_number,
+        )
+    except Exception as exc:
+        errors.append(f"progression: exact source PR identity post-read failed: {exc}")
+        return [], errors
+
+    if collector._pr_identity_fence(pr_before) != collector._pr_identity_fence(pr_after):
+        errors.append("progression: source PR moved while collecting exact commit sequence")
+    if collector.compact_pr(pr_after) != expected_snapshot_pr:
+        errors.append("progression: exact source PR identity no longer matches evidence snapshot")
+    if pr_after.get("commits") != len(commits):
+        errors.append("progression: exact source PR commit count differs after sequence collection")
+
+    sequence: list[str] = []
+    seen: set[str] = set()
+    for index, raw in enumerate(commits, start=1):
+        sha = raw.get("sha") if isinstance(raw, dict) else None
+        if not isinstance(sha, str) or not collector.SHA40_RE.fullmatch(sha):
+            errors.append(f"progression: exact source PR commit {index} has invalid SHA")
+            continue
+        if sha in seen:
+            errors.append(f"progression: exact source PR commit sequence contains duplicate {sha}")
+            continue
+        seen.add(sha)
+        sequence.append(sha)
+
+    expected_count = pr_after.get("commits")
+    expected_head = ((pr_after.get("head") or {}).get("sha"))
+    if isinstance(expected_count, int) and len(sequence) != expected_count:
+        errors.append("progression: exact source PR commit sequence length differs from PR identity")
+    if expected_count and (not sequence or sequence[-1] != expected_head):
+        errors.append("progression: exact source PR commit sequence does not terminate at exact PR head")
+    return sequence, errors
 
 
 def _cross_stage_compare(
@@ -67,6 +144,8 @@ def _validate_cross_stage_progression(
     client: stage.base.GitHubClient,
     entry: dict[str, Any],
     snapshot: dict[str, Any],
+    *,
+    exact_commit_sequence: list[str] | None = None,
 ) -> list[str]:
     errors: list[str] = []
     owner, name = stage.base.split_repository(entry["repository"])
@@ -83,18 +162,20 @@ def _validate_cross_stage_progression(
         if isinstance(item, dict) and isinstance(item.get("id"), int)
     }
 
-    commit_sequence: list[str] = []
-    seen_commits: set[str] = set()
-    for index, item in enumerate(snapshot.get("commits", []), start=1):
-        sha = item.get("sha") if isinstance(item, dict) else None
-        if not isinstance(sha, str):
-            errors.append(f"progression: source PR commit {index} has no exact SHA")
-            continue
-        if sha in seen_commits:
-            errors.append(f"progression: source PR commit sequence contains duplicate {sha}")
-            continue
-        seen_commits.add(sha)
-        commit_sequence.append(sha)
+    if exact_commit_sequence is None:
+        commit_sequence, sequence_errors = _resolve_exact_pr_commit_sequence(client, entry, snapshot)
+        errors.extend(sequence_errors)
+    else:
+        commit_sequence = list(exact_commit_sequence)
+        seen: set[str] = set()
+        for index, sha in enumerate(commit_sequence, start=1):
+            if not isinstance(sha, str) or not collector.SHA40_RE.fullmatch(sha):
+                errors.append(f"progression: supplied exact source PR commit {index} has invalid SHA")
+                continue
+            if sha in seen:
+                errors.append(f"progression: supplied exact source PR commit sequence contains duplicate {sha}")
+            seen.add(sha)
+
     commit_position = {sha: index for index, sha in enumerate(commit_sequence)}
 
     stages = [
@@ -251,6 +332,7 @@ def verify(
         ],
         "limitations": [
             "F057, F059, and F061 remain distinct findings bound to distinct reviewed heads",
+            "cross-stage PR ordering is bound to a separately re-read and collector-validated exact GitHub PR commit sequence; snapshot commit timestamp sorting is not ordering authority",
             "cross-stage progression requires prior response-head ancestry/PR ordering into the next reviewed head and response-commit chronology before the next review",
             "each owner reply must postdate its own finding and exact response commit; owner reply posting time is not used as the cross-stage ordering authority because a reply may document an already-existing response after a subsequent review began",
             "later stronger namespace findings do not retroactively collapse the earlier F057 finding identity",
