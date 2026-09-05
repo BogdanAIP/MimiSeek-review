@@ -120,6 +120,8 @@ def sequence(snap):
 
 
 class FakeClient:
+    api_url = "https://api.github.test"
+
     def __init__(self, item):
         self.item = item
         self.cross_status = "ahead"
