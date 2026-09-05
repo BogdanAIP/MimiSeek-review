@@ -128,7 +128,12 @@ def follow_up_ref(root: Path, value: str, label: str, tracked: set[str]) -> str:
         if not tail.isdigit() or int(tail) < 1 or "/" in tail:
             raise DevelopmentFailurePatternError(f"{label} must be an exact MimiSeek issue URL or tracked regular file")
         return ref
-    tracked_ref(root, ref, label, tracked)
+    try:
+        tracked_ref(root, ref, label, tracked)
+    except DevelopmentFailurePatternError as exc:
+        raise DevelopmentFailurePatternError(
+            f"{label} must be an exact MimiSeek issue URL or tracked regular file"
+        ) from exc
     return ref
 
 
@@ -251,7 +256,7 @@ def validate_pattern(value: Any, root: Path, label: str, *, tracked: set[str] | 
     occurrences = validate_occurrences(pattern["occurrences"], pid, origin, f"{label}.occurrences")
     pending_unknown = [o for o in occurrences if o["relation"] == "REPEAT" and o["prevention_failure_reason"] == "UNKNOWN_PENDING_ANALYSIS"]
     if pending_unknown and search["status"] != "BOUNDED_FOLLOW_UP":
-        raise DevelopmentFailurePatternError(f"{label} UNKNOWN_PENDING_ANALYSIS requires repository_search.status=BOUNDED_FOLLOW_UP")
+        raise DevelopmentFailurePatternError(f"{label} UNKNOWN_PENDING_ANALYSIS requires BOUNDED_FOLLOW_UP")
     return pattern
 
 
