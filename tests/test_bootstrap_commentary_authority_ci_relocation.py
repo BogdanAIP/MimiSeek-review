@@ -1,8 +1,6 @@
 import importlib.util
-import json
 import sys
 import unittest
-from copy import deepcopy
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +20,13 @@ DOC_PATH = REPO_ROOT / "data" / "bootstrap-commentary-authority-ci-reconciliatio
 MANIFEST_PATH = REPO_ROOT / "data" / "bootstrap-source.json"
 FINDINGS_PATH = REPO_ROOT / "data" / "findings.jsonl"
 FINAL_HEAD = "9120fd768255775d938da5e827043db9691a8886"
+F056_CODEX_BODY = """**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Update the exact-head verification record**
+
+The reviewed tree differs materially from the claimed final head `dc973c9`—including the result-integrity and shared-executor provenance fixes—so CI #3469 on that older head does not establish the required checks for this review head. Recording the older SHA as the “final draft implementation head” leaves the review state claiming evidence that does not cover the code being approved; rerun the declared checks on the latest head and record that exact SHA/result.
+
+AGENTS.md reference: [AGENTS.md:L126-L133](https://github.com/BogdanAIP/uv-studio/blob/aafddd3b37476a65558d56755edd2ae440648b74/AGENTS.md#L126-L133)
+
+Useful? React with 👍 / 👎."""
 
 
 def f056_entry():
@@ -58,6 +63,8 @@ def source_snapshot(current_commit):
                 "pull_request_review_id": 5043917353,
                 "commit_id": current_commit,
                 "original_commit_id": verifier.REVIEWED_HEAD,
+                "updated_at": "2026-08-27T17:50:12Z",
+                "body": F056_CODEX_BODY,
                 "user": {"login": verifier.CODEX_LOGIN},
             }
         ],
