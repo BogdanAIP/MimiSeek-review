@@ -4,21 +4,17 @@ Status: explanatory reference only; non-authoritative.
 
 ## Purpose
 
-This page explains the MimiSeek self-development repeat-prevention artifacts and why they exist. The **sole normative owner** of the cross-chat MimiSeek development process is `docs/DEVELOPMENT_PROTOCOL.md`. If this page ever conflicts with that protocol, the protocol governs and this page is stale documentation.
+This page explains why MimiSeek has self-development repeat-prevention artifacts and where to find their canonical owners. The **sole normative owner** of the cross-chat MimiSeek development process is `docs/DEVELOPMENT_PROTOCOL.md`. If this page ever conflicts with that protocol, the protocol governs and this page is stale documentation.
 
 The design goal is simple: a confirmed material MimiSeek development defect should leave durable, preferably executable protection rather than relying on chat memory or a local one-off fix.
 
 ## Artifact map
 
-The machine registry is:
+Canonical machine state:
 
 `data/development-failure-patterns.jsonl`
 
-Each non-empty line uses schema identity:
-
-`DEVELOPMENT_FAILURE_PATTERN_V1`
-
-Shape documentation:
+Schema identity and shape documentation:
 
 `data/schemas/development-failure-pattern-v1.schema.json`
 
@@ -26,11 +22,15 @@ Executable registry validator:
 
 `tools/validate_development_failure_patterns.py`
 
-The validator checks machine shape and local repository references. Current path authority is intentionally Git-bound: prevention refs, discovered instances, and search-scope matches resolve only to tracked regular files from the exact checked-out `HEAD` tree; `.git` metadata, untracked or staged-only checkout files, and tracked symlinks do not count as repository artifacts. Bounded follow-ups are restricted to recoverable MimiSeek issue locators or tracked regular exact-HEAD files, and unresolved `UNKNOWN_PENDING_ANALYSIS` repeats remain visible in active-pattern output.
+Normative process rules, including development-start retrieval, repository-search states, prevention requirements, repeat classification, retirement constraints, and repository write hygiene:
+
+`docs/DEVELOPMENT_PROTOCOL.md`
+
+This page intentionally does **not** copy the current pattern count, pattern identities, live search statuses, follow-up issue numbers, or occurrence inventory. Those are mutable machine facts owned by the JSONL registry and should be inspected from that canonical source rather than manually synchronized here.
 
 ## Scope boundary
 
-This registry is limited to development of `BogdanAIP/MimiSeek-review` itself. It is separate from the future reviewer-evolution defect-pattern/counterexample architecture described in research documents.
+The registry is limited to development of `BogdanAIP/MimiSeek-review` itself. It is separate from the future reviewer-evolution defect-pattern/counterexample architecture described in research documents.
 
 It does not itself create:
 
@@ -41,28 +41,6 @@ It does not itself create:
 - `REVIEW_JOB_V1` or `REVIEW_RESULT_V1` semantics.
 
 Any future use of these records as reviewer-learning input needs separately accepted authority.
-
-## Current pattern inventory
-
-The current PR #21 target state contains six self-development failure classes:
-
-- `DFP-0001` — `evidence.semantic_binding_missing`: claim-bearing free-form evidence can be identity-authenticated without binding the actual semantic body. Its repository search is currently `BOUNDED_FOLLOW_UP` because PR #21 found additional same-class commentary verifiers; durable closure is tracked in issue #22.
-- `DFP-0002` — `repository.reference_not_git_bound`: checkout filesystem existence can be mistaken for durable tracked repository authority.
-- `DFP-0003` — `governance.duplicate_canonical_owner`: one cross-chat process can accidentally be defined normatively in multiple mutable documents.
-- `DFP-0004` — `workflow.noop_head_mutation`: a byte-identical repository Contents write can still move exact HEAD and invalidate exact-head CI/review evidence; PR #21 recorded both the origin and an immediate same-class repeat.
-- `DFP-0005` — `workflow.follow_up_locator_not_durable`: bounded process debt can appear recoverable even when its follow-up reference is only free-form text or another unsupported locator.
-- `DFP-0006` — `workflow.pending_repeat_analysis_hidden`: an unresolved repeat-analysis reason can otherwise coexist with apparently complete search state and disappear from the startup view.
-
-The registry itself, the exact origin evidence, and `docs/DEVELOPMENT_PROTOCOL.md` carry the authoritative machine/process details. This page only provides orientation.
-
-## Why `DFP-0001` is not marked complete
-
-The original PR #20 remediation hardened `tools/verify_bootstrap_commentary_authority_ci_reconciliation.py`, but the broader semantic search performed during PR #21 found additional same-class current instances in:
-
-- `tools/verify_bootstrap_commentary_fix_baseline_reconciliation.py`;
-- `tools/verify_bootstrap_commentary_fix_evidence_reconciliation.py`.
-
-Issue #22 records the bounded follow-up. Accordingly, the registry currently exposes `BOUNDED_FOLLOW_UP` rather than `COMPLETED`. The transition criteria for repository-search states are owned exclusively by `docs/DEVELOPMENT_PROTOCOL.md`; this page does not define or alter them.
 
 ## Relationship to ordinary acceptance
 
