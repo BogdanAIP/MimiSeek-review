@@ -63,10 +63,15 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         self.assertEqual(patterns[0]["repository_search"]["follow_up_refs"], ["https://github.com/BogdanAIP/MimiSeek-review/issues/22"])
         self.assertEqual(patterns[1]["origin"]["evidence_locator"], "review_comment:3941887912")
         self.assertEqual(patterns[2]["origin"]["evidence_locator"], "review_comment:3941887906")
+        self.assertEqual(patterns[2]["occurrences"][1]["relation"], "RELATED")
+        self.assertEqual(patterns[2]["occurrences"][1]["evidence_locator"], "review_comment:3942225450")
         self.assertEqual(patterns[3]["failure_class"], "workflow.noop_head_mutation")
         self.assertEqual(patterns[3]["occurrences"][1]["prevention_failure_reason"], "NO_GUARD")
         self.assertEqual(patterns[4]["origin"]["evidence_locator"], "review_comment:3942020916")
         self.assertEqual(patterns[5]["origin"]["evidence_locator"], "review_comment:3942020917")
+        self.assertEqual(patterns[5]["occurrences"][1]["relation"], "REPEAT")
+        self.assertEqual(patterns[5]["occurrences"][1]["prevention_failure_reason"], "GUARD_TOO_NARROW")
+        self.assertEqual(patterns[5]["occurrences"][1]["evidence_locator"], "review_comment:3942225446")
 
     def test_executable_and_manual_prevention_contracts(self) -> None:
         p = seed(); p["prevention"]["guard_refs"] = []
@@ -186,6 +191,7 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         protocol = (ROOT/"docs/DEVELOPMENT_PROTOCOL.md").read_text(encoding="utf-8")
         reference = (ROOT/"docs/DEVELOPMENT_REPEAT_PREVENTION.md").read_text(encoding="utf-8")
         self.assertIn("Canonical owner for the MimiSeek cross-chat development process: this document.", protocol)
+        self.assertIn("A failure pattern may be `RETIRED` only after", protocol)
         self.assertIn("Status: explanatory reference only; non-authoritative.", reference)
         for forbidden in (
             "## Required closure loop",
