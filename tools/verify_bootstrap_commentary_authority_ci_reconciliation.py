@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -31,7 +32,11 @@ EXPECTED = {
         "source_note": "Current architecture authorities were synchronized to active review state.",
         "review_id": 5043917353,
         "comment_id": 3874358302,
+        "comment_updated_at": "2026-08-27T17:50:12Z",
+        "comment_body_sha256": "1361b84d58bf7a7267d5be4277698fcf101a6665080a58f286d63c9edbb065b8",
         "reply_id": 3874609972,
+        "reply_updated_at": "2026-08-27T18:15:36Z",
+        "reply_body_sha256": "539788844ccbc49638018be9fa300a7b64168c06b1f049edda7ba333c89adb54",
         "kind": "supported_same_pr_authority_sync_evidence",
         "status": "SUPPORTED_SAME_PR_AUTHORITY_SYNC_EVIDENCE",
     },
@@ -40,7 +45,11 @@ EXPECTED = {
         "source_note": "Exact code-bearing and metadata-head CI evidence was rerun and recorded.",
         "review_id": 5043917353,
         "comment_id": 3874358316,
+        "comment_updated_at": "2026-08-27T17:50:12Z",
+        "comment_body_sha256": "12ad205280e98315394846421a4bdfc1d8e9341ee0a8bdeaf5669afee0efa227",
         "reply_id": 3874610894,
+        "reply_updated_at": "2026-08-27T18:15:43Z",
+        "reply_body_sha256": "71ec212ead6ebd6098e52845b596c48e1026263120d82c0057d00a9ed859dc00",
         "kind": "supported_exact_head_ci_refresh_evidence",
         "status": "SUPPORTED_EXACT_HEAD_CI_REFRESH_EVIDENCE",
     },
@@ -69,6 +78,12 @@ def exact(raw: Any, fields: set[str], label: str) -> dict[str, Any]:
 
 def strings(value: Any, label: str, *, allow_empty: bool = False) -> list[str]:
     return base.require_string_array(value, label, allow_empty=allow_empty)
+
+
+def _body_sha256(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def load_document(path: Path, source_manifest_path: Path) -> dict[str, Any]:
@@ -116,9 +131,30 @@ def load_document(path: Path, source_manifest_path: Path) -> dict[str, Any]:
         if entry["kind"] != expected["kind"] or entry["reconciliation_status"] != expected["status"]:
             raise AuthorityCiError(f"{path}: {fid} kind/status differs")
         base.require_nonempty_string(entry["authority_limit"], f"{path}: {fid} authority_limit")
-        gh = exact(entry["github_evidence"], {"codex_review_id", "codex_review_comment_id", "owner_reply_comment_id"}, f"{path}: {fid} github")
-        if gh != {"codex_review_id": expected["review_id"], "codex_review_comment_id": expected["comment_id"], "owner_reply_comment_id": expected["reply_id"]}:
-            raise AuthorityCiError(f"{path}: {fid} GitHub identities differ")
+        gh = exact(
+            entry["github_evidence"],
+            {
+                "codex_review_id",
+                "codex_review_comment_id",
+                "codex_review_comment_updated_at",
+                "codex_review_comment_body_sha256",
+                "owner_reply_comment_id",
+                "owner_reply_updated_at",
+                "owner_reply_body_sha256",
+            },
+            f"{path}: {fid} github",
+        )
+        expected_gh = {
+            "codex_review_id": expected["review_id"],
+            "codex_review_comment_id": expected["comment_id"],
+            "codex_review_comment_updated_at": expected["comment_updated_at"],
+            "codex_review_comment_body_sha256": expected["comment_body_sha256"],
+            "owner_reply_comment_id": expected["reply_id"],
+            "owner_reply_updated_at": expected["reply_updated_at"],
+            "owner_reply_body_sha256": expected["reply_body_sha256"],
+        }
+        if gh != expected_gh:
+            raise AuthorityCiError(f"{path}: {fid} GitHub identity/body binding differs")
         if fid == "F055":
             ev = exact(entry[evidence_field], {
                 "code_docs_head", "metadata_head", "reviewed_to_code_docs_commits",
@@ -195,13 +231,17 @@ def _validate_historical_binding(entry: dict[str, Any], finding: dict[str, Any],
             errors.append(f"{fid}: finding relocated commit is not a member of the exact source PR")
         if ((comment.get("user") or {}).get("login")) != CODEX_LOGIN:
             errors.append(f"{fid}: finding actor differs")
+        if comment.get("updated_at") != gh["codex_review_comment_updated_at"]:
+            errors.append(f"{fid}: finding updated_at differs")
+        if _body_sha256(comment.get("body")) != gh["codex_review_comment_body_sha256"]:
+            errors.append(f"{fid}: finding body digest differs")
     for sha in (REVIEWED_HEAD, CODE_DOCS_HEAD, METADATA_HEAD):
         if sha not in commits:
             errors.append(f"{fid}: required source PR commit {sha} is absent")
     return errors
 
 
-def _validate_owner_reply(client: base.GitHubClient, entry: dict[str, Any], snapshot: dict[str, Any], required_tokens: list[str]) -> list[str]:
+def _validate_owner_reply(client: base.GitHubClient, entry: dict[str, Any], snapshot: dict[str, Any]) -> list[str]:
     fid = entry["finding_id"]
     errors: list[str] = []
     gh = entry["github_evidence"]
@@ -222,10 +262,10 @@ def _validate_owner_reply(client: base.GitHubClient, entry: dict[str, Any], snap
         errors.append(f"{fid}: owner reply lost original reviewed-head binding")
     if not str(reply.get("pull_request_url") or "").endswith(f"/pulls/{PR_NUMBER}"):
         errors.append(f"{fid}: owner reply is not bound to source PR")
-    body = str(reply.get("body") or "")
-    for token in required_tokens:
-        if token not in body:
-            errors.append(f"{fid}: owner reply does not name required evidence {token!r}")
+    if reply.get("updated_at") != gh["owner_reply_updated_at"]:
+        errors.append(f"{fid}: owner reply updated_at differs")
+    if _body_sha256(reply.get("body")) != gh["owner_reply_body_sha256"]:
+        errors.append(f"{fid}: owner reply body digest differs")
     return errors
 
 
@@ -320,7 +360,7 @@ def verify(findings_path: Path, reconciliation_path: Path, source_manifest_path:
         entry_errors = [f"{fid}: normalized finding does not exist"] if finding is None else _validate_historical_binding(entry, finding, snapshot)
         if fid == "F055":
             ev = entry["authority_sync_evidence"]
-            entry_errors.extend(_validate_owner_reply(source_client, entry, snapshot, [CODE_DOCS_HEAD, METADATA_HEAD, "33101350599", "33102045907"]))
+            entry_errors.extend(_validate_owner_reply(source_client, entry, snapshot))
             try:
                 owner, name = base.split_repository(REPOSITORY)
                 prefix = f"/repos/{owner}/{name}"
@@ -332,7 +372,7 @@ def verify(findings_path: Path, reconciliation_path: Path, source_manifest_path:
             entry_errors.extend(_validate_assertion_content(source_client, ev["metadata_content_assertions"], METADATA_HEAD, "F055 metadata"))
         else:
             ev = entry["exact_head_ci_evidence"]
-            entry_errors.extend(_validate_owner_reply(source_client, entry, snapshot, [CODE_DOCS_HEAD, METADATA_HEAD, "33101350599", "33102045907"]))
+            entry_errors.extend(_validate_owner_reply(source_client, entry, snapshot))
             try:
                 owner, name = base.split_repository(REPOSITORY)
                 prefix = f"/repos/{owner}/{name}"
@@ -360,7 +400,9 @@ def verify(findings_path: Path, reconciliation_path: Path, source_manifest_path:
             "historical Actions CI success is execution evidence, not universal semantic correctness proof",
             "historical Actions are read through a separate unauthenticated public GitHub client; the CAP/UV source App permissions remain unchanged and read-only",
             "historical inline-comment current commit_id relocation is bounded only by exact source-PR commit membership; immutable reviewed-head identity remains the exact review submission plus original_commit_id",
-            "owner prose, ancestry, CI, and later reviewer silence are not accepted as semantic correctness authority",
+            "exact Codex finding and owner-reply semantics are bound by governed UTF-8 body SHA-256 plus exact GitHub updated_at identities; IDs or evidence-token occurrence alone are insufficient",
+            "owner prose remains bounded source commentary even when digest-bound; it is not accepted as universal semantic correctness authority",
+            "ancestry, CI, and later reviewer silence are not accepted as semantic correctness authority",
             "does not modify authenticated bootstrap-v1 source projections or create learning/baseline/stable state",
             "does not claim global source-commentary reconciliation or Stage 1 completion",
         ],
