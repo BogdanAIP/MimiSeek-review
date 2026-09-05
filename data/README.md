@@ -140,11 +140,24 @@ The first slice covers only root finding `F057` from UV PR #71. Its authenticate
 - later distinct `F059` on reviewed head `10643bd160c65b8d8df690266390725d5d0dd6eb` binds the stronger complete-typed namespace-collision finding and exact owner response head `7c8280721d96e7822d3c56e08e00ff6cb3868349`, including immutable reservation code/test evidence;
 - later distinct `F061` on reviewed head `7c8280721d96e7822d3c56e08e00ff6cb3868349` binds the further proposal-created namespace-collision finding and exact owner response code/docs head `1467bd3c97511f8349b574d00a6029e8e98b3fe7`, including immutable proposal-output validation and regression evidence.
 
-`tools/verify_bootstrap_commentary_multi_review_progression_reconciliation.py` requires exact normalized source rows, exact Codex review/comment identities, exact owner replies to the corresponding original comments, exact response heads in source-PR history, reviewed→response ancestry/termination, bounded compare evidence, and immutable response-head content.
+`tools/verify_bootstrap_commentary_multi_review_progression_reconciliation.py` requires exact normalized source rows, exact Codex review/comment identities, exact owner replies to the corresponding original comments, exact response heads in source-PR history, reviewed→response ancestry/termination, bounded compare evidence, and immutable response-head content. Its cross-stage ordering check separately re-reads and validates the exact GitHub source-PR commit sequence rather than using the timestamp-sorted compact snapshot as ordering authority.
 
 `SUPPORTED_SAME_PR_MULTI_REVIEW_PROGRESSION_EVIDENCE` means only that the authenticated F057 note's two-part progression is supported while `F057`, `F059`, and `F061` remain separate findings bound to separate reviewed heads. Later stronger findings broaden the observed namespace-risk progression; they are not automatically the same defect identity and do not retroactively erase the bounded evidence for the earlier response. The relation labels in this Stage-1 document are evidence descriptors only and do not instantiate the future `FINDING_V1` lifecycle research plan. Owner prose, ancestry, tests, CI, and later reviewer silence remain insufficient for universal semantic correctness.
 
 The F057 progression document also keeps `global_commentary_reconciliation_complete=false`; remaining material commentary stays pending before baseline derivation.
+
+### Bounded historical authority + exact-head CI reconciliation
+
+`data/bootstrap-commentary-authority-ci-reconciliation.json` introduces a separate strict shape for two distinct authenticated findings on the same historical reviewed head where one source Note concerns synchronization of historical current-authority documents and the other concerns refreshed exact-head CI evidence.
+
+The first slice covers distinct UV PR #71 findings `F055` and `F056`, both originally reviewed on `aafddd3b37476a65558d56755edd2ae440648b74` under Codex review `5043917353`:
+
+- `F055` binds exact inline finding `3874358302` and owner reply `3874609972`, the exact four-commit reviewed→code/docs range ending at `9af22cdcbb60501dca968fd10f12dc1d40ee6482`, exact range inventory, immutable `CURRENT_ARCHITECTURE.md` / `UV_STUDIO_V2_ARCHITECTURE_MAP.md` text that changes the historical Stage-17 classification from `NEXT`/idle to `ACTIVE REVIEW`, and the one-commit metadata update to `10643bd160c65b8d8df690266390725d5d0dd6eb`;
+- `F056` independently binds exact inline finding `3874358316` and owner reply `3874610894`, the exact code→metadata range, and historical PR CI #3488/run `33101350599` on code head `9af22cdc...` plus PR CI #3490/run `33102045907` on metadata head `10643bd...`.
+
+`tools/verify_bootstrap_commentary_authority_ci_reconciliation.py` keeps the source GitHub App limited to its existing read-only Contents/Issues/Pull-requests scope. It resolves historical public UV Actions runs through a separate unauthenticated public GitHub client and requires exact repository, workflow, PR event, run number, head SHA, completed-success state, and the exact five unique successful permanent jobs for each declared run. Historical inline-comment `original_commit_id` plus the exact review submission remain the immutable reviewed-head binding; mutable current `commit_id` relocation is accepted only when that relocated commit is a member of the exact source PR.
+
+`SUPPORTED_SAME_PR_AUTHORITY_SYNC_EVIDENCE` means only that the authenticated F055 Note's historical synchronization claim is supported by the exact bounded Git/review/content evidence. It does not make those historical `CURRENT` documents present-day authority. `SUPPORTED_EXACT_HEAD_CI_REFRESH_EVIDENCE` means only that the authenticated F056 Note's two exact historical CI runs and metadata record are supported. CI is execution evidence, not semantic correctness proof. F055 and F056 remain separate finding identities, and the document keeps `global_commentary_reconciliation_complete=false`.
 
 ## Continuous GitHub evidence intake
 
@@ -188,6 +201,7 @@ Stage 2 will add the structured consumer evidence-export contract required to ma
 - Source commentary omitted from normalized tuples remains recoverable by manifest + `source_row`; material assertions from it must be provenance-reconciled before baseline derivation.
 - Bounded source-commentary reconciliation must explicitly state its coverage and may not claim global completion.
 - A multi-review progression must preserve each distinct finding identity and reviewed head; stronger later findings are not silently collapsed into the earlier finding.
+- Historical authority synchronization and exact-head CI refresh evidence must remain separate finding claims; CI success and historical `CURRENT` document labels are not present-day semantic authority.
 - Preserved source `UNKNOWN` is not evidence that later proof does or does not exist.
-- Structural commit provenance, material follow-up evidence, clean exact-head re-review evidence, same-PR material-fix evidence, same-PR material-fix baseline evidence, and same-PR multi-review progression evidence do not by themselves equal universal semantic fix correctness.
+- Structural commit provenance, material follow-up evidence, clean exact-head re-review evidence, same-PR material-fix evidence, same-PR material-fix baseline evidence, same-PR multi-review progression evidence, historical authority synchronization, and exact-head CI evidence do not by themselves equal universal semantic fix correctness.
 - A baseline seed may not be derived merely because files exist; Stage 1 provenance/policy/classification/current-intake requirements must also be satisfied.
