@@ -1,13 +1,13 @@
 # Current State
 
-Last synchronized: 2026-09-04
+Last synchronized: 2026-09-05
 
 ## Repository state
 
 - Project: MimiSeek Review
 - Repository: `BogdanAIP/MimiSeek-review`
 - Stable branch: `main`
-- Development status: Stage 1 in progress — authenticated collector active, first backfill durable, structural BUGGY/FIXED/VERIFIED provenance accepted, bounded F050/F051, F052, F053/F054, and F058 source-commentary reconciliations accepted, clean unchanged-source collector no-op and large-PR commit collection accepted; remaining source-commentary reconciliation, reviewer-policy refs, classification, and baseline seed remain pending
+- Development status: Stage 1 in progress — authenticated collector active, first backfill durable, structural BUGGY/FIXED/VERIFIED provenance accepted, bounded F050/F051, F052, F053/F054, F058, and F057 multi-review-progression source-commentary reconciliations represented, clean unchanged-source collector no-op and large-PR commit collection accepted; remaining source-commentary reconciliation, reviewer-policy refs, classification, and baseline seed remain pending
 - Stage 0 implementation foundation: accepted and merged
 - Stage 1 bootstrap-data/evidence-intake foundation: accepted and merged
 - Stage 1 structural bootstrap commit provenance: accepted and merged
@@ -15,9 +15,11 @@ Last synchronized: 2026-09-04
 - Stage 1 exact-head clean re-review reconciliation (F052): accepted and merged
 - Stage 1 same-PR material-fix evidence reconciliation (F053/F054): accepted and merged
 - Stage 1 same-PR material-fix-baseline reconciliation (F058): accepted and merged
+- Stage 1 same-PR multi-review progression reconciliation (F057 → distinct F059/F061): represented in this tree; acceptance remains PR-scoped until fresh exact-head review/merge
 - Stage 1 collector clean no-op and large-PR support: accepted and merged
 - Review-job coordination research: accepted in PR #14
 - Review-job coordination architecture: `ACCEPT_NARROW` selected by ADR 0013
+- Semantic reviewer architecture research plan: accepted PR #18 consolidates predecessor PR #6, review-quality orchestration research, and later finding/strategy ideas as research only; no production context/orchestration architecture was selected
 - Review-job local foundation: accepted PR #16 implements the `REVIEW_JOB_V1` public schema/state-machine/validation boundary
 - Review-job durability slice in this tree: MimiSeek-owned GitHub ledger/publication adapter implemented with revision/identity fencing, immutable exact-result blob publication, and explicit ambiguous-publication reconciliation; physical production enablement and external CAP/session integration remain pending acceptance/separate verification
 - Track R implementation may proceed in parallel with remaining Stage 1 work, but live external launch/wake remains blocked until separately accepted/verified generic external session capabilities are resolved
@@ -55,7 +57,7 @@ Accepted PR #9 establishes the first bounded source-commentary reconciliation fo
 
 Accepted PR #10 establishes a distinct F052 evidence shape for CAP PR #129. The authenticated source note says that the P2 was fixed and a final exact-head Codex re-review reported no remaining major issues. `data/bootstrap-commentary-rereview-reconciliation.json` binds that bounded claim to the exact original Codex finding on reviewed head `0dde5aab1725c076ff56e2d2c8662c842e57b8ae`, live merged-PR final head `d6ea5bbd913d8a3ab27d7d1521d389e972602de2`, exact owner reply/re-review request, exact Codex GitHub-App clean-result comment, evidence chronology, final changed-file inventory, and immutable final-head contract-test text.
 
-This F052 evidence does not claim that the final reviewed branch head itself became a canonical-main commit. Live PR #129 history is divergent after merge mechanics, while the authenticated source claim is specifically about an exact-head review. The relevant identity boundary is therefore the exact live final merged-PR head plus reviewed→fixed descent, immutable fixed-head content, and the clean Codex result bound to that same head. A clean re-review remains evidence about that bounded review run, not universal semantic-correctness authority.
+This F052 evidence does not claim that the final reviewed branch head itself became a canonical-main commit. Live history for PR #129 is divergent after merge mechanics, while the authenticated source claim is specifically about an exact-head review. The relevant identity boundary is therefore the exact live final merged-PR head plus reviewed→fixed descent, immutable fixed-head content, and the clean Codex result bound to that same head. A clean re-review remains evidence about that bounded review run, not universal semantic-correctness authority.
 
 Accepted PR #12 closes the previously pending clean collector no-op gate and the newly exposed large-PR commit-history boundary. For source PRs above GitHub's 250-commit pull-list cap, the collector now reads exact paginated BASE...HEAD comparison commits and fails closed on count, compare identity, duplicate SHAs, source movement, or failure to terminate at the exact PR HEAD. The existing post-read PR identity fence remains authoritative for mixed-head rejection. For unchanged source snapshots, durable per-repository watermark/state no longer advances merely because wall-clock time passed; retaining the prior watermark is conservative because the next scan rechecks at least the same overlap interval. A fresh independent exact-head review accepted a physical two-pass live CAP/UV run in which the first pass converged stale local evidence and a later second pass changed zero snapshots, zero durable state bytes, and zero files while the remote intake branch remained unchanged.
 
@@ -63,7 +65,7 @@ Accepted PR #11 establishes the bounded same-PR material-fix evidence shape for 
 
 Accepted PR #13 establishes the bounded same-PR material-fix-baseline evidence shape for UV PR #71 finding F058 from reviewed head `aafddd3b37476a65558d56755edd2ae440648b74`. Its authenticated Note says `Fixed with exact harness/store/planner authority checks.` The exact owner reply names code-bearing baseline `9af22cdcbb60501dca968fd10f12dc1d40ee6482`, which is the end of a four-commit reviewed→baseline range rather than one implementation commit. `SUPPORTED_SAME_PR_MATERIAL_FIX_BASELINE_EVIDENCE` therefore binds the exact original Codex finding/thread, exact owner reply and baseline SHA, exact ordered reviewed→baseline commit sequence, exact range changed-file inventory, source-PR membership/ancestry, and immutable baseline-head implementation/regression content. It deliberately does not pretend the named baseline commit itself is the implementation commit and does not infer universal semantic correctness from owner prose, ancestry, tests, CI, or later reviewer silence.
 
-F057 is deliberately not included in that slice. Its authenticated Note spans both the complete typed-delegation matching fix and a later stronger namespace-reservation review cycle, so it remains pending until that multi-review progression can be reconciled without collapsing distinct reviewed heads into one claim.
+This tree adds the bounded same-PR multi-review progression evidence shape for UV PR #71 finding F057 from reviewed head `aafddd3b37476a65558d56755edd2ae440648b74`. Its authenticated Note says `Fixed by complete typed delegation matching and later stronger namespace reservation.` The progression preserves three distinct normalized findings and reviewed heads rather than collapsing them: F057 binds its exact owner response head `9af22cdcbb60501dca968fd10f12dc1d40ee6482` and complete-typed matching evidence; later F059 on reviewed head `10643bd160c65b8d8df690266390725d5d0dd6eb` binds the stronger existing-identity namespace collision and response head `7c8280721d96e7822d3c56e08e00ff6cb3868349`; later F061 on that `7c828072...` reviewed head binds the further proposal-created namespace collision and response code/docs head `1467bd3c97511f8349b574d00a6029e8e98b3fe7`. `SUPPORTED_SAME_PR_MULTI_REVIEW_PROGRESSION_EVIDENCE` records only that bounded source-note progression with exact review/comment/reply, ancestry, source-PR membership, and immutable response-head content. The relation labels are Stage-1 evidence descriptors only: they do not instantiate future `FINDING_V1` lifecycle authority, do not turn F057/F059/F061 into one defect identity, and do not infer universal semantic correctness from owner prose, tests, CI, ancestry, or later reviewer silence.
 
 All accepted commentary slices explicitly report that global source-commentary reconciliation is incomplete. Other material source-commentary/disposition assertions still require governed reconciliation before baseline derivation.
 
@@ -146,7 +148,7 @@ Fresh ordinary-ChatGPT terminal reviews that existed only inside ChatGPT and wer
 
 Once this ledger/publication adapter is accepted and physically enabled, Track R durable review-job results can reduce future chat-only result loss. Those results are still source review evidence, not automatically adjudicated learning outcomes, and they do not replace Stage 2/3 evidence/export/normalization requirements.
 
-Authenticated workbook commentary can contain material fix/adjudication hints. Structural commit reconciliation is not enough to promote those hints. Accepted F050/F051, F052, F053/F054, and F058 slices demonstrate bounded patterns for preserving explicit unknowns, binding positive follow-up claims, binding exact-head clean re-review chains, binding exact same-PR fix commits, and binding owner-declared multi-commit code-bearing baselines without silently converting any of them into universal semantic correctness. The rest of the material commentary corpus still needs the same treatment.
+Authenticated workbook commentary can contain material fix/adjudication hints. Structural commit reconciliation is not enough to promote those hints. Accepted F050/F051, F052, F053/F054, and F058 slices plus the F057 multi-review progression represented in this tree demonstrate bounded patterns for preserving explicit unknowns, binding positive follow-up claims, binding exact-head clean re-review chains, binding exact same-PR fix commits, binding owner-declared multi-commit code-bearing baselines, and preserving stronger later findings without collapsing distinct reviewed heads. None of those shapes silently converts source commentary into universal semantic correctness. The rest of the material commentary corpus still needs the same treatment.
 
 ## Next canonical action
 
@@ -163,7 +165,7 @@ Continue in this order where dependencies allow parallel preparation:
 
 ### Track R independent-review coordination
 
-After acceptance of this ledger/publication implementation slice:
+With the MimiSeek-owned ledger/publication slice accepted:
 
 1. enable and verify the isolated MimiSeek-owned ledger path under separately governed MimiSeek write authority, including physical exact-result publication, concurrent-CAS behavior, restart recovery, and ambiguous-applied/absent reconciliation without touching a consumer repository;
 2. independently resolve the exact accepted generic session/execution capability identities for fresh qualified worker launch/result correlation and existing-session return delivery;
@@ -171,7 +173,7 @@ After acceptance of this ledger/publication implementation slice:
 4. keep private return/session authority outside the public ledger and keep CAP/UV source GitHub access read-only;
 5. run the required cross-origin physical E2E/restart/ambiguous-delivery experiments before treating Track R as routine review infrastructure.
 
-The accepted local state foundation plus this proposed durability adapter do not satisfy those later external/physical acceptance gates by themselves.
+The accepted local state foundation plus accepted durability adapter do not satisfy those later external/physical acceptance gates by themselves.
 
 Stage 2 then adds structured consumer evidence export/binding, including durable fresh ordinary-ChatGPT result export. Stage 3 later completes the normalized operational collector/outcome-store contract and owns operational outcome schemas rather than appending records to bootstrap-v1 files.
 

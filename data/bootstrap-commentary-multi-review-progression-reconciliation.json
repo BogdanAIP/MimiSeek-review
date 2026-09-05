@@ -1,0 +1,147 @@
+{
+  "schema_version": "bootstrap_commentary_multi_review_progression_reconciliation_v1",
+  "authority": "governed_reconciliation_of_authenticated_source_commentary",
+  "source_artifact_sha256": "6fe79a73a7f10e528a7323adce1fafcc1951955394a0dbece31a5eec73d6391a",
+  "coverage": {
+    "kind": "bounded_same_pr_multi_review_progression_slice",
+    "source_sheet": "Findings",
+    "finding_ids": [
+      "F057"
+    ],
+    "related_followup_finding_ids": [
+      "F059",
+      "F061"
+    ],
+    "complete_for_scope": true,
+    "global_commentary_reconciliation_complete": false
+  },
+  "entries": [
+    {
+      "finding_id": "F057",
+      "repository": "BogdanAIP/uv-studio",
+      "pr": 71,
+      "reviewed_head": "aafddd3b37476a65558d56755edd2ae440648b74",
+      "source_sheet": "Findings",
+      "source_row": 58,
+      "source_confirmed": "CONFIRMED",
+      "source_note": "Fixed by complete typed delegation matching and later stronger namespace reservation.",
+      "kind": "supported_same_pr_multi_review_progression_evidence",
+      "initial_fix_evidence": {
+        "codex_review_id": 5043917353,
+        "codex_review_comment_id": 3874358356,
+        "owner_reply_comment_id": 3874611686,
+        "response_head": "9af22cdcbb60501dca968fd10f12dc1d40ee6482",
+        "expected_compare_commit_count": 4,
+        "required_changed_files": [
+          "tests/test_agent_stage17_result_integrity.py",
+          "uv_studio/agent/stage17_provenance.py"
+        ],
+        "content_assertions": [
+          {
+            "path": "uv_studio/agent/stage17_provenance.py",
+            "required_present": [
+              "_DELEGATION_REFERENCE_PATTERN = re.compile(",
+              "r\"^agent_delegate_(?:explore|plan|media|critic)_[0-9a-f]{32}$\"",
+              "_DELEGATION_REFERENCE_PATTERN.fullmatch(value)"
+            ],
+            "required_absent": []
+          },
+          {
+            "path": "tests/test_agent_stage17_result_integrity.py",
+            "required_present": [
+              "test_prefix_like_canonical_project_id_is_not_a_delegation_reference",
+              "project_id=\"agent_delegate_project\""
+            ],
+            "required_absent": []
+          }
+        ]
+      },
+      "followup_reviews": [
+        {
+          "finding_id": "F059",
+          "relation": "DISTINCT_STRONGER_NAMESPACE_FINDING",
+          "reviewed_head": "10643bd160c65b8d8df690266390725d5d0dd6eb",
+          "source_row": 60,
+          "codex_review_id": 5044266036,
+          "codex_review_comment_id": 3874658738,
+          "owner_reply_comment_id": 3874859175,
+          "response_head": "7c8280721d96e7822d3c56e08e00ff6cb3868349",
+          "expected_compare_commit_count": 2,
+          "required_changed_files": [
+            "tests/test_agent_stage17_result_integrity.py",
+            "uv_studio/agent/stage17_provenance.py"
+          ],
+          "content_assertions": [
+            {
+              "path": "uv_studio/agent/stage17_provenance.py",
+              "required_present": [
+                "def prepare(self, request: AgentSubagentRequest) -> AgentSubagentContext:",
+                "if _is_delegation_reference(reference)",
+                "canonical identity collides with the reserved functional-subagent delegation namespace"
+              ],
+              "required_absent": []
+            },
+            {
+              "path": "tests/test_agent_stage17_result_integrity.py",
+              "required_present": [
+                "test_complete_delegation_namespace_is_reserved_from_canonical_project_ids",
+                "project_id=\"agent_delegate_media_00000000000000000000000000000000\""
+              ],
+              "required_absent": []
+            }
+          ]
+        },
+        {
+          "finding_id": "F061",
+          "relation": "DISTINCT_FURTHER_NAMESPACE_FINDING",
+          "reviewed_head": "7c8280721d96e7822d3c56e08e00ff6cb3868349",
+          "source_row": 62,
+          "codex_review_id": 5044434417,
+          "codex_review_comment_id": 3874801219,
+          "owner_reply_comment_id": 3875173639,
+          "response_head": "1467bd3c97511f8349b574d00a6029e8e98b3fe7",
+          "expected_compare_commit_count": 11,
+          "required_changed_files": [
+            "tests/test_agent_stage17_result_integrity.py",
+            "uv_studio/agent/stage17_provenance.py"
+          ],
+          "content_assertions": [
+            {
+              "path": "uv_studio/agent/stage17_provenance.py",
+              "required_present": [
+                "_RESERVED_ACTION_OUTPUT_FIELDS",
+                "_RESERVED_SKILL_OUTPUT_FIELDS",
+                "def _validate_reserved_proposal_outputs",
+                "planned canonical output collides with the reserved",
+                "functional-subagent delegation namespace",
+                "_validate_reserved_proposal_outputs(base.proposals)",
+                "_validate_reserved_proposal_outputs(result.proposals)"
+              ],
+              "required_absent": []
+            },
+            {
+              "path": "tests/test_agent_stage17_result_integrity.py",
+              "required_present": [
+                "test_planned_canonical_output_cannot_occupy_delegation_namespace",
+                "_RESERVED_TRACK_ID = \"agent_delegate_media_00000000000000000000000000000000\""
+              ],
+              "required_absent": []
+            }
+          ]
+        }
+      ],
+      "reconciliation_status": "SUPPORTED_SAME_PR_MULTI_REVIEW_PROGRESSION_EVIDENCE",
+      "authority_limit": "This evidence supports the authenticated F057 source-note progression: the original prefix-only classification finding received materially corresponding complete-typed matching evidence, and later separate Codex findings F059 and F061 expanded the namespace problem on later reviewed heads and received stronger namespace-reservation responses. F057, F059, and F061 remain distinct findings bound to distinct reviewed heads; this record does not collapse them into one defect identity, does not treat later findings as proof that the earlier bounded fix evidence was false, and does not infer universal semantic correctness from owner prose, ancestry, CI, tests, or later reviewer silence."
+    }
+  ],
+  "rules": [
+    "bootstrap-v1 source projections remain immutable",
+    "authenticated source commentary is not promoted to truth merely because it exists",
+    "a multi-review progression must preserve each distinct finding identity and reviewed head",
+    "later stronger findings may broaden a defect family without retroactively collapsing earlier finding identity or exact-head evidence",
+    "each response must bind an exact Codex review/comment, exact owner reply, exact response head, reviewed-to-response ancestry, source-PR membership, and immutable response-head content",
+    "relation labels in this bootstrap reconciliation are evidence descriptors only and do not instantiate future FINDING_V1 lifecycle authority",
+    "owner fixed prose, ancestry, tests, CI, and reviewer silence are not universal semantic correctness proof",
+    "unreconciled source commentary remains pending before baseline derivation"
+  ]
+}

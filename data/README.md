@@ -116,7 +116,7 @@ GitHub may relocate an old inline comment's current `commit_id` onto the merged 
 
 `data/bootstrap-commentary-fix-baseline-reconciliation.json` introduces a separate strict shape for a source Note whose exact owner reply names a **code-bearing baseline head** rather than one exact implementation commit. This distinction is important: a baseline can span several commits, so the verifier must not pretend that the final named baseline commit itself owns all implementation/test changes.
 
-The proposed first slice covers only UV PR #71 finding `F058`, originally reviewed on `aafddd3b37476a65558d56755edd2ae440648b74`. The authenticated Note is `Fixed with exact harness/store/planner authority checks.` The exact owner reply names baseline `9af22cdcbb60501dca968fd10f12dc1d40ee6482`.
+The accepted first slice covers only UV PR #71 finding `F058`, originally reviewed on `aafddd3b37476a65558d56755edd2ae440648b74`. The authenticated Note is `Fixed with exact harness/store/planner authority checks.` The exact owner reply names baseline `9af22cdcbb60501dca968fd10f12dc1d40ee6482`.
 
 `tools/verify_bootstrap_commentary_fix_baseline_reconciliation.py` therefore requires:
 
@@ -130,7 +130,21 @@ The proposed first slice covers only UV PR #71 finding `F058`, originally review
 
 `SUPPORTED_SAME_PR_MATERIAL_FIX_BASELINE_EVIDENCE` means only that the exact owner-declared same-PR baseline contains materially corresponding implementation/regression evidence over the exact governed range. It does not infer universal semantic correctness from owner prose, ancestry, tests, CI, or later reviewer silence. The F058 document keeps `global_commentary_reconciliation_complete=false`.
 
-F057 is intentionally outside this slice because its authenticated Note spans the typed-delegation matching change and a later stronger namespace-reservation review cycle. It remains pending until that multi-review progression can be reconciled without collapsing distinct reviewed heads.
+### Bounded same-PR multi-review progression reconciliation
+
+`data/bootstrap-commentary-multi-review-progression-reconciliation.json` introduces a separate strict shape for an authenticated source Note that spans an initial bounded fix and later stronger findings on newer reviewed heads in the **same source PR**.
+
+The first slice covers only root finding `F057` from UV PR #71. Its authenticated Note is `Fixed by complete typed delegation matching and later stronger namespace reservation.` The verifier preserves three distinct normalized findings rather than collapsing them:
+
+- `F057` on reviewed head `aafddd3b37476a65558d56755edd2ae440648b74` binds the original prefix-only classification finding, the exact owner reply naming response head `9af22cdcbb60501dca968fd10f12dc1d40ee6482`, reviewed→response ancestry, and immutable response-head code/test evidence for complete typed matching and the prefix-like canonical-ID regression;
+- later distinct `F059` on reviewed head `10643bd160c65b8d8df690266390725d5d0dd6eb` binds the stronger complete-typed namespace-collision finding and exact owner response head `7c8280721d96e7822d3c56e08e00ff6cb3868349`, including immutable reservation code/test evidence;
+- later distinct `F061` on reviewed head `7c8280721d96e7822d3c56e08e00ff6cb3868349` binds the further proposal-created namespace-collision finding and exact owner response code/docs head `1467bd3c97511f8349b574d00a6029e8e98b3fe7`, including immutable proposal-output validation and regression evidence.
+
+`tools/verify_bootstrap_commentary_multi_review_progression_reconciliation.py` requires exact normalized source rows, exact Codex review/comment identities, exact owner replies to the corresponding original comments, exact response heads in source-PR history, reviewed→response ancestry/termination, bounded compare evidence, and immutable response-head content.
+
+`SUPPORTED_SAME_PR_MULTI_REVIEW_PROGRESSION_EVIDENCE` means only that the authenticated F057 note's two-part progression is supported while `F057`, `F059`, and `F061` remain separate findings bound to separate reviewed heads. Later stronger findings broaden the observed namespace-risk progression; they are not automatically the same defect identity and do not retroactively erase the bounded evidence for the earlier response. The relation labels in this Stage-1 document are evidence descriptors only and do not instantiate the future `FINDING_V1` lifecycle research plan. Owner prose, ancestry, tests, CI, and later reviewer silence remain insufficient for universal semantic correctness.
+
+The F057 progression document also keeps `global_commentary_reconciliation_complete=false`; remaining material commentary stays pending before baseline derivation.
 
 ## Continuous GitHub evidence intake
 
@@ -173,6 +187,7 @@ Stage 2 will add the structured consumer evidence-export contract required to ma
 - A discovered source-lineage conflict is represented in a separate governed reconciliation layer; it is not silently repaired by mutating the source projection.
 - Source commentary omitted from normalized tuples remains recoverable by manifest + `source_row`; material assertions from it must be provenance-reconciled before baseline derivation.
 - Bounded source-commentary reconciliation must explicitly state its coverage and may not claim global completion.
+- A multi-review progression must preserve each distinct finding identity and reviewed head; stronger later findings are not silently collapsed into the earlier finding.
 - Preserved source `UNKNOWN` is not evidence that later proof does or does not exist.
-- Structural commit provenance, material follow-up evidence, clean exact-head re-review evidence, same-PR material-fix evidence, and same-PR material-fix baseline evidence do not by themselves equal universal semantic fix correctness.
+- Structural commit provenance, material follow-up evidence, clean exact-head re-review evidence, same-PR material-fix evidence, same-PR material-fix baseline evidence, and same-PR multi-review progression evidence do not by themselves equal universal semantic fix correctness.
 - A baseline seed may not be derived merely because files exist; Stage 1 provenance/policy/classification/current-intake requirements must also be satisfied.
