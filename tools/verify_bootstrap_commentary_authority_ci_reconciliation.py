@@ -179,6 +179,7 @@ def _validate_historical_binding(entry: dict[str, Any], finding: dict[str, Any],
     gh = entry["github_evidence"]
     reviews = {x.get("id"): x for x in snapshot.get("reviews", []) if isinstance(x, dict)}
     comments = {x.get("id"): x for x in snapshot.get("review_comments", []) if isinstance(x, dict)}
+    commits = {x.get("sha") for x in snapshot.get("commits", []) if isinstance(x, dict)}
     review = reviews.get(gh["codex_review_id"])
     comment = comments.get(gh["codex_review_comment_id"])
     if not isinstance(review, dict) or review.get("commit_id") != REVIEWED_HEAD or ((review.get("user") or {}).get("login")) != CODEX_LOGIN:
@@ -186,16 +187,14 @@ def _validate_historical_binding(entry: dict[str, Any], finding: dict[str, Any],
     if not isinstance(comment, dict):
         errors.append(f"{fid}: exact original finding is absent")
     else:
-        live_final_head = ((pr.get("head") or {}).get("sha"))
         if comment.get("pull_request_review_id") != gh["codex_review_id"]:
             errors.append(f"{fid}: finding review id differs")
         if comment.get("original_commit_id") != REVIEWED_HEAD:
             errors.append(f"{fid}: finding original_commit_id differs")
-        if comment.get("commit_id") not in {REVIEWED_HEAD, live_final_head}:
-            errors.append(f"{fid}: finding relocated commit is not bounded")
+        if comment.get("commit_id") not in commits:
+            errors.append(f"{fid}: finding relocated commit is not a member of the exact source PR")
         if ((comment.get("user") or {}).get("login")) != CODEX_LOGIN:
             errors.append(f"{fid}: finding actor differs")
-    commits = {x.get("sha") for x in snapshot.get("commits", []) if isinstance(x, dict)}
     for sha in (REVIEWED_HEAD, CODE_DOCS_HEAD, METADATA_HEAD):
         if sha not in commits:
             errors.append(f"{fid}: required source PR commit {sha} is absent")
@@ -360,6 +359,7 @@ def verify(findings_path: Path, reconciliation_path: Path, source_manifest_path:
             "historical current-architecture synchronization is bounded evidence about that source PR, not current product authority today",
             "historical Actions CI success is execution evidence, not universal semantic correctness proof",
             "historical Actions are read through a separate unauthenticated public GitHub client; the CAP/UV source App permissions remain unchanged and read-only",
+            "historical inline-comment current commit_id relocation is bounded only by exact source-PR commit membership; immutable reviewed-head identity remains the exact review submission plus original_commit_id",
             "owner prose, ancestry, CI, and later reviewer silence are not accepted as semantic correctness authority",
             "does not modify authenticated bootstrap-v1 source projections or create learning/baseline/stable state",
             "does not claim global source-commentary reconciliation or Stage 1 completion",
