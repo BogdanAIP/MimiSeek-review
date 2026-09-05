@@ -21,6 +21,9 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Validate development failure-pattern registry
+        run: python tools/validate_development_failure_patterns.py
+
       - name: Unit tests
         run: python -m unittest discover -s tests -p "test_*.py"
 
