@@ -119,6 +119,7 @@ def require_repo_relative(value: str, label: str) -> str:
 
 
 def tracked_regular_files(root: Path) -> set[str]:
+    """Return regular files from the exact checked-out HEAD tree, not checkout extras."""
     root = root.resolve()
     try:
         top = subprocess.run(
@@ -139,13 +140,13 @@ def tracked_regular_files(root: Path) -> set[str]:
 
     try:
         raw = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "-s", "-z"],
+            ["git", "-C", str(root), "ls-tree", "-r", "-z", "--full-tree", "HEAD"],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         ).stdout
     except (OSError, subprocess.CalledProcessError) as exc:
-        raise DevelopmentFailurePatternError("cannot resolve tracked Git index entries") from exc
+        raise DevelopmentFailurePatternError("cannot resolve exact HEAD Git tree entries") from exc
 
     result: set[str] = set()
     for record in raw.split(b"\0"):
@@ -153,17 +154,13 @@ def tracked_regular_files(root: Path) -> set[str]:
             continue
         try:
             metadata, path_bytes = record.split(b"\t", 1)
-            mode, _blob, stage = metadata.decode("ascii").split()
+            mode, object_type, _object_sha = metadata.decode("ascii").split()
             path = path_bytes.decode("utf-8")
         except (ValueError, UnicodeDecodeError) as exc:
             raise DevelopmentFailurePatternError(
-                "malformed/non-UTF8 tracked Git index entry"
+                "malformed/non-UTF8 exact HEAD tree entry"
             ) from exc
-        if stage != "0":
-            raise DevelopmentFailurePatternError(
-                f"unmerged Git index entry is not valid repeat-prevention authority: {path}"
-            )
-        if mode in REGULAR_GIT_MODES:
+        if mode in REGULAR_GIT_MODES and object_type == "blob":
             result.add(path)
     return result
 
@@ -177,7 +174,7 @@ def require_tracked_regular_ref(
     path = require_repo_relative(value, label)
     if path not in tracked:
         raise DevelopmentFailurePatternError(
-            f"{label} is not a tracked regular repository file: {path}"
+            f"{label} is not a tracked regular file in exact HEAD: {path}"
         )
     candidate = root / path
     if candidate.is_symlink() or not candidate.is_file():
@@ -245,7 +242,7 @@ def validate_repository_search(
         matches = sorted(path for path in tracked if fnmatch.fnmatchcase(path, normalized))
         if not matches:
             raise DevelopmentFailurePatternError(
-                f"{label}.searched_scope[{index}] matches no tracked regular repository files: {pattern}"
+                f"{label}.searched_scope[{index}] matches no tracked regular files in exact HEAD: {pattern}"
             )
     for index, instance in enumerate(discovered, start=1):
         require_tracked_regular_ref(
