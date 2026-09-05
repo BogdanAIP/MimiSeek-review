@@ -114,6 +114,22 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         guard.validate_pattern(p, ROOT, "p")
         self.assertEqual(guard.active_summary(p)["pending_repeat_analysis"], [])
 
+    def test_retired_pattern_cannot_hide_unresolved_debt(self) -> None:
+        p = seed(); p["status"] = "RETIRED"
+        with self.assertRaisesRegex(guard.DevelopmentFailurePatternError, "RETIRED pattern cannot hide unresolved"):
+            guard.validate_pattern(p, ROOT, "p")
+
+        p = seed()
+        p["occurrences"].append({"occurrence_id":"DFP-0001-O002","relation":"REPEAT","pr":99,"head_sha":"5"*40,"evidence_locator":"review_comment:1002","prevention_failure_reason":"UNKNOWN_PENDING_ANALYSIS"})
+        p["status"] = "RETIRED"
+        with self.assertRaisesRegex(guard.DevelopmentFailurePatternError, "RETIRED pattern cannot hide unresolved"):
+            guard.validate_pattern(p, ROOT, "p")
+
+        p = seed()
+        p["status"] = "RETIRED"
+        p["repository_search"] = {**p["repository_search"], "status":"COMPLETED", "follow_up_refs":[]}
+        guard.validate_pattern(p, ROOT, "p")
+
     def test_exact_head_git_authority_blocks_checkout_only_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
             root = Path(tmp); fixture_repo(root)
@@ -171,7 +187,14 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         reference = (ROOT/"docs/DEVELOPMENT_REPEAT_PREVENTION.md").read_text(encoding="utf-8")
         self.assertIn("Canonical owner for the MimiSeek cross-chat development process: this document.", protocol)
         self.assertIn("Status: explanatory reference only; non-authoritative.", reference)
-        for forbidden in ("## Required closure loop", "## Development-start retrieval", "## Review-time repeat check", "python tools/validate_development_failure_patterns.py --list-active"):
+        for forbidden in (
+            "## Required closure loop",
+            "## Development-start retrieval",
+            "## Review-time repeat check",
+            "## Current pattern inventory",
+            "## Why `DFP-0001` is not marked complete",
+            "DFP-0001",
+        ):
             self.assertNotIn(forbidden, reference)
 
 
