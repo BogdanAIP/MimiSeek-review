@@ -44,11 +44,12 @@ Any future use of these records as reviewer-learning input needs separately acce
 
 ## Current pattern inventory
 
-The current PR #21 target state contains three self-development failure classes:
+The current PR #21 target state contains four self-development failure classes:
 
 - `DFP-0001` — `evidence.semantic_binding_missing`: claim-bearing free-form evidence can be identity-authenticated without binding the actual semantic body. Its repository search is currently `BOUNDED_FOLLOW_UP` because PR #21 found additional same-class commentary verifiers; durable closure is tracked in issue #22.
 - `DFP-0002` — `repository.reference_not_git_bound`: checkout filesystem existence can be mistaken for durable tracked repository authority.
 - `DFP-0003` — `governance.duplicate_canonical_owner`: one cross-chat process can accidentally be defined normatively in multiple mutable documents.
+- `DFP-0004` — `workflow.noop_head_mutation`: a byte-identical repository Contents write can still move exact HEAD and invalidate exact-head CI/review evidence; PR #21 recorded both the origin and an immediate same-class repeat.
 
 The registry itself, the exact origin evidence, and `docs/DEVELOPMENT_PROTOCOL.md` carry the authoritative machine/process details. This page only provides orientation.
 
