@@ -124,6 +124,8 @@ A `REPEAT` must classify why prior prevention did not stop recurrence using one 
 
 `UNKNOWN_PENDING_ANALYSIS` is a temporary fail-closed classification, not permission to finish remediation without determining whether the prevention loop itself needs strengthening. While any occurrence remains `UNKNOWN_PENDING_ANALYSIS`, the pattern must remain `BOUNDED_FOLLOW_UP` with a durable `follow_up_ref`, and active-pattern retrieval must expose the pending occurrence identity so it cannot disappear across chats.
 
+A failure pattern may be `RETIRED` only after `repository_search.status=COMPLETED`, all durable follow-ups are closed/removed from the record, and no `UNKNOWN_PENDING_ANALYSIS` occurrence remains. Retirement must never make unresolved debt disappear from active-pattern retrieval.
+
 A repeat is therefore both a new code/process defect and evidence that the prior prevention loop was insufficient.
 
 ### Review-time use
