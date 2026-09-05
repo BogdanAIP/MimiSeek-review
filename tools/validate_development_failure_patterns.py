@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import argparse
-import glob
+import fnmatch
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ OCCURRENCE_ID_RE = re.compile(r"^DFP-[0-9]{4}-O[0-9]{3}$")
 FAILURE_CLASS_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 LOCATOR_RE = re.compile(r"^(review_comment|issue_comment|review_thread|pr_comment):.+$")
+REGULAR_GIT_MODES = {"100644", "100755"}
 
 TOP_FIELDS = {
     "schema_version",
@@ -107,16 +109,92 @@ def require_unique_strings(
 
 
 def require_repo_relative(value: str, label: str) -> str:
-    path = Path(value.split("#", 1)[0])
+    raw_path = value.split("#", 1)[0]
+    path = Path(raw_path)
     if path.is_absolute() or ".." in path.parts or not path.parts:
         raise DevelopmentFailurePatternError(f"{label} must be a repository-relative path")
+    if path.parts[0] == ".git":
+        raise DevelopmentFailurePatternError(f"{label} must not reference .git metadata")
     return path.as_posix()
 
 
-def require_existing_ref(root: Path, value: str, label: str) -> None:
+def tracked_regular_files(root: Path) -> set[str]:
+    root = root.resolve()
+    try:
+        top = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise DevelopmentFailurePatternError(
+            "repeat-prevention validation requires an exact Git working tree"
+        ) from exc
+    if Path(top).resolve() != root:
+        raise DevelopmentFailurePatternError(
+            f"repeat-prevention root is not the Git toplevel: root={root} git={top}"
+        )
+
+    try:
+        raw = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-s", "-z"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise DevelopmentFailurePatternError("cannot resolve tracked Git index entries") from exc
+
+    result: set[str] = set()
+    for record in raw.split(b"\0"):
+        if not record:
+            continue
+        try:
+            metadata, path_bytes = record.split(b"\t", 1)
+            mode, _blob, stage = metadata.decode("ascii").split()
+            path = path_bytes.decode("utf-8")
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise DevelopmentFailurePatternError(
+                "malformed/non-UTF8 tracked Git index entry"
+            ) from exc
+        if stage != "0":
+            raise DevelopmentFailurePatternError(
+                f"unmerged Git index entry is not valid repeat-prevention authority: {path}"
+            )
+        if mode in REGULAR_GIT_MODES:
+            result.add(path)
+    return result
+
+
+def require_tracked_regular_ref(
+    root: Path,
+    value: str,
+    label: str,
+    tracked: set[str],
+) -> str:
     path = require_repo_relative(value, label)
-    if not (root / path).is_file():
-        raise DevelopmentFailurePatternError(f"{label} does not resolve to a repository file: {path}")
+    if path not in tracked:
+        raise DevelopmentFailurePatternError(
+            f"{label} is not a tracked regular repository file: {path}"
+        )
+    candidate = root / path
+    if candidate.is_symlink() or not candidate.is_file():
+        raise DevelopmentFailurePatternError(
+            f"{label} checkout path is not a regular file: {path}"
+        )
+    try:
+        resolved = candidate.resolve(strict=True)
+    except OSError as exc:
+        raise DevelopmentFailurePatternError(
+            f"{label} tracked file cannot be resolved: {path}"
+        ) from exc
+    if not resolved.is_relative_to(root.resolve()):
+        raise DevelopmentFailurePatternError(
+            f"{label} resolves outside repository authority: {path}"
+        )
+    return path
 
 
 def validate_origin(value: Any, label: str) -> dict[str, Any]:
@@ -135,7 +213,12 @@ def validate_origin(value: Any, label: str) -> dict[str, Any]:
     return origin
 
 
-def validate_repository_search(value: Any, root: Path, label: str) -> dict[str, Any]:
+def validate_repository_search(
+    value: Any,
+    root: Path,
+    label: str,
+    tracked: set[str],
+) -> dict[str, Any]:
     search = require_exact_shape(value, SEARCH_FIELDS, label)
     if search["status"] not in {"COMPLETED", "BOUNDED_FOLLOW_UP"}:
         raise DevelopmentFailurePatternError(f"{label}.status is unsupported")
@@ -158,18 +241,28 @@ def validate_repository_search(value: Any, root: Path, label: str) -> dict[str, 
         )
 
     for index, pattern in enumerate(scopes, start=1):
-        require_repo_relative(pattern, f"{label}.searched_scope[{index}]")
-        matches = [Path(item) for item in glob.glob(str(root / pattern), recursive=True)]
-        if not any(item.is_file() for item in matches):
+        normalized = require_repo_relative(pattern, f"{label}.searched_scope[{index}]")
+        matches = sorted(path for path in tracked if fnmatch.fnmatchcase(path, normalized))
+        if not matches:
             raise DevelopmentFailurePatternError(
-                f"{label}.searched_scope[{index}] matches no repository files: {pattern}"
+                f"{label}.searched_scope[{index}] matches no tracked regular repository files: {pattern}"
             )
     for index, instance in enumerate(discovered, start=1):
-        require_existing_ref(root, instance, f"{label}.discovered_instances[{index}]")
+        require_tracked_regular_ref(
+            root,
+            instance,
+            f"{label}.discovered_instances[{index}]",
+            tracked,
+        )
     return search
 
 
-def validate_prevention(value: Any, root: Path, label: str) -> dict[str, Any]:
+def validate_prevention(
+    value: Any,
+    root: Path,
+    label: str,
+    tracked: set[str],
+) -> dict[str, Any]:
     prevention = require_exact_shape(value, PREVENTION_FIELDS, label)
     kind = prevention["kind"]
     if kind not in {"EXECUTABLE", "MANUAL_ONLY"}:
@@ -192,16 +285,21 @@ def validate_prevention(value: Any, root: Path, label: str) -> dict[str, Any]:
                 f"{label}.EXECUTABLE requires manual_only_reason=null"
             )
     else:
-        if guards:
+        if guards or regressions:
             raise DevelopmentFailurePatternError(
-                f"{label}.MANUAL_ONLY must not claim executable guard_refs"
+                f"{label}.MANUAL_ONLY must not claim executable guard/regression refs"
             )
         require_nonempty_string(reason, f"{label}.manual_only_reason")
 
     for index, ref in enumerate(guards, start=1):
-        require_existing_ref(root, ref, f"{label}.guard_refs[{index}]")
+        require_tracked_regular_ref(root, ref, f"{label}.guard_refs[{index}]", tracked)
     for index, ref in enumerate(regressions, start=1):
-        require_existing_ref(root, ref, f"{label}.regression_refs[{index}]")
+        require_tracked_regular_ref(
+            root,
+            ref,
+            f"{label}.regression_refs[{index}]",
+            tracked,
+        )
     return prevention
 
 
@@ -231,9 +329,7 @@ def validate_occurrences(
         if occurrence_id in seen:
             raise DevelopmentFailurePatternError(f"duplicate occurrence_id {occurrence_id}")
         if previous_id is not None and occurrence_id <= previous_id:
-            raise DevelopmentFailurePatternError(
-                f"{label} must be ordered by occurrence_id"
-            )
+            raise DevelopmentFailurePatternError(f"{label} must be ordered by occurrence_id")
         previous_id = occurrence_id
         seen.add(occurrence_id)
 
@@ -242,9 +338,7 @@ def validate_occurrences(
             raise DevelopmentFailurePatternError(f"{item_label}.relation is unsupported")
         require_positive_int(item["pr"], f"{item_label}.pr")
         require_sha(item["head_sha"], f"{item_label}.head_sha")
-        locator = require_nonempty_string(
-            item["evidence_locator"], f"{item_label}.evidence_locator"
-        )
+        locator = require_nonempty_string(item["evidence_locator"], f"{item_label}.evidence_locator")
         if not LOCATOR_RE.fullmatch(locator):
             raise DevelopmentFailurePatternError(f"{item_label}.evidence_locator is invalid")
 
@@ -278,7 +372,15 @@ def validate_occurrences(
     return result
 
 
-def validate_pattern(value: Any, root: Path, label: str) -> dict[str, Any]:
+def validate_pattern(
+    value: Any,
+    root: Path,
+    label: str,
+    *,
+    tracked: set[str] | None = None,
+) -> dict[str, Any]:
+    if tracked is None:
+        tracked = tracked_regular_files(root)
     pattern = require_exact_shape(value, TOP_FIELDS, label)
     if pattern["schema_version"] != SCHEMA_VERSION:
         raise DevelopmentFailurePatternError(f"{label}.schema_version is unsupported")
@@ -299,8 +401,10 @@ def validate_pattern(value: Any, root: Path, label: str) -> dict[str, Any]:
     require_unique_strings(
         pattern["non_applicable_scope"], f"{label}.non_applicable_scope", allow_empty=True
     )
-    validate_repository_search(pattern["repository_search"], root, f"{label}.repository_search")
-    validate_prevention(pattern["prevention"], root, f"{label}.prevention")
+    validate_repository_search(
+        pattern["repository_search"], root, f"{label}.repository_search", tracked
+    )
+    validate_prevention(pattern["prevention"], root, f"{label}.prevention", tracked)
     validate_occurrences(pattern["occurrences"], pattern_id, origin, f"{label}.occurrences")
     return pattern
 
@@ -325,6 +429,7 @@ def validate_schema_identity(root: Path) -> None:
 def load_registry(path: Path, root: Path) -> list[dict[str, Any]]:
     if not path.is_file():
         raise DevelopmentFailurePatternError(f"missing registry: {path}")
+    tracked = tracked_regular_files(root)
     patterns: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
     seen_classes: set[str] = set()
@@ -339,7 +444,12 @@ def load_registry(path: Path, root: Path) -> list[dict[str, Any]]:
             raise DevelopmentFailurePatternError(
                 f"{path}:{line_number}: invalid JSON: {exc.msg}"
             ) from exc
-        pattern = validate_pattern(raw, root, f"{path}:{line_number}")
+        pattern = validate_pattern(
+            raw,
+            root,
+            f"{path}:{line_number}",
+            tracked=tracked,
+        )
         pattern_id = pattern["pattern_id"]
         failure_class = pattern["failure_class"]
         if pattern_id in seen_ids:
@@ -356,7 +466,9 @@ def load_registry(path: Path, root: Path) -> list[dict[str, Any]]:
         patterns.append(pattern)
 
     if not patterns:
-        raise DevelopmentFailurePatternError("development failure-pattern registry must not be empty")
+        raise DevelopmentFailurePatternError(
+            "development failure-pattern registry must not be empty"
+        )
     return patterns
 
 
@@ -367,6 +479,8 @@ def active_summary(pattern: dict[str, Any]) -> dict[str, Any]:
         "title": pattern["title"],
         "trigger_conditions": pattern["trigger_conditions"],
         "applicable_scope": pattern["applicable_scope"],
+        "search_status": pattern["repository_search"]["status"],
+        "follow_up_refs": pattern["repository_search"]["follow_up_refs"],
         "guard_refs": pattern["prevention"]["guard_refs"],
         "regression_refs": pattern["prevention"]["regression_refs"],
     }
@@ -403,7 +517,11 @@ def main() -> int:
     try:
         validate_schema_identity(root)
         patterns = load_registry(registry, root)
-    except (DevelopmentFailurePatternError, OSError, json.JSONDecodeError) as exc:
+    except (
+        DevelopmentFailurePatternError,
+        OSError,
+        json.JSONDecodeError,
+    ) as exc:
         print(f"development failure-pattern validation failed: {exc}")
         return 1
 
