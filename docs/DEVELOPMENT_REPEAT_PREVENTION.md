@@ -59,7 +59,7 @@ The original PR #20 remediation hardened `tools/verify_bootstrap_commentary_auth
 - `tools/verify_bootstrap_commentary_fix_baseline_reconciliation.py`;
 - `tools/verify_bootstrap_commentary_fix_evidence_reconciliation.py`.
 
-Issue #22 records the bounded follow-up. The registry therefore exposes that incomplete search state instead of claiming repository-wide closure prematurely. Issue #22 must be resolved through a later accepted repository change before `DFP-0001.repository_search.status` can return to `COMPLETED`; the issue's mere existence is not evidence that the remaining verifiers are safe.
+Issue #22 records the bounded follow-up. Accordingly, the registry currently exposes `BOUNDED_FOLLOW_UP` rather than `COMPLETED`. The transition criteria for repository-search states are owned exclusively by `docs/DEVELOPMENT_PROTOCOL.md`; this page does not define or alter them.
 
 ## Relationship to ordinary acceptance
 
