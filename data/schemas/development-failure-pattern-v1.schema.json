@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "MimiSeek development failure pattern v1",
-  "description": "Cross-cutting self-development repeat-prevention record for confirmed MimiSeek development defects. This is not reviewer-evolution DEFECT_PATTERN_V1 authority. Repository path authority (tracked regular Git files, not checkout-only state or symlinks) is enforced by the executable validator.",
+  "description": "Cross-cutting self-development repeat-prevention record for confirmed MimiSeek development defects. This is not reviewer-evolution DEFECT_PATTERN_V1 authority. Repository path authority (tracked regular Git files, not checkout-only state or symlinks), durable follow-up locator authority, and UNKNOWN_PENDING_ANALYSIS cross-field closure are enforced by the executable validator.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -52,7 +52,7 @@
         },
         "follow_up_refs": {
           "type": "array",
-          "items": {"type": "string", "minLength": 1},
+          "items": {"$ref": "#/$defs/followUpRef"},
           "uniqueItems": true
         },
         "notes": {"type": "string", "minLength": 1}
@@ -122,6 +122,19 @@
       "minItems": 1,
       "items": {"type": "string", "minLength": 1},
       "uniqueItems": true
+    },
+    "followUpRef": {
+      "description": "Durable bounded follow-up locator. Exact tracked-file authority is enforced by the executable validator.",
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^https://github\\.com/BogdanAIP/MimiSeek-review/issues/[1-9][0-9]*$"
+        },
+        {
+          "type": "string",
+          "pattern": "^(?!https?://)(?!/)(?!\\.git(?:/|$))(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+        }
+      ]
     },
     "occurrenceOrigin": {
       "type": "object",

@@ -26,7 +26,7 @@ Executable registry validator:
 
 `tools/validate_development_failure_patterns.py`
 
-The validator checks machine shape and local repository references. Current path authority is intentionally Git-bound: prevention refs, discovered instances, and search-scope matches resolve only to tracked regular files from the exact checked-out `HEAD` tree; `.git` metadata, untracked or staged-only checkout files, and tracked symlinks do not count as repository artifacts.
+The validator checks machine shape and local repository references. Current path authority is intentionally Git-bound: prevention refs, discovered instances, and search-scope matches resolve only to tracked regular files from the exact checked-out `HEAD` tree; `.git` metadata, untracked or staged-only checkout files, and tracked symlinks do not count as repository artifacts. Bounded follow-ups are restricted to recoverable MimiSeek issue locators or tracked regular exact-HEAD files, and unresolved `UNKNOWN_PENDING_ANALYSIS` repeats remain visible in active-pattern output.
 
 ## Scope boundary
 
@@ -44,12 +44,14 @@ Any future use of these records as reviewer-learning input needs separately acce
 
 ## Current pattern inventory
 
-The current PR #21 target state contains four self-development failure classes:
+The current PR #21 target state contains six self-development failure classes:
 
 - `DFP-0001` — `evidence.semantic_binding_missing`: claim-bearing free-form evidence can be identity-authenticated without binding the actual semantic body. Its repository search is currently `BOUNDED_FOLLOW_UP` because PR #21 found additional same-class commentary verifiers; durable closure is tracked in issue #22.
 - `DFP-0002` — `repository.reference_not_git_bound`: checkout filesystem existence can be mistaken for durable tracked repository authority.
 - `DFP-0003` — `governance.duplicate_canonical_owner`: one cross-chat process can accidentally be defined normatively in multiple mutable documents.
 - `DFP-0004` — `workflow.noop_head_mutation`: a byte-identical repository Contents write can still move exact HEAD and invalidate exact-head CI/review evidence; PR #21 recorded both the origin and an immediate same-class repeat.
+- `DFP-0005` — `workflow.follow_up_locator_not_durable`: bounded process debt can appear recoverable even when its follow-up reference is only free-form text or another unsupported locator.
+- `DFP-0006` — `workflow.pending_repeat_analysis_hidden`: an unresolved repeat-analysis reason can otherwise coexist with apparently complete search state and disappear from the startup view.
 
 The registry itself, the exact origin evidence, and `docs/DEVELOPMENT_PROTOCOL.md` carry the authoritative machine/process details. This page only provides orientation.
 
