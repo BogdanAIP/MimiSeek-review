@@ -8,41 +8,24 @@ import re
 import subprocess
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 SCHEMA_VERSION = "DEVELOPMENT_FAILURE_PATTERN_V1"
 REPOSITORY = "BogdanAIP/MimiSeek-review"
+REPOSITORY_ISSUE_PREFIX = "https://github.com/BogdanAIP/MimiSeek-review/issues/"
 PATTERN_ID_RE = re.compile(r"^DFP-[0-9]{4}$")
 OCCURRENCE_ID_RE = re.compile(r"^DFP-[0-9]{4}-O[0-9]{3}$")
 FAILURE_CLASS_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 LOCATOR_RE = re.compile(r"^(review_comment|issue_comment|review_thread|pr_comment):.+$")
-ISSUE_FOLLOW_UP_RE = re.compile(
-    r"^https://github\.com/BogdanAIP/MimiSeek-review/issues/[1-9][0-9]*$"
-)
 REGULAR_GIT_MODES = {"100644", "100755"}
-REPEAT_FAILURE_REASONS = {
-    "NO_GUARD",
-    "GUARD_TOO_NARROW",
-    "GUARD_NOT_IN_CI",
-    "PATTERN_NOT_RETRIEVED",
-    "SCOPE_WRONG",
-    "NEW_VARIANT",
-    "UNKNOWN_PENDING_ANALYSIS",
-}
 
-TOP_FIELDS = {
-    "schema_version", "pattern_id", "status", "title", "failure_class", "origin",
-    "root_cause", "failure_mechanism", "violated_invariant", "trigger_conditions",
-    "applicable_scope", "non_applicable_scope", "repository_search", "prevention",
-    "occurrences",
-}
+TOP_FIELDS = {"schema_version", "pattern_id", "status", "title", "failure_class", "origin", "root_cause", "failure_mechanism", "violated_invariant", "trigger_conditions", "applicable_scope", "non_applicable_scope", "repository_search", "prevention", "occurrences"}
 ORIGIN_FIELDS = {"source_kind", "repository", "pr", "head_sha", "evidence_locator"}
 SEARCH_FIELDS = {"status", "searched_scope", "discovered_instances", "follow_up_refs", "notes"}
 PREVENTION_FIELDS = {"kind", "guard_refs", "regression_refs", "manual_only_reason"}
-OCCURRENCE_FIELDS = {
-    "occurrence_id", "relation", "pr", "head_sha", "evidence_locator",
-    "prevention_failure_reason",
-}
+OCCURRENCE_FIELDS = {"occurrence_id", "relation", "pr", "head_sha", "evidence_locator", "prevention_failure_reason"}
+REPEAT_FAILURE_REASONS = {"NO_GUARD", "GUARD_TOO_NARROW", "GUARD_NOT_IN_CI", "PATTERN_NOT_RETRIEVED", "SCOPE_WRONG", "NEW_VARIANT", "UNKNOWN_PENDING_ANALYSIS"}
 
 
 class DevelopmentFailurePatternError(RuntimeError):
@@ -53,26 +36,13 @@ def exact_object(value: Any, fields: set[str], label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise DevelopmentFailurePatternError(f"{label} must be an object")
     if set(value) != fields:
-        raise DevelopmentFailurePatternError(
-            f"{label} shape mismatch; missing={sorted(fields-set(value))} "
-            f"unknown={sorted(set(value)-fields)}"
-        )
+        raise DevelopmentFailurePatternError(f"{label} shape mismatch; missing={sorted(fields-set(value))} unknown={sorted(set(value)-fields)}")
     return value
 
 
 def nonempty(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise DevelopmentFailurePatternError(f"{label} must be a non-empty string")
-    return value
-
-
-def unique_strings(value: Any, label: str, *, allow_empty: bool = False) -> list[str]:
-    if not isinstance(value, list) or any(not isinstance(x, str) or not x.strip() for x in value):
-        raise DevelopmentFailurePatternError(f"{label} must be an array of non-empty strings")
-    if not allow_empty and not value:
-        raise DevelopmentFailurePatternError(f"{label} must not be empty")
-    if len(value) != len(set(value)):
-        raise DevelopmentFailurePatternError(f"{label} contains duplicates")
     return value
 
 
@@ -88,49 +58,46 @@ def sha40(value: Any, label: str) -> str:
     return value
 
 
+def unique_strings(value: Any, label: str, allow_empty: bool=False) -> list[str]:
+    if not isinstance(value, list) or any(not isinstance(x, str) or not x.strip() for x in value):
+        raise DevelopmentFailurePatternError(f"{label} must be an array of non-empty strings")
+    if not allow_empty and not value:
+        raise DevelopmentFailurePatternError(f"{label} must not be empty")
+    if len(value) != len(set(value)):
+        raise DevelopmentFailurePatternError(f"{label} contains duplicates")
+    return value
+
+
 def repo_relative(value: str, label: str) -> str:
-    raw = value.split("#", 1)[0]
-    path = Path(raw)
-    if path.is_absolute() or not path.parts or ".." in path.parts:
+    raw = value.split("#",1)[0]
+    p = Path(raw)
+    if p.is_absolute() or ".." in p.parts or not p.parts:
         raise DevelopmentFailurePatternError(f"{label} must be a repository-relative path")
-    if path.parts[0] == ".git":
+    if p.parts[0] == ".git":
         raise DevelopmentFailurePatternError(f"{label} must not reference .git metadata")
-    return path.as_posix()
+    return p.as_posix()
 
 
 def tracked_regular_files(root: Path) -> set[str]:
     root = root.resolve()
     try:
-        top = subprocess.run(
-            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
-            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-        ).stdout.strip()
+        top = subprocess.run(["git","-C",str(root),"rev-parse","--show-toplevel"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True).stdout.strip()
         if Path(top).resolve() != root:
-            raise DevelopmentFailurePatternError(
-                f"repeat-prevention root is not the Git toplevel: root={root} git={top}"
-            )
-        raw = subprocess.run(
-            ["git", "-C", str(root), "ls-tree", "-r", "-z", "--full-tree", "HEAD"],
-            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        ).stdout
-    except DevelopmentFailurePatternError:
-        raise
+            raise DevelopmentFailurePatternError(f"repeat-prevention root is not the Git toplevel: root={root} git={top}")
+        raw = subprocess.run(["git","-C",str(root),"ls-tree","-r","-z","--full-tree","HEAD"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
     except (OSError, subprocess.CalledProcessError) as exc:
-        raise DevelopmentFailurePatternError(
-            "repeat-prevention validation requires an exact Git HEAD tree"
-        ) from exc
-
+        raise DevelopmentFailurePatternError("repeat-prevention validation requires an exact Git HEAD tree") from exc
     result: set[str] = set()
     for record in raw.split(b"\0"):
         if not record:
             continue
         try:
-            meta, path_bytes = record.split(b"\t", 1)
-            mode, kind, _sha = meta.decode("ascii").split()
-            path = path_bytes.decode("utf-8")
+            meta, pbytes = record.split(b"\t",1)
+            mode, object_type, _ = meta.decode("ascii").split()
+            path = pbytes.decode("utf-8")
         except (ValueError, UnicodeDecodeError) as exc:
             raise DevelopmentFailurePatternError("malformed/non-UTF8 exact HEAD tree entry") from exc
-        if mode in REGULAR_GIT_MODES and kind == "blob":
+        if mode in REGULAR_GIT_MODES and object_type == "blob":
             result.add(path)
     return result
 
@@ -138,9 +105,7 @@ def tracked_regular_files(root: Path) -> set[str]:
 def tracked_ref(root: Path, value: str, label: str, tracked: set[str]) -> str:
     path = repo_relative(value, label)
     if path not in tracked:
-        raise DevelopmentFailurePatternError(
-            f"{label} is not a tracked regular file in exact HEAD: {path}"
-        )
+        raise DevelopmentFailurePatternError(f"{label} is not a tracked regular file in exact HEAD: {path}")
     candidate = root / path
     if candidate.is_symlink() or not candidate.is_file():
         raise DevelopmentFailurePatternError(f"{label} checkout path is not a regular file: {path}")
@@ -155,18 +120,16 @@ def tracked_ref(root: Path, value: str, label: str, tracked: set[str]) -> str:
 
 def follow_up_ref(root: Path, value: str, label: str, tracked: set[str]) -> str:
     ref = nonempty(value, label)
-    if ISSUE_FOLLOW_UP_RE.fullmatch(ref):
+    if ref.startswith("https://"):
+        parsed = urlparse(ref)
+        if parsed.scheme != "https" or parsed.netloc != "github.com" or parsed.query or parsed.fragment or not ref.startswith(REPOSITORY_ISSUE_PREFIX):
+            raise DevelopmentFailurePatternError(f"{label} must be an exact MimiSeek issue URL or tracked regular file")
+        tail = ref[len(REPOSITORY_ISSUE_PREFIX):]
+        if not tail.isdigit() or int(tail) < 1 or "/" in tail:
+            raise DevelopmentFailurePatternError(f"{label} must be an exact MimiSeek issue URL or tracked regular file")
         return ref
-    if "://" in ref:
-        raise DevelopmentFailurePatternError(
-            f"{label} must be an exact MimiSeek issue URL or tracked regular file"
-        )
-    try:
-        return tracked_ref(root, ref, label, tracked)
-    except DevelopmentFailurePatternError as exc:
-        raise DevelopmentFailurePatternError(
-            f"{label} must be an exact MimiSeek issue URL or tracked regular file: {ref}"
-        ) from exc
+    tracked_ref(root, ref, label, tracked)
+    return ref
 
 
 def validate_origin(value: Any, label: str) -> dict[str, Any]:
@@ -175,34 +138,33 @@ def validate_origin(value: Any, label: str) -> dict[str, Any]:
         raise DevelopmentFailurePatternError(f"{label}.source_kind is unsupported")
     if origin["repository"] != REPOSITORY:
         raise DevelopmentFailurePatternError(f"{label}.repository must remain scoped to {REPOSITORY}")
-    positive_int(origin["pr"], f"{label}.pr")
-    sha40(origin["head_sha"], f"{label}.head_sha")
-    locator = nonempty(origin["evidence_locator"], f"{label}.evidence_locator")
-    if not LOCATOR_RE.fullmatch(locator):
+    positive_int(origin["pr"], f"{label}.pr"); sha40(origin["head_sha"], f"{label}.head_sha")
+    loc = nonempty(origin["evidence_locator"], f"{label}.evidence_locator")
+    if not LOCATOR_RE.fullmatch(loc):
         raise DevelopmentFailurePatternError(f"{label}.evidence_locator is invalid")
     return origin
 
 
-def validate_search(value: Any, root: Path, label: str, tracked: set[str]) -> dict[str, Any]:
+def validate_repository_search(value: Any, root: Path, label: str, tracked: set[str]) -> dict[str, Any]:
     search = exact_object(value, SEARCH_FIELDS, label)
     if search["status"] not in {"COMPLETED", "BOUNDED_FOLLOW_UP"}:
         raise DevelopmentFailurePatternError(f"{label}.status is unsupported")
     scopes = unique_strings(search["searched_scope"], f"{label}.searched_scope")
     discovered = unique_strings(search["discovered_instances"], f"{label}.discovered_instances", allow_empty=True)
-    followups = unique_strings(search["follow_up_refs"], f"{label}.follow_up_refs", allow_empty=True)
+    follows = unique_strings(search["follow_up_refs"], f"{label}.follow_up_refs", allow_empty=True)
     nonempty(search["notes"], f"{label}.notes")
-    if search["status"] == "COMPLETED" and followups:
+    if search["status"] == "COMPLETED" and follows:
         raise DevelopmentFailurePatternError(f"{label}.COMPLETED search must not retain follow_up_refs")
-    if search["status"] == "BOUNDED_FOLLOW_UP" and not followups:
+    if search["status"] == "BOUNDED_FOLLOW_UP" and not follows:
         raise DevelopmentFailurePatternError(f"{label}.BOUNDED_FOLLOW_UP requires at least one follow_up_ref")
     for i, pattern in enumerate(scopes, 1):
-        normalized = repo_relative(pattern, f"{label}.searched_scope[{i}")
-        if not any(fnmatch.fnmatchcase(path, normalized) for path in tracked):
+        normalized = repo_relative(pattern, f"{label}.searched_scope[{i}]")
+        if not any(fnmatch.fnmatchcase(p, normalized) for p in tracked):
             raise DevelopmentFailurePatternError(f"{label}.searched_scope[{i}] matches no tracked regular files in exact HEAD: {pattern}")
-    for i, item in enumerate(discovered, 1):
-        tracked_ref(root, item, f"{label}.discovered_instances[{i}]", tracked)
-    for i, item in enumerate(followups, 1):
-        follow_up_ref(root, item, f"{label}.follow_up_refs[{i}]", tracked)
+    for i, instance in enumerate(discovered, 1):
+        tracked_ref(root, instance, f"{label}.discovered_instances[{i}]", tracked)
+    for i, ref in enumerate(follows, 1):
+        follow_up_ref(root, ref, f"{label}.follow_up_refs[{i}]", tracked)
     return search
 
 
@@ -234,7 +196,7 @@ def validate_occurrences(value: Any, pattern_id: str, origin: dict[str, Any], la
     for i, raw in enumerate(value, 1):
         item_label = f"{label}[{i}]"
         item = exact_object(raw, OCCURRENCE_FIELDS, item_label)
-      oid = nonempty(item["occurrence_id"], f"{item_label}.occurrence_id")
+        oid = nonempty(item["occurrence_id"], f"{item_label}.occurrence_id")
         if not OCCURRENCE_ID_RE.fullmatch(oid) or not oid.startswith(f"{pattern_id}-O"):
             raise DevelopmentFailurePatternError(f"{item_label}.occurrence_id must be namespaced by {pattern_id}")
         if oid in seen or (previous is not None and oid <= previous):
@@ -264,9 +226,7 @@ def validate_occurrences(value: Any, pattern_id: str, origin: dict[str, Any], la
     return result
 
 
-def validate_pattern(
-    value: Any, root: Path, label: str, *, tracked: set[str] | None = None
-) -> dict[str, Any]:
+def validate_pattern(value: Any, root: Path, label: str, *, tracked: set[str] | None=None) -> dict[str, Any]:
     tracked = tracked if tracked is not None else tracked_regular_files(root)
     pattern = exact_object(value, TOP_FIELDS, label)
     if pattern["schema_version"] != SCHEMA_VERSION:
@@ -286,49 +246,69 @@ def validate_pattern(
     unique_strings(pattern["trigger_conditions"], f"{label}.trigger_conditions")
     unique_strings(pattern["applicable_scope"], f"{label}.applicable_scope")
     unique_strings(pattern["non_applicable_scope"], f"{label}.non_applicable_scope", allow_empty=True)
-    search = validate_search(pattern["repository_search"], root, f"{label}.repository_search", tracked)
+    search = validate_repository_search(pattern["repository_search"], root, f"{label}.repository_search", tracked)
     validate_prevention(pattern["prevention"], root, f"{label}.prevention", tracked)
     occurrences = validate_occurrences(pattern["occurrences"], pid, origin, f"{label}.occurrences")
-    pending = [
-        item["occurrence_id"] for item in occurrences
-        if item["relation"] == "REPEAT"
-        and itemVÈœ™]™[[Û—Ù˜Z[\™WÜ™X\ÛÛˆ—HOH•S’Ó“ÕÓ—ÔS‘S‘×ÐSSTÒTÈ‚ˆBˆYˆ[™[™È[™ÙX\˜ÚÈœÝ]\È—HOH“ÕS‘QÑ“ÓÕ×ÕTŽ‚ˆ˜Z\ÙH]™[ÜY[˜Z[\™T]\›‘\œ›ÜŠˆˆžÛX™[K•S’Ó“ÕÓ—ÔS‘S‘×ÐSSTÒTÈ™\]Z\™\È“ÕS‘QÑ“ÓÕ×ÕTÚ]\˜X›H›ÛÝË]\‚ˆ
-Bˆ™]\›ˆ]\›‚‚‚™Yˆ˜[Y]WÜØÚ[XWÚY[]J›ÛÝˆ]
-HOˆ›Û™N‚ˆ]H›ÛÝÈ™]KÜØÚ[X\ËÙ]™[ÜY[Y˜Z[\™K\]\›‹]ŒKœØÚ[XKšœÛÛˆ‚ˆYˆ›Ý]š\×Ùš[J
-N‚ˆ˜Z\ÙH]™[ÜY[˜Z[\™T]\›‘\œ›ÜŠˆ›Z\ÜÚ[™ÈØÚ[XHš[NˆÜ]HŠBˆ˜]ÈHœÛÛ‹›ØYÊ]œ™XYÝ^
-[˜ÛÙ[™ÏH]‹NŠJBˆžN‚ˆ™\œÚ[ÛˆH˜]ÖÈœ›Ü\Y\È—VÈœØÚ[XWÝ™\œÚ[Ûˆ—VÈ˜ÛÛœÝ—Bˆ^Ù\
-Ù^Q\œ›Ü‹\Q\œ›ÜŠH\È^Î‚ˆ˜Z\ÙH]™[ÜY[˜Z[\™T]\›‘\œ›ÜŠ™]™[ÜY[˜Z[\™K\]\›ˆØÚ[XHXÚÜÈØÚ[XWÝ™\œÚ[ÛˆÛÛœÝŠHœ›ÛH^ÂˆYˆ™\œÚ[ÛˆOHÐÒSPWÕ‘T”ÒSÓŽ‚ˆ˜Z\ÙH]™[ÜY[˜Z[\™T]\›‘\œ›ÜŠ˜[Y]Ü‹ÜØÚ[XHU‘SÔQS•ÑRST‘WÔUT“—ÕŒHY[]HšYŠB‚‚™YˆØYÜ™YÚ\ÝžJ]ˆ]›ÛÝˆ]
-HOˆ\ÝÙXÝÜÝ‹[žWWN‚ˆYˆ›Ý]š\×Ùš[J
-N‚ˆ˜Z\ÙH]™[ÜY[˜Z[\™T]\›‘\œ›ÜŠˆ›Z\ÜÚ[™È™YÚ\ÝžNˆÜ]HŠBˆ˜XÚÙYH˜XÚÙYÜ™YÝ[\—Ùš[\Ê›ÛÝ
-Bˆ]\›œÎˆ\ÝÙXÝÜÝ‹[žWWHH×BˆÙY[—ÚYÎˆÙ]ÜÝ—HHÙ]
+    pending_unknown = [o for o in occurrences if o["relation"] == "REPEAT" and o["prevention_failure_reason"] == "UNKNOWN_PENDING_ANALYSIS"]
+    if pending_unknown and search["status"] != "BOUNDED_FOLLOW_UP":
+        raise DevelopmentFailurePatternError(f"{label} UNKNOWN_PENDING_ANALYSIS requires repository_search.status=BOUNDED_FOLLOW_UP")
+    return pattern
 
-BˆÙY[—ØÛ\ÜÙ\ÎˆÙ]ÜÝ—HHÙ]
 
-Bˆ™]š[Ý\ÎˆÝˆ›Û™HH›Û™Bˆ›Üˆ[™WÛ[X™\‹[™H[ˆ[[Y\˜]J]œ™XYÝ^
-[˜ÛÙ[™ÏH]‹NŠKœÜ][™\Ê
-KJN‚ˆYˆ›Ý[™KœÝš\
+def validate_schema_identity(root: Path) -> None:
+    path = root / "data/schemas/development-failure-pattern-v1.schema.json"
+    if not path.is_file():
+        raise DevelopmentFailurePatternError(f"missing schema file: {path}")
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if raw.get("properties",{}).get("schema_version",{}).get("const") != SCHEMA_VERSION:
+        raise DevelopmentFailurePatternError("validator/schema DEVELOPMENT_FAILURE_PATTERN_V1 identity drift")
 
-N‚ˆÛÛ[YBˆžN‚ˆ˜]ÈHœÛÛ‹›ØYÊ[™JBˆ^Ù\œÛÛ‹’”ÓÓ‘XÛÙQ\œ›Üˆ\È^Î‚ˆ˜Z\ÙH]™[ÜY[˜Z[\™T]\›‘\œ›ÜŠˆžÜ]NžÛ[™WÛ[X™\ŸNˆ[˜[Y”ÓÓŽˆÙ^Ë›\ÙßHŠHœ›ÛH^Âˆ]\›ˆH˜[Y]WÜ]\›Š˜]Ë›ÛÝˆžÜ]NžÛ[™WÛ[X™\ŸH‹˜XÚÙY]˜XÚÙY
-BˆYH]\›–Èœ]\›—ÚY—Bˆ˜Û\ÜÈH]\›–È™˜Z[\™WØÛ\ÜÈ—BˆYˆY[ˆÙY[—ÚYÎ‚ˆ˜Z\ÙH]™[ÜY[˜Z[\™T]\›‘\œ›ÜŠˆ™\XØ]H]\›—ÚYÜYHŠBˆYˆ˜Û\ÜÈ[ˆÙY[—ØÛ\ÜÙ\Î‚ˆ˜Z\ÙH]™[ÜY[˜Z[\™T]\›‘\œ›ÜŠˆ™\XØ]H˜Z[\™WØÛ\ÜÈÙ˜Û\ÜßNÈ\ÙHØØÝ\œ™[˜Ù\È›Üˆ™\X]ÈŠBˆYˆ™]š[Ý\È\È›Ý›Û™H[™YH™]š[Ý\Î‚ˆ˜Z\ÙH]™[ÜY[˜Z[\™T]\›‘\œ›ÜŠœ™YÚ\ÝžH]\Ý™HÜ™\™YžH]\›—ÚYŠBˆ™]š[Ý\ÈHYÈÙY[—ÚYË˜Y
-Y
-NÈÙY[—ØÛ\ÜÙ\Ë˜Y
-˜Û\ÜÊNÈ]\›œË˜\[™
-]\›ŠBˆYˆ›Ý]\›œÎ‚ˆ˜Z\ÙH]™[ÜY[˜Z[\™T]\›‘\œ›ÜŠ™]™[ÜY[˜Z[\™K\]\›ˆ™YÚ\ÝžH]\Ý›Ý™H[\HŠBˆ™]\›ˆ]\›œÂ‚‚™YˆXÝ]™WÜÝ[[X\žJ]\›ŽˆXÝÜÝ‹[žWJHOˆXÝÜÝ‹[žWN‚ˆ[™[™ÈHÂˆ][VÈ›ØØÝ\œ™[˜ÙWÚY—H›Üˆ][H[ˆ]\›–È›ØØÝ\œ™[˜Ù\È—BˆYˆ][VÈœ™[][Ûˆ—HOH”‘TPU‚ˆ[™][VÈœ™]™[[Û—Ù˜Z[\™WÜ™X\ÛÛˆ—HOH•S’Ó“ÕÓ—ÔS‘S‘×ÐSSTÒTÈ‚ˆBˆ™]\›ˆÂˆœ]\›—ÚYŽˆ]\›–Èœ]\›—ÚY—Kˆ™˜Z[\™WØÛ\ÜÈŽˆ]\›–È™˜Z[\™WØÛ\ÜÈ—Kˆ]HŽˆ]\›–È]H—KˆšYÙÙ\—ØÛÛ™][ÛœÈŽˆ]\›–ÈšYÙÙ\—ØÛÛ™][ÛœÈ—Kˆ˜\XØX›WÜØÛÜHŽˆ]\›–È˜\XØX›WÜØÛÜH—KˆœÙX\˜ÚÜÝ]\ÈŽˆ]\›–Èœ™\ÜÚ]ÜžWÜÙX\˜Ú—VÈœÝ]\È—Kˆ™›ÛÝ×Ý\Ü™YœÈŽˆ]\›–Èœ™\ÜÚ]ÜžWÜÙX\˜Ú—VÈ™›ÛÝ×Ý\Ü™YœÈ—Kˆœ[™[™×Ü™\X]Ø[˜[\Ú\ÈŽˆ[™[™Ëˆ™ÝX\™Ü™YœÈŽˆ]\›–Èœ™]™[[Ûˆ—VÈ™ÝX\™Ü™YœÈ—Kˆœ™YÜ™\ÜÚ[Û—Ü™YœÈŽˆ]\›–Èœ™]™[[Ûˆ—VÈœ™YÜ™\ÜÚ[Û—Ü™YœÈ—KˆB‚‚™YˆXZ[Š
-HOˆ[‚ˆ\œÙ\ˆH\™Ü\œÙK\™Ý[Y[\œÙ\Š\ØÜš\[ÛH•˜[Y]HZ[ZTÙYZÈÙ[‹Y]™[ÜY[™\X]\™]™[[Ûˆ]\›œÈŠBˆ\œÙ\‹˜YØ\™Ý[Y[
-‹K\›ÛÝ‹\OT]Y˜][T]
-×Ùš[W×ÊKœ™\ÛÛ™J
-Kœ\™[ÖÌWJBˆ\œÙ\‹˜YØ\™Ý[Y[
-‹K\™YÚ\ÝžH‹\OT]Y˜][T]
-™]KÙ]™[ÜY[Y˜Z[\™K\]\›œËšœÛÛ›ŠJBˆ\œÙ\‹˜YØ\™Ý[Y[
-‹K[\ÝXXÝ]™H‹XÝ[ÛHœÝÜ™WÝYHŠBˆ\™ÜÈH\œÙ\‹œ\œÙWØ\™ÜÊ
-Bˆ›ÛÝH\™ÜËœ›ÛÝœ™\ÛÛ™J
-Bˆ™YÚ\ÝžHH\™ÜËœ™YÚ\ÝžHYˆ\™ÜËœ™YÚ\ÝžKš\×ØXœÛÛ]J
-H[ÙH›ÛÝÈ\™ÜËœ™YÚ\ÝžBˆžN‚ˆ˜[Y]WÜØÚ[XWÚY[]J›ÛÝ
-Bˆ]\›œÈHØYÜ™YÚ\ÝžJ™YÚ\ÝžK›ÛÝ
-Bˆ^Ù\
-]™[ÜY[˜Z[\™T]\›‘\œ›Ü‹ÔÑ\œ›Ü‹œÛÛ‹’”ÓÓ‘XÛÙQ\œ›ÜŠH\È^Î‚ˆš[
-ˆ™]™[ÜY[˜Z[\™K\]\›ˆ˜[Y][Ûˆ˜Z[YˆÙ^ßHŠBˆ™]\›ˆBˆYˆ\™ÜË›\ÝØXÝ]™N‚ˆ›Üˆ]\›ˆ[ˆ]\›œÎ‚ˆYˆ]\›–ÈœÝ]\È—HOHPÕU‘HŽ‚ˆš[
-œÛÛ‹™[\ÊXÝ]™WÜÝ[[X\žJ]\›ŠK[œÝ\™WØ\ØÚZOQ˜[ÙKÛÜÚÙ^\ÏUYJJBˆ[ÙN‚ˆXÝ]™HHÝ[J]\›–ÈœÝ]\È—HOHPÕU‘Hˆ›Üˆ]\›ˆ[ˆ]\›œÊBˆš[
-ˆ™]™[ÜY[˜Z[\™K\]\›ˆ™YÚ\ÝžH˜[Yˆ]\›œÏ^Û[Š]\›œÊ_HXÝ]™O^ØXÝ]™_HŠBˆ™]\›ˆ‚‚šYˆ×Û˜[YW×ÈOH—×ÛXZ[—×ÈŽ‚ˆ˜Z\ÙHÞ\Ý[Q^]
-XZ[Š
-JB
+
+def load_registry(path: Path, root: Path) -> list[dict[str, Any]]:
+    if not path.is_file():
+        raise DevelopmentFailurePatternError(f"missing registry: {path}")
+    tracked = tracked_regular_files(root); patterns=[]; ids=set(); classes=set(); previous=None
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            raw=json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise DevelopmentFailurePatternError(f"{path}:{line_number}: invalid JSON: {exc.msg}") from exc
+        pattern=validate_pattern(raw, root, f"{path}:{line_number}", tracked=tracked)
+        pid=pattern["pattern_id"]; fclass=pattern["failure_class"]
+        if pid in ids:
+            raise DevelopmentFailurePatternError(f"duplicate pattern_id {pid}")
+        if fclass in classes:
+            raise DevelopmentFailurePatternError(f"duplicate failure_class {fclass}; use occurrences for repeats")
+        if previous is not None and pid <= previous:
+            raise DevelopmentFailurePatternError("registry must be ordered by pattern_id")
+        previous=pid; ids.add(pid); classes.add(fclass); patterns.append(pattern)
+    if not patterns:
+        raise DevelopmentFailurePatternError("development failure-pattern registry must not be empty")
+    return patterns
+
+
+def active_summary(pattern: dict[str, Any]) -> dict[str, Any]:
+    pending=[o["occurrence_id"] for o in pattern["occurrences"] if o["relation"]=="REPEAT" and o["prevention_failure_reason"]=="UNKNOWN_PENDING_ANALYSIS"]
+    return {"pattern_id":pattern["pattern_id"],"failure_class":pattern["failure_class"],"title":pattern["title"],"trigger_conditions":pattern["trigger_conditions"],"applicable_scope":pattern["applicable_scope"],"search_status":pattern["repository_search"]["status"],"follow_up_refs":pattern["repository_search"]["follow_up_refs"],"pending_repeat_analysis":pending,"guard_refs":pattern["prevention"]["guard_refs"],"regression_refs":pattern["prevention"]["regression_refs"]}
+
+
+def main() -> int:
+    parser=argparse.ArgumentParser(description="Validate MimiSeek self-development repeat-prevention patterns")
+    parser.add_argument("--root",type=Path,default=Path(__file__).resolve().parents[1]); parser.add_argument("--registry",type=Path,default=Path("data/development-failure-patterns.jsonl")); parser.add_argument("--list-active",action="store_true")
+    args=parser.parse_args(); root=args.root.resolve(); registry=args.registry if args.registry.is_absolute() else root/args.registry
+    try:
+        validate_schema_identity(root); patterns=load_registry(registry, root)
+    except (DevelopmentFailurePatternError,OSError,json.JSONDecodeError) as exc:
+        print(f"development failure-pattern validation failed: {exc}"); return 1
+    if args.list_active:
+        for pattern in patterns:
+            if pattern["status"]=="ACTIVE":
+                print(json.dumps(active_summary(pattern),ensure_ascii=False,sort_keys=True))
+    else:
+        print(f"development failure-pattern registry valid: patterns={len(patterns)} active={sum(p['status']=='ACTIVE' for p in patterns)}")
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())
