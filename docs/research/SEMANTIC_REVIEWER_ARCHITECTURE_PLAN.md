@@ -2,60 +2,75 @@
 
 Status: **research only / non-authoritative / no production architecture selected**
 
-Research baseline: 2026-09-04.
+Research baseline: 2026-09-05.
 
-This document is the unified research plan for MimiSeek's future semantic reviewer architecture. It synthesizes the reviewer-context research from PR #6, the review-quality/orchestration research from PR #18, and the later architecture ideas around finding lifecycle, review planning, evidence quality, defect-pattern memory, authority extraction, strategy evaluation, and cost-aware orchestration.
+This document is the unified research plan for MimiSeek's future semantic-review architecture. It consolidates three previously separate bodies of work:
 
-It intentionally does **not** change current product/runtime/acceptance authority, accepted ADR 0013, `REVIEW_JOB_V1`, the current durable GitHub ledger/publication boundary, consumer repository authority, reviewer promotion authority, distribution authority, or merge semantics.
+1. reviewer-context and capability research from predecessor PR #6;
+2. semantic coverage, structured findings, falsification, and orchestration research developed in PR #18;
+3. later ideas around review planning, evidence quality, finding lifecycle/correlation, defect-pattern memory, authority extraction, replay, reviewer/strategy profiles, adaptive depth, strategy evaluation, and cost accounting.
 
-The purpose of this plan is to stop treating context architecture, review observability, finding memory, falsification, and orchestration as unrelated ideas. They are different layers of one reviewer system and should be researched, measured, and accepted in dependency order.
+The purpose of consolidation is to give these ideas one research owner, one dependency order, and explicit decision gates. It does **not** accept the whole stack for production.
 
-## 1. Accepted boundary that this research must preserve
+This document intentionally does **not** change current product/runtime/acceptance authority, accepted ADR 0013, current `REVIEW_JOB_V1` or `REVIEW_RESULT_V1` semantics, the MimiSeek-owned durable GitHub ledger/publication boundary, consumer authority, reviewer-promotion authority, distribution authority, or merge semantics.
 
-Accepted architecture already establishes a lower execution/control-plane layer:
+## 1. Accepted boundary this research must preserve
+
+Accepted architecture already provides the lower review-execution/control-plane model:
 
 ```text
-consumer project chat
+consumer project
     -> explicit exact-identity review request
     -> MimiSeek REVIEW_JOB_V1 coordination
     -> generic external fresh-worker/session capability
-    -> one fresh reviewer execution
+    -> one fresh review execution
     -> one correlated REVIEW_RESULT_V1
     -> durable MimiSeek-owned result state
     -> generic return/wake delivery
     -> consumer workflow continues
 ```
 
-This research starts **above** that atomic execution boundary.
+This research begins **above** that atomic execution boundary.
 
-The following remain accepted constraints rather than research questions:
+The following remain accepted constraints rather than open research questions:
 
-- one `REVIEW_JOB_V1` represents one immutable review target and one fresh reviewer execution/result;
-- generic transport/session infrastructure must remain project-neutral and must not interpret GitHub PR semantics or `PASS/FINDINGS` semantics;
-- consumer repositories own review readiness, project-local policy, finding adjudication, remediation, re-review decisions, terminal acceptance, and merge consequences;
-- MimiSeek may coordinate review execution and may later improve reviewer methodology, but a review-job `PASS` is not consumer merge authority and not MimiSeek reviewer-promotion authority;
+- one `REVIEW_JOB_V1` represents one immutable review target and one fresh review execution/result;
+- current `REVIEW_RESULT_V1` keeps its accepted terminal review semantics; this research does not silently reinterpret them;
+- generic transport/session infrastructure remains project-neutral and must not interpret project-specific GitHub PR or `PASS/FINDINGS` semantics;
+- consumer repositories own review readiness, project-local policy/architecture truth, finding adjudication, remediation, re-review decisions, terminal acceptance, and merge consequences;
+- a review-job `PASS` is neither consumer merge authority nor MimiSeek reviewer-promotion/distribution authority;
 - reviewer agreement or majority vote is not ground truth;
 - ground truth comes from governed adjudicated evidence, reproducible behavior, accepted fixes, and other accepted evidence;
-- private session/browser authority must not leak into public GitHub review-job state;
-- ambiguous launch, publication, delivery, identity, evidence, or policy must fail closed rather than guess through;
-- a change to reviewer quality architecture must not weaken the repository-development acceptance policy governing that same change.
+- private browser/session capability must not leak into public GitHub coordination state;
+- ambiguous identity, launch, publication, delivery, evidence, or policy fails closed;
+- a reviewer-quality change cannot weaken the repository-development acceptance authority that governs that same change.
 
 ## 2. Why one unified plan is needed
 
-The earlier research naturally separated into three questions:
+The earlier research addressed three questions:
 
-1. **PR #6 — reviewer context/capabilities:** what can one reviewer see and do?
-2. **PR #18 — review quality/orchestration:** how can review coverage, findings, falsification, and additional passes be made explicit and measurable?
-3. **Later architecture ideas — review knowledge/evolution:** how can findings persist across review cycles, recurring defect patterns become reusable reviewer knowledge, and review strategies themselves be evaluated and improved?
+### PR #6 — context and capabilities
 
-These are not independent products.
+> What can one strong reviewer see and do?
 
-A reviewer cannot produce trustworthy semantic coverage if it cannot reach the relevant unchanged repository evidence. A finding lifecycle is not useful if findings are not structured. Adaptive multi-pass review is premature if one well-equipped reviewer has not first been measured. A strategy learner is not trustworthy if strategy identity, evidence leakage boundaries, and replay ground truth are not explicit.
+It explored immutable repository context, deterministic snapshot versus agentic repository exploration, unchanged callers, structural navigation, bounded validation, context completeness, and experimental controls.
 
-The resulting dependency chain is:
+### PR #18 — review observability and orchestration
+
+> How can MimiSeek show what was actually reviewed and challenge important findings?
+
+It introduced evidence-backed coverage, structured findings, targeted falsification, bounded multi-pass concepts, LoopGuard, and strategy identity.
+
+### Later ideas — review memory and strategy evolution
+
+> How can findings persist across cycles, recurring defects become reusable knowledge, and review strategies themselves be measured and improved?
+
+These questions depend on one another. Coverage is weak if relevant repository evidence is unreachable. Finding lifecycle is weak if findings are unstructured. Multi-pass review is premature before a strong single-reviewer baseline is measured. Strategy learning is unsafe if evidence leakage, strategy identity, ground truth, and evaluation authority are unclear.
+
+The intended research dependency chain is therefore:
 
 ```text
-RELIABLE EXECUTION
+RELIABLE ATOMIC EXECUTION
     ↓
 CONTEXT + CAPABILITIES
     ↓
@@ -67,20 +82,18 @@ FINDING LIFECYCLE + OUTCOME MEMORY
     ↓
 DEFECT PATTERNS + COUNTEREXAMPLES
     ↓
-BOUNDED ORCHESTRATION
+TYPED FALSIFICATION + BOUNDED ORCHESTRATION
     ↓
 STRATEGY EVALUATION + EVOLUTION
 ```
 
-## 3. Architectural overview
-
-### Layer 0 — reliable review execution
+## 3. Layer 0 — reliable atomic review execution
 
 Owner: accepted Track R architecture.
 
 Question:
 
-> Can MimiSeek reliably execute exactly one independent review for one exact immutable target and durably return its result?
+> Can MimiSeek reliably execute exactly one independent review for one immutable target and durably return its exact result?
 
 Existing concepts include:
 
@@ -89,152 +102,69 @@ Existing concepts include:
 - exact reviewer/execution correlation;
 - durable result bytes/digest;
 - launch/publication/return claim states;
-- `*_UNKNOWN` reconciliation states;
+- explicit `*_UNKNOWN` reconciliation states;
 - restart/recovery/no-blind-retry behavior;
 - source-currentness recheck;
 - MimiSeek-owned GitHub ledger/publication state.
 
-This unified semantic-review plan does not redefine Layer 0.
+This plan does not redefine Layer 0.
 
-### Layer 1 — reviewer context and capabilities
+### Gate E0 — atomic execution readiness
+
+Before production multi-pass orchestration is considered, one atomic Track R job should be physically proven across:
+
+- exact launch;
+- exact result correlation;
+- durable publication;
+- source-currentness recheck;
+- exact return/wake;
+- restart/recovery;
+- ambiguous launch/publication/delivery reconciliation;
+- no blind duplicate launch or wake.
+
+Until E0 passes, multi-pass remains research only.
+
+## 4. Layer 1 — reviewer context and capabilities
 
 Primary predecessor: PR #6.
 
 Question:
 
-> Can one reviewer independently reach enough repository evidence to perform strong semantic review?
-
-Candidate capability stack:
-
-```text
-REVIEW_CONTEXT_CORE
-    ↓
-immutable repository / BASE / HEAD / policy identity
-    ↓
-primitive read-only repository exploration
-    ↓
-optional structural navigation
-    ↓
-optional bounded validation/execution
-```
-
-The reviewer, not CAP or another transport layer, should decide which unchanged repository evidence is semantically relevant.
-
-### Layer 2 — review planning and evidence indexing
-
-Question:
-
-> Before semantic conclusions are produced, can the review procedure explicitly identify the authority, evidence classes, and semantic surfaces that need examination without leaking expected answers?
-
-Candidate research artifacts:
-
-- `AUTHORITY_MANIFEST_V1`;
-- `EVIDENCE_MANIFEST_V1`;
-- `REVIEW_PLAN_V1`.
-
-These are indexes/planning artifacts, not truth authorities.
-
-### Layer 3 — semantic observability and structured findings
-
-Question:
-
-> Can MimiSeek distinguish "reviewed and no defect found" from "not reviewed" and represent each finding as an evidence-backed machine object?
-
-Candidate research artifacts:
-
-- `REVIEW_COVERAGE_V1`;
-- `FINDING_V1`;
-- current `REVIEW_RESULT_V1` retained as the small terminal envelope unless evidence later justifies a versioned replacement.
-
-### Layer 4 — finding lifecycle and review knowledge
-
-Question:
-
-> What happened to each finding across adjudication, remediation, new heads, and re-review?
-
-Candidate concepts:
-
-- reviewer assertion state;
-- consumer disposition state;
-- remediation relation;
-- re-review relation;
-- finding correlation/fingerprint hints;
-- false-positive cause;
-- miss classification.
-
-### Layer 5 — reusable review intelligence
-
-Question:
-
-> Which recurring engineering failure mechanics and adversarial scenarios should MimiSeek learn as transferable review knowledge?
-
-Candidate artifacts:
-
-- `DEFECT_PATTERN_V1`;
-- counterexample/adversarial scenario library;
-- reusable authority/recovery/concurrency/security mechanics;
-- pattern-triggered review-plan hints.
-
-### Layer 6 — bounded review orchestration
-
-Question:
-
-> After one strong reviewer baseline exists, when does a second distinct pass improve review quality enough to justify cost/complexity?
-
-Candidate artifacts:
-
-- `REVIEW_RUN_V1` above atomic jobs;
-- `review_strategy_ref`;
-- targeted specialist jobs;
-- finding falsification jobs;
-- gap/coverage-audit jobs;
-- semantic budget / LoopGuard;
-- explicit unresolved outcomes rather than recursive worker spawning.
-
-### Layer 7 — strategy evaluation and evolution
-
-Question:
-
-> Which reviewer/context/orchestration strategy actually performs better on governed evidence, and how should improved strategies become default without self-certification?
-
-Candidate mechanisms:
-
-- historical replay corpus;
-- shadow review;
-- reviewer/strategy performance profiles;
-- semantic risk features;
-- adaptive review depth;
-- cost/latency accounting;
-- fixed evaluation gate for strategy candidates;
-- independent `PROMOTE / REJECT / ABSTAIN` style decision for default-strategy changes if later architecture accepts that lifecycle.
-
-## 4. Layer 1 — reviewer context and capability research
+> Can one reviewer independently reach enough evidence to perform strong semantic review?
 
 ### 4.1 Immutable provider/Git authority
 
-For provider-backed review, repository truth must come from exact remote/provider identities and immutable Git objects rather than an arbitrary local working tree.
+For provider-backed review, repository truth must be bound to exact provider and immutable Git identities rather than an arbitrary local working tree.
 
-Candidate control sequence:
+Candidate sequence:
 
 ```text
-live PR identity
+live provider PR identity
  -> exact BASE_SHA / HEAD_SHA
  -> exact commit/tree/blob identity
- -> reviewer context/session bound to those immutable objects
- -> explicit local parity only as separate evidence
+ -> reviewer context bound to those immutable objects
+ -> local checkout parity recorded only as separate evidence
 ```
 
-Useful local parity states may include:
+Useful local parity classes may include:
 
-`MATCH | LOCAL_AHEAD | REMOTE_AHEAD | DIVERGED | DIRTY | LOCAL_ONLY | REMOTE_UNAVAILABLE`.
+```text
+MATCH
+LOCAL_AHEAD
+REMOTE_AHEAD
+DIVERGED
+DIRTY
+LOCAL_ONLY
+REMOTE_UNAVAILABLE
+```
 
-A local match does not replace remote PR authority. A remote PR does not prove a local workspace is clean.
+A local match does not replace remote PR authority. Remote PR correctness does not prove a local workspace is clean.
 
-### 4.2 Explicit context incompleteness
+### 4.2 Explicit context completeness
 
 Silent omission is incompatible with authoritative `PASS`.
 
-The reviewer/context layer must be able to represent relevant incompleteness such as:
+The context layer must be able to represent material incompleteness such as:
 
 - binary/non-UTF8 content;
 - LFS pointers;
@@ -244,31 +174,31 @@ The reviewer/context layer must be able to represent relevant incompleteness suc
 - unavailable external evidence;
 - bounded tool-session limitations.
 
-The correct response to unresolved material context may be `INSUFFICIENT_EVIDENCE`, `ABSTAIN`, or another fail-closed state rather than silent truncation.
+Material unresolved incompleteness should produce `INSUFFICIENT_EVIDENCE`, `ABSTAIN`, or another policy-compatible fail-closed consequence rather than silent truncation.
 
-### 4.3 Core context envelope
+### 4.3 Candidate core context envelope
 
-A research-only candidate:
+Research-only candidate:
 
 ```text
 REVIEW_CONTEXT_CORE_V1
 
-repository identity
+repository/provider identity
 PR identity
 BASE commit/tree
 HEAD commit/tree
 review_policy_ref
-applicable accepted instructions/policy refs
+applicable accepted policy/instruction refs
 changed-file inventory
 exact diff
 relevant CI/check identity
-context/session capability identity
+context/capability identity
 explicit completeness/omission declarations
 ```
 
-The core envelope is not expected to contain all repository source.
+The core envelope is not expected to contain the whole repository.
 
-### 4.4 Primitive read-only repository exploration
+### 4.4 Primitive read-only exploration
 
 Candidate capability family:
 
@@ -280,13 +210,11 @@ show_diff(base, head, path)
 show_history(path/symbol/range)
 ```
 
-No arbitrary repository mutation is required for normal semantic review.
-
-The reviewer must retain the ability to inspect unchanged code selected by its own reasoning.
+The reviewer must retain the ability to choose and inspect unchanged evidence. CAP or another transport layer should not preselect the only files the reviewer is allowed to consider semantically relevant.
 
 ### 4.5 Structural navigation
 
-Optional higher-level capabilities to evaluate:
+Optional capabilities to evaluate:
 
 ```text
 find_symbol
@@ -298,35 +226,33 @@ find_importers
 find_dependents
 ```
 
-Each result should expose retrieval/provenance class where possible:
+Results should identify retrieval/provenance class when possible:
 
-- precise compiler/index-derived;
+- compiler/index-derived;
 - parser-derived;
 - search/heuristic;
 - incomplete/unsupported.
 
-Critical rule candidate:
+Critical research principle:
 
-> `not found in graph/index` must not mean `does not exist` or `is irrelevant` unless the concrete indexing contract proves completeness for that mechanism.
+> `not found in graph/index` must not mean `does not exist` or `is irrelevant` unless the concrete index contract proves completeness for that mechanism.
 
-This preserves dynamic registration, configuration, reflection, generated code, plugins, and unsupported-language cases.
+This preserves dynamic registration, reflection, generated code, configuration coupling, plugin systems, and unsupported-language cases.
 
-### 4.6 Bounded validation/execution
+### 4.6 Bounded validation
 
 Candidate read/validation capabilities:
 
-- run repository-governed focused tests;
-- run predefined static analyzers/lints/type checks;
-- inspect already-produced CI logs/artifacts;
-- run a bounded reproduction harness when governing policy permits it.
+- repository-governed focused tests;
+- predefined static analyzers/lints/type checks;
+- inspection of existing CI logs/artifacts;
+- bounded reproduction harnesses where governing policy permits execution.
 
-A test failure can be direct evidence. A test pass is not proof that an untested invariant is correct.
+A test failure can be evidence. A test pass does not prove every untested invariant.
 
-### 4.7 Context architecture experiment matrix
+### 4.7 Context experiment matrix
 
-Do not select a production context architecture by intuition alone.
-
-Research variants:
+Do not select production context architecture by intuition alone.
 
 ```text
 A — public provider reconstruction baseline
@@ -338,19 +264,23 @@ E — D + bounded test/static/reproduction validation
 
 Research gates:
 
-- B vs C — snapshot sufficiency versus agentic exploration;
-- C vs D — structural navigation value;
-- D vs E — bounded validation value.
+- **C1:** B versus C — snapshot sufficiency versus agentic exploration;
+- **C2:** C versus D — structural-navigation value;
+- **C3:** D versus E — bounded-validation value.
 
-Only after a strong E-like single-reviewer baseline exists should multi-pass variants be measured.
+Possible C1 outcomes may include `ACCEPT_SNAPSHOT`, `ACCEPT_AGENTIC`, `HYBRID`, or `DEFER`. C2/C3 should use bounded `ACCEPT_NARROW / DEFER / REJECT`-style decisions.
 
-## 5. Layer 2 — authority, evidence, and review planning
+Only after a strong single-reviewer baseline exists should multi-pass variants be measured.
 
-### 5.1 Authority manifest
+## 5. Layer 2 — review planning and evidence indexing
 
-A future `AUTHORITY_MANIFEST_V1` may index the authority chain applicable to one exact review target.
+Question:
 
-Example:
+> Can the review procedure make required authority, evidence classes, and semantic surfaces explicit without leaking expected answers or becoming a closed checklist?
+
+### 5.1 `AUTHORITY_MANIFEST_V1`
+
+A future authority manifest may index the authority chain for one exact target:
 
 ```text
 AUTHORITY_MANIFEST_V1
@@ -360,26 +290,23 @@ BASE_SHA
 HEAD_SHA
 review_policy_ref
 
-accepted_authority_refs:
-  BASE AGENTS.md
-  BASE DEVELOPMENT_PROTOCOL
-  delegated accepted review skill/policy
-  applicable accepted ADRs
-
-head_target_semantics_refs:
-  proposed HEAD policy/architecture files
-
-live_state_refs:
-  current PR identity
-  exact-head CI
-  external accepted capability refs where applicable
+accepted_authority_refs[]
+head_target_semantics_refs[]
+live_state_refs[]
 ```
 
-The manifest is **not** a replacement for independent authority reconstruction when policy requires it. It is an index designed to reduce omission and precedence errors.
+It may help distinguish:
 
-### 5.2 Evidence manifest
+- accepted immutable BASE authority;
+- proposed HEAD target semantics;
+- current live GitHub/source state;
+- accepted external capability evidence.
 
-A future `EVIDENCE_MANIFEST_V1` may index evidence classes expected for the review:
+It is an index, **not** a new authority source. Where policy requires independent reconstruction, the reviewer must still verify the underlying refs.
+
+### 5.2 `EVIDENCE_MANIFEST_V1`
+
+A future evidence manifest may index evidence classes expected for the target:
 
 ```text
 E001 PR identity
@@ -390,17 +317,17 @@ E005 immutable authority refs
 E006 exact diff
 E007 exact-head CI
 E008 relevant runtime/test artifacts
-E009 relevant accepted external capability evidence
+E009 relevant external capability evidence
 ...
 ```
 
-The reviewer must verify underlying sources rather than trust the manifest because MimiSeek listed them.
+The reviewer verifies underlying sources rather than trusting the manifest because MimiSeek listed them.
 
 ### 5.3 Evidence quality metadata
 
-The research should avoid a single magical `DIRECT` flag.
+Avoid a single magical quality flag.
 
-A stronger evidence description may separate:
+Candidate dimensions:
 
 ```text
 source_kind
@@ -410,7 +337,7 @@ freshness
 derivation
 ```
 
-Examples:
+Example:
 
 ```text
 PR body says CI passed
@@ -422,23 +349,23 @@ identity_binding = unresolved
 versus:
 
 ```text
-live GitHub workflow run
+live provider workflow
 source_kind = provider_workflow
 verification_state = VERIFIED_DIRECT
 identity_binding = exact_head
 freshness = current
 ```
 
-The reviewer should prefer stronger evidence without pretending that any one metadata label proves correctness.
+Metadata describes evidence quality; it does not prove semantic correctness by itself.
 
-### 5.4 Review plan
+### 5.4 `REVIEW_PLAN_V1`
 
-A candidate `REVIEW_PLAN_V1` should be derived dynamically from:
+A future review plan should be dynamically derived from:
 
 - exact diff and changed concepts;
 - accepted architecture/policy invariants;
 - changed and unchanged dependency paths;
-- risk features;
+- explainable risk features;
 - historical defect patterns;
 - required evidence classes;
 - known context omissions.
@@ -469,23 +396,25 @@ required_evidence_classes:
   accepted authority refs
 ```
 
-The plan must not leak expected defects, finding count, post-fix knowledge, or ground truth.
+The plan must not expose expected finding text, expected finding count, later fix knowledge, adjudicated answer keys, or other evaluation ground truth.
 
-### 5.5 Open-ended review remains mandatory
+### 5.5 Open-ended review remains required
 
-A review plan can itself create blind spots if treated as exhaustive authority.
+A plan can create blind spots if treated as exhaustive authority.
 
-Therefore a future procedure should preserve an explicit open-ended semantic pass:
+Any future procedure should retain an explicit open-ended semantic pass after planned surfaces are examined.
 
-> After planned surfaces are examined, search for material defects outside the precomputed plan.
-
-The plan is a coverage scaffold, not a finite proof that no other semantic risk exists.
+The plan is a coverage scaffold, not a finite proof that no other material risk exists.
 
 ## 6. Layer 3 — semantic coverage and structured findings
 
+Question:
+
+> Can MimiSeek distinguish "reviewed and no finding" from "not reviewed" and represent each material finding as an evidence-backed machine object?
+
 ### 6.1 Coverage states
 
-A review should distinguish at least:
+Candidate states for material semantic surfaces:
 
 ```text
 REVIEWED_NO_FINDING
@@ -495,15 +424,15 @@ INSUFFICIENT_EVIDENCE
 NOT_REVIEWED
 ```
 
-for material semantic surfaces.
-
-A zero-finding result is not equivalent to complete review coverage.
+A zero-finding result is not equivalent to complete coverage.
 
 ### 6.2 Evidence-backed coverage
 
-Coverage must not become reviewer self-attestation such as:
+Coverage must not become reviewer self-certification such as:
 
-> concurrency checked = yes
+```text
+concurrency_checked = true
+```
 
 A positive coverage record should reference observable evidence of what was examined, for example:
 
@@ -512,16 +441,16 @@ A positive coverage record should reference observable evidence of what was exam
 - state-transition paths;
 - callers/dependencies;
 - tests/runtime evidence;
-- concrete adversarial/counterexample paths considered.
+- concrete adversarial scenarios considered.
 
-The goal is not to expose hidden chain-of-thought. The goal is to record review scope/evidence sufficiently for later diagnosis and learning.
+The goal is not to expose private chain-of-thought. The goal is to preserve bounded scope/evidence sufficient for later diagnosis and learning.
 
 ### 6.3 Candidate `REVIEW_COVERAGE_V1`
 
 ```text
 REVIEW_COVERAGE_V1
 
-review identity
+review_identity
 
 surfaces[]:
   surface_id
@@ -533,9 +462,7 @@ surfaces[]:
 
 The surface set must be derived from the concrete target rather than a universal static checklist.
 
-### 6.4 Structured finding object
-
-A candidate `FINDING_V1`:
+### 6.4 Candidate `FINDING_V1`
 
 ```text
 FINDING_V1
@@ -560,13 +487,13 @@ uncertainty
 falsification_summary
 ```
 
-Avoid model-generated numeric confidence as a substitute for evidence.
+Do not store private chain-of-thought. Store bounded rationale and evidence sufficient to reconstruct the claim.
 
-Do not store private chain-of-thought. Store bounded rationale/evidence sufficient to reconstruct the claim.
+Do not treat model-generated numeric confidence as proof.
 
-### 6.5 Keep `REVIEW_RESULT_V1` small for now
+### 6.5 Keep current `REVIEW_RESULT_V1` small
 
-Do not replace the accepted terminal result contract merely because richer semantics are useful.
+Richer semantic artifacts do not automatically justify changing the accepted terminal result contract.
 
 Initial research preference:
 
@@ -578,17 +505,29 @@ REVIEW_RESULT_V1
     +-- EVIDENCE_MANIFEST_V1
 ```
 
-These may be companion/digest-bound artifacts.
+The rich objects may later be companion/digest-bound artifacts.
 
-A future `REVIEW_RESULT_V2` should be considered only after the structured semantics have stabilized and a versioned replacement provides clear operational value.
+A future `REVIEW_RESULT_V2` should be considered only after these semantics stabilize and a versioned replacement provides demonstrated operational value.
 
-## 7. Layer 4 — finding lifecycle and review knowledge
+### Gate Q1 — semantic observability
 
-### 7.1 Do not collapse reviewer assertion and consumer adjudication
+Question:
 
-A finding has multiple authorities over time.
+> Do review planning, authority/evidence indexing, evidence-backed coverage, and structured findings materially improve review completeness diagnosis and learning without becoming checklist self-attestation?
 
-Reviewer-internal assertion state may use concepts such as:
+Decision: `ACCEPT_NARROW | DEFER | REJECT`.
+
+## 7. Layer 4 — finding lifecycle and outcome knowledge
+
+Question:
+
+> What happened to each finding across adjudication, remediation, new HEADs, and re-review?
+
+### 7.1 Separate authorities
+
+Do not collapse reviewer assertion, consumer adjudication, and remediation evidence into one state machine.
+
+Reviewer/challenge assertion concepts may include:
 
 ```text
 SUPPORTED
@@ -596,7 +535,7 @@ REJECTED
 UNRESOLVED
 ```
 
-Consumer-governed disposition may use concepts such as:
+Consumer-governed disposition may include:
 
 ```text
 UNKNOWN
@@ -605,7 +544,7 @@ REJECTED
 SUPERSEDED
 ```
 
-Remediation/re-review relation may use concepts such as:
+Remediation/re-review relation may include:
 
 ```text
 NONE
@@ -614,7 +553,7 @@ REREVIEW_REQUIRED
 NO_LONGER_REPRODUCED
 ```
 
-MimiSeek must not declare a consumer defect `FIXED` merely because an implementation changed or a reviewer stopped reproducing the finding. Consumer policy/adjudication remains authoritative.
+MimiSeek must not declare a consumer-owned semantic defect `FIXED` merely because implementation changed or a reviewer stopped reproducing it.
 
 ### 7.2 Finding history across heads
 
@@ -627,26 +566,26 @@ HEAD A
 
 HEAD B
   remediation evidence exists
-  prior exact-head result is stale for acceptance
+  prior exact-head review is stale for acceptance
 
 fresh review of HEAD B
   F001 no longer reproduced
 ```
 
-The history must not imply that review of HEAD A accepted HEAD B.
+Review of HEAD A never accepts HEAD B.
 
 ### 7.3 Finding correlation
 
-Long-lived PRs need help recognizing when similar findings across review cycles may represent the same root cause.
+Long-lived PRs need help recognizing potentially related findings across cycles.
 
-A candidate `finding_fingerprint` may use normalized hints such as:
+A future `finding_fingerprint` may use normalized hints such as:
 
 - category;
 - affected semantic object;
 - violated authority/invariant;
 - normalized claim shape.
 
-The fingerprint must be a **correlation hint**, not immutable identity and not automatic root-cause truth.
+The fingerprint is a **correlation hint**, not immutable identity and not automatic root-cause truth.
 
 Possible relation states:
 
@@ -657,13 +596,11 @@ DISTINCT_FINDING
 UNRESOLVED_RELATION
 ```
 
-where any authoritative cross-cycle conclusion must be evidence-backed.
+Authoritative cross-cycle conclusions must remain evidence-backed.
 
 ### 7.4 False-positive tracking
 
-Rejected findings are valuable learning evidence.
-
-A later normalized learning record should be able to capture why a finding failed, for example:
+Rejected findings are valuable learning evidence. A normalized record should eventually capture both disposition and cause, for example:
 
 - misunderstood CAS semantics;
 - wrong authority precedence;
@@ -672,7 +609,7 @@ A later normalized learning record should be able to capture why a finding faile
 - heuristic graph result treated as complete;
 - speculative consequence without reproducible path.
 
-This extends the existing `OUR_FALSE_POSITIVE` concept with causal structure rather than only outcome label.
+This extends existing false-positive learning concepts with causal structure.
 
 ### 7.5 Miss tracking
 
@@ -700,17 +637,29 @@ compatibility
 runtime
 ```
 
-Do not collapse `CONCURRENCY_MISS` into the same axis as `EVIDENCE_MISS`: one describes domain, the other describes why the review failed.
+Do not collapse domain and failure cause into one label.
 
-Different-head/timing/leakage conditions must still support the inference before a run is labeled a miss.
+Different-head, timing, visibility, and leakage conditions must support the inference before an earlier run is labeled a miss.
+
+### Gate Q2 — finding lifecycle value
+
+Question:
+
+> Do structured assertion/disposition/remediation/re-review relations improve learning and long-PR continuity without taking consumer adjudication authority?
+
+Decision: `ACCEPT_NARROW | DEFER | REJECT`.
 
 ## 8. Layer 5 — reusable defect patterns and counterexamples
 
-### 8.1 `DEFECT_PATTERN_V1`
+Question:
 
-MimiSeek should eventually learn transferable mechanics rather than historical SHA/file answers.
+> Which recurring engineering failure mechanics should become transferable reviewer knowledge?
 
-Candidate example:
+### 8.1 Candidate `DEFECT_PATTERN_V1`
+
+MimiSeek should learn generic mechanics rather than historical SHA/file answers.
+
+Example:
 
 ```text
 DEFECT_PATTERN_V1
@@ -725,7 +674,7 @@ review_questions:
   was consequence claimed durably before mutation?
   can applied-versus-absent state be reconciled?
   is blind resend forbidden?
-  does restart preserve the unresolved claim?
+  does restart preserve unresolved claim state?
 ```
 
 Other pattern families may include:
@@ -735,13 +684,13 @@ Other pattern families may include:
 - multiple durable writers outside one serialization boundary;
 - incomplete recovery fencing;
 - optimistic currentness after source movement;
-- hidden project-specific semantics in generic transport;
+- project-specific semantics hidden in generic transport;
 - unsafe migration/compatibility assumptions;
 - graph-only false completeness.
 
 ### 8.2 Counterexample/adversarial library
 
-Each defect pattern may have reusable scenarios that ask the reviewer to prove correctness under stress without telling it that a defect exists.
+Patterns may carry reusable scenarios that ask the reviewer to prove correctness under stress without revealing that a defect exists.
 
 Example for ambiguous external effects:
 
@@ -754,7 +703,7 @@ remote state visible before local state
 local fence visible before remote state
 ```
 
-Example for session/launch lifecycle:
+Example for session lifecycle:
 
 ```text
 crash before claim
@@ -769,32 +718,44 @@ The reviewer receives scenarios/questions, not expected findings.
 
 ### 8.3 Pattern-triggered planning
 
-Historical evidence may later justify adding one targeted review surface when a change matches a known pattern.
+Historical evidence may justify adding targeted review surfaces when a change matches a known pattern.
 
 Example:
 
 ```text
 observed history:
-  persistent state + restart changes correlate with missed multi-writer defects
+  persistence + restart changes correlate with missed multi-writer defects
 
-reviewer-method change:
+reviewer-method candidate:
   enumerate every independently reachable writer
 
-strategy change:
+strategy candidate:
   add one targeted recovery/concurrency pass for this risk class
 ```
 
-Reviewer methodology and orchestration strategy must remain independently identifiable and evaluable.
+Reviewer methodology and orchestration strategy must remain separately identifiable and evaluable.
+
+### Gate K1 — pattern/counterexample value
+
+Question:
+
+> Do transferable patterns/scenarios improve recall or reduce misses without leaking historical answers into evaluation cases?
+
+Decision: `ACCEPT_NARROW | DEFER | REJECT`.
 
 ## 9. Layer 6 — falsification and bounded orchestration
 
-### 9.1 Finding falsification
+Question:
 
-A consequential candidate finding may receive an explicit adversarial challenge:
+> After a strong single-reviewer baseline exists, can targeted challenges and additional asymmetric passes improve quality without changing atomic V1 semantics, using voting, or creating unbounded recursion?
 
-> Try to prove that F001 is false. Find the strongest valid path under which the claimed invariant is actually preserved.
+### 9.1 Finding falsification concept
 
-Candidate internal outcome:
+A consequential candidate finding may receive an adversarial challenge:
+
+> Try to prove F001 false. Find the strongest valid path under which the claimed invariant is actually preserved.
+
+Candidate-level challenge outcomes may conceptually be:
 
 ```text
 SUPPORTED
@@ -802,7 +763,7 @@ REJECTED
 UNRESOLVED
 ```
 
-The falsifier is not asked to review the entire PR again and is not asked to agree with the primary reviewer.
+The falsifier is **not** asked to review the entire PR again and is not asked to agree with the primary reviewer.
 
 Initial trigger candidates:
 
@@ -810,13 +771,13 @@ Initial trigger candidates:
 - acceptance-blocking findings;
 - incomplete/indirect evidence;
 - subtle recovery/concurrency/authority consequences;
-- findings with high historical false-positive risk.
+- historically high false-positive categories.
 
 Universal falsification of every low-severity observation is not an initial requirement.
 
-### 9.2 Preserve atomic `REVIEW_JOB_V1`
+### 9.2 Preserve atomic `REVIEW_JOB_V1` and current `REVIEW_RESULT_V1`
 
-Do not expand one job into:
+Do not expand one `REVIEW_JOB_V1` into:
 
 ```text
 workers[]
@@ -824,11 +785,66 @@ results[]
 votes[]
 ```
 
-One job remains one fresh execution/result.
+One current `REVIEW_JOB_V1` remains one fresh **whole-review** execution with one correlated current `REVIEW_RESULT_V1`.
 
-### 9.3 `REVIEW_RUN_V1` above jobs
+Under the accepted V1 contract, the terminal review outcomes remain the accepted values such as:
 
-If multi-pass review proves useful, add a higher procedure layer:
+```text
+PASS
+FINDINGS
+ABSTAIN
+```
+
+This research does **not** reinterpret those values as candidate-finding challenge outcomes.
+
+A falsifier has a narrower semantic task. Therefore:
+
+```text
+SUPPORTED
+REJECTED
+UNRESOLVED
+```
+
+are not valid substitutes for current `REVIEW_RESULT_V1` terminal semantics.
+
+Likewise, putting an orchestration-critical falsification outcome only into free-form `report` text would not provide a typed machine-verifiable result contract for future aggregation.
+
+### 9.3 Typed falsification execution/result contract is unresolved
+
+This is an explicit research prerequisite exposed by review of this plan.
+
+Before a future `REVIEW_RUN_V1` may launch an independent falsifier as a subordinate execution, a separately governed architecture decision must define a compatible typed execution/result contract.
+
+This plan intentionally does **not** choose the contract.
+
+Research options include, for example:
+
+1. a distinct future `FALSIFICATION_JOB_V1` / `FALSIFICATION_RESULT_V1` beside current review-job V1; or
+2. a later versioned review job/result family in which role and typed result variant are explicit, without retroactively changing V1 semantics.
+
+Names above are illustrative, not selected architecture.
+
+Any accepted design must preserve at least:
+
+- immutable review-target and candidate-finding identity;
+- immutable strategy/role identity where applicable;
+- one subordinate execution -> one typed correlated result;
+- durable/recoverable result identity where required;
+- fail-closed malformed, stale, wrong-finding, wrong-target, or conflicting results;
+- candidate-level challenge state remaining separate from consumer adjudication;
+- no silent reinterpretation of current `REVIEW_JOB_V1` / `REVIEW_RESULT_V1`.
+
+Until that contract is separately accepted and implemented:
+
+- an independent falsifier must **not** be modeled or launched as an ordinary `REVIEW_JOB_V1`;
+- production `REVIEW_RUN_V1` must not depend on such a falsification execution;
+- research experiments may study falsification value with explicitly non-production artifacts, but those artifacts grant no current review-job, acceptance, merge, promotion, or consumer authority.
+
+### 9.4 Future `REVIEW_RUN_V1` above compatible atomic executions
+
+If multi-pass review proves useful **and every subordinate execution role has an accepted compatible typed result contract**, a higher procedure layer may be considered.
+
+Research-only conceptual shape:
 
 ```text
 REVIEW_RUN_V1
@@ -836,30 +852,36 @@ REVIEW_RUN_V1
 review_identity
 review_strategy_ref
 
-jobs:
+review_jobs:
   J1 general semantic review
-  J2 targeted recovery/concurrency review
-  J3 falsify F001
-  J4 gap review for uncovered surface
+  J2 targeted whole-review specialist
+  J3 gap/coverage whole-review pass
+
+optional_typed_challenges:
+  C1 falsify F001
 
 aggregation_policy
 final_procedure_state
 ```
 
+The example does **not** claim that `C1` is a `REVIEW_JOB_V1`. Typed correlation and aggregation for heterogeneous subordinate execution kinds remain future architecture.
+
+Even J2/J3 may only use `REVIEW_JOB_V1` if their tasks and terminal outputs remain semantically compatible with the accepted whole-review V1 contract. A future role that is not compatible requires its own accepted typed contract rather than semantic overloading.
+
 The run must not treat majority vote as truth.
 
-Distinct job roles should be asymmetrical:
+Possible asymmetric roles include:
 
 - general reviewer;
-- risk specialist;
-- falsifier;
-- gap/coverage reviewer.
+- risk specialist where compatible with its typed contract;
+- falsifier through a separately accepted typed challenge contract;
+- gap/coverage reviewer where compatible with its typed contract.
 
-### 9.4 Semantic budget / LoopGuard
+### 9.5 Semantic budget / LoopGuard
 
-Review orchestration needs the same bounded/no-blind discipline as transport.
+Review orchestration needs bounded/no-blind discipline.
 
-Research limits may start with something like:
+Research limits might begin with:
 
 ```text
 max_general_passes = 1
@@ -869,34 +891,61 @@ max_falsification_attempts_per_finding = 1
 
 Persistent material disagreement becomes `UNRESOLVED` rather than recursive worker spawning.
 
-For release-critical unresolved uncertainty, consumer governing policy may require terminal `ABSTAIN`.
+If unresolved uncertainty is release-critical, consumer governing policy may require a terminal `ABSTAIN` from the applicable whole-review acceptance path. The orchestrator itself does not invent consumer acceptance consequences.
 
-### 9.5 Strategy identity
+### 9.6 Strategy identity
 
-Once more than one meaningful orchestration strategy exists, introduce immutable:
+Once multiple meaningful orchestration strategies exist, research proposes immutable:
 
 ```text
 review_strategy_ref
 ```
 
-Keep it distinct from:
+It should remain distinct from:
 
 - reviewer source/version;
 - model/provider;
 - review policy;
 - worker profile;
-- context-capability profile;
+- context/capability profile;
 - execution identity.
 
-Without this separation, later evaluation cannot tell whether quality changed because of model, reviewer instruction, context capability, or orchestration.
+Without this separation, later evaluation cannot tell whether quality changed because of model, reviewer methodology, context capability, or orchestration.
 
-## 10. Layer 7 — risk, profiles, evaluation, and strategy evolution
+### Gate Q3 — falsification value and typed-result feasibility
+
+Question:
+
+> Does targeted falsification reduce unsupported HIGH/CRITICAL findings enough to justify cost/latency, and can an independent falsifier receive a typed execution/result contract without reinterpreting current V1 review semantics?
+
+Passing Q3 for production use requires **both**:
+
+1. demonstrated semantic value; and
+2. a separately governed compatible falsification execution/result contract.
+
+Research-only falsification experiments may precede that contract but cannot be treated as production `REVIEW_JOB_V1` executions.
+
+Decision: `ACCEPT_NARROW | DEFER | REJECT`.
+
+### Gate S1 — multi-pass value
+
+Question:
+
+> After a strong single-reviewer baseline exists and subordinate result contracts are valid, does a higher `REVIEW_RUN_V1` with asymmetric roles materially improve quality per unit cost/latency?
+
+Decision: `ACCEPT_NARROW | DEFER | REJECT`.
+
+## 10. Layer 7 — risk, profiles, replay, and strategy evolution
+
+Question:
+
+> Which reviewer/context/orchestration strategy performs better on governed evidence, and how can a better strategy become default without self-certification?
 
 ### 10.1 Risk features before risk scores
 
-Do not start with invented weights such as `+5 concurrency`.
+Do not begin with invented weights such as `+5 concurrency`.
 
-First represent explainable features:
+Start with explainable features:
 
 ```text
 concurrency = true
@@ -908,11 +957,11 @@ credential_boundary = false
 migration = false
 ```
 
-Later governed outcome data may justify weights/classification thresholds.
+Later governed outcome data may justify weights or classification thresholds.
 
-Risk classification allocates review effort. It must not decide defect truth.
+Risk classification allocates review effort. It never decides defect truth.
 
-### 10.2 Adaptive review depth
+### 10.2 Adaptive depth
 
 A future strategy may use risk/evidence to choose bounded depth.
 
@@ -928,33 +977,33 @@ NORMAL
 
 HIGH
   general pass
-  targeted specialist and/or falsification
+  targeted compatible specialist and/or typed falsification if available
 
 CRITICAL
-  multiple distinct semantic paths
+  multiple distinct bounded semantic paths
   explicit coverage closure or unresolved outcome
 ```
 
-This must be measured rather than accepted merely because the categories sound reasonable.
+This must be measured rather than accepted because the categories sound reasonable.
 
-### 10.3 Reviewer/strategy performance profiles
+### 10.3 Reviewer/strategy profiles
 
-A future profile must not collapse all behavior into one model score.
+Do not collapse performance into one global model score.
 
-Performance identity should separate at least:
+Performance identity should distinguish at least:
 
 ```text
 reviewer source/version
 model/provider
-context-capability profile
+context/capability profile
 review_strategy_ref
 review policy class
 ```
 
-Possible metrics:
+Candidate metrics:
 
-- reviews total;
-- critical finding recall;
+- review count;
+- critical-defect recall;
 - supported-finding rate;
 - false-positive rate;
 - miss rate;
@@ -964,11 +1013,11 @@ Possible metrics:
 - unresolved rate;
 - domain-specific performance for concurrency/security/lifecycle/docs/etc.
 
-Use sample sizes and confidence intervals/statistical caution where appropriate; do not turn sparse observations into a leaderboard truth.
+Sparse observations must not become leaderboard truth. Use sample size and statistical caution where appropriate.
 
 ### 10.4 Replay/regression corpus
 
-Historical real PR evidence is a core evaluation asset.
+Historical real PR evidence is a core asset.
 
 A governed replay case may contain:
 
@@ -980,12 +1029,12 @@ adjudicated accepted/rejected finding evidence
 known remediation relation
 ```
 
-New reviewer/context/strategy candidates can be tested blind:
+New reviewer/context/strategy candidates can be evaluated blind:
 
 - does the target defect reappear on BUGGY?
 - does the old finding disappear on FIXED?
 - are new false positives emitted?
-- what semantic coverage is achieved?
+- what coverage is achieved?
 - what tools/context were required?
 
 ### 10.5 Leakage controls
@@ -998,9 +1047,9 @@ learning/training evidence
 != later holdout/shadow evidence
 ```
 
-Expected finding text/category/count and later fix/disposition must remain hidden from candidate reviewer context unless the experiment explicitly tests that condition.
+Expected finding text/category/count and later fix/disposition must remain hidden from candidate reviewer context unless an experiment explicitly tests that condition.
 
-Historical public comments/fixes can invalidate a case for blind evaluation and must be recorded as leakage risk.
+Historical public comments/fixes can invalidate a case for blind evaluation and should be recorded as leakage risk.
 
 ### 10.6 Strategy evaluation
 
@@ -1023,14 +1072,14 @@ Candidate metrics:
 - unsupported-finding rate;
 - unresolved rate;
 - semantic coverage completion;
-- worker/job count;
+- worker/execution count;
 - tool/context usage;
 - latency;
 - execution cost where measurable.
 
 Do not optimize cost before establishing an acceptable semantic-quality region.
 
-### 10.7 Strategy promotion lifecycle
+### 10.7 Strategy promotion research
 
 If strategy changes later become consequence-bearing defaults, do not make every experimental strategy default immediately.
 
@@ -1039,7 +1088,7 @@ Candidate progression:
 ```text
 strategy candidate
     ↓
-offline replay corpus
+offline replay
     ↓
 shadow review
     ↓
@@ -1050,203 +1099,112 @@ fresh independent evaluation
 PROMOTE / REJECT / ABSTAIN
 ```
 
-This should reuse existing MimiSeek principles — fixed exam before candidate, no self-defined evaluation, independent promotion authority — rather than create an unrelated weaker governance system.
+This may reuse existing MimiSeek principles such as fixed exam before candidate, no self-defined evaluation, and independent promotion authority.
 
-The exact strategy-promotion contract is future architecture, not selected by this research document.
-
-## 11. Experiment controls inherited from PR #6
-
-The earlier PR #6 research remains valuable as experimental evidence and method.
-
-Important controls to preserve include:
-
-### 11.1 Positive / stale / hidden-defect controls
-
-A useful experiment suite includes materially different cases:
-
-- accepted exact target where `PASS` is possible;
-- superseded target that must become `STALE`;
-- known defective immutable target where expected findings/count are hidden;
-- later rejected/false-positive cases.
-
-A PASS-shaped response alone is not reviewer-quality evidence.
-
-### 11.2 Unchanged-caller control
-
-Changed producer/API semantics while an unchanged caller still relies on old behavior.
-
-Purpose: distinguish local diff review from repository impact exploration.
-
-### 11.3 Similar-name false-reference control
-
-Multiple plausible same/similar symbols.
-
-Purpose: measure heuristic search versus precise navigation and prevent false completeness.
-
-### 11.4 Dynamic registration/configuration control
-
-Behavior connected through plugin/registry/config string rather than obvious static call graph.
-
-Purpose: falsify graph-only completeness assumptions.
-
-### 11.5 Large-repository/context-pressure control
-
-Relevant unchanged evidence outside the obvious context/shard/ranking boundary.
-
-Purpose: compare deterministic snapshot/context packing with agentic search and explicit oversize behavior.
-
-### 11.6 Validation-value control
-
-Static reading yields a plausible candidate issue that a focused test/reproduction either confirms or disproves.
-
-Purpose: measure precision gain from bounded validation.
-
-### 11.7 FIXED false-positive control
-
-Reviewer sees materially fixed state without being told it is fixed.
-
-Purpose: prevent "stronger" review from merely repeating remembered historical findings.
-
-### 11.8 Governance self-change control
-
-PR changes reviewer/governance instructions in HEAD.
-
-Purpose: prove accepted BASE-derived authority still governs rather than allowing proposed HEAD policy to grade itself.
-
-## 12. Unified research decision gates
-
-The plan should progress through explicit gates rather than accept the whole stack at once.
-
-### Gate E0 — atomic execution readiness
-
-Question:
-
-> Is one Track R review job physically reliable across launch/result/publication/return, restart, ambiguity, and no-duplicate reconciliation?
-
-Until yes, do not make multi-pass orchestration routine infrastructure.
-
-### Gate C1 — snapshot versus agentic exploration
-
-Question:
-
-> Does deterministic snapshot context B match or exceed primitive agentic repository session C on governed real cases within acceptable completeness/size bounds?
-
-Possible decisions:
-
-`ACCEPT_SNAPSHOT | ACCEPT_AGENTIC | HYBRID | DEFER`
-
-### Gate C2 — structural navigation value
-
-Question:
-
-> Does D materially improve quality/efficiency over C without unacceptable false confidence from index incompleteness?
-
-Decision:
-
-`ACCEPT_NARROW | DEFER | REJECT`
-
-### Gate C3 — bounded validation value
-
-Question:
-
-> Does E materially improve precision/recall/severity calibration enough to justify sandbox/test complexity?
-
-Decision:
-
-`ACCEPT_NARROW | DEFER | REJECT`
-
-### Gate Q1 — structured semantic observability
-
-Question:
-
-> Do `REVIEW_PLAN`, evidence-backed `REVIEW_COVERAGE`, and structured `FINDING_V1` materially improve review completeness diagnosis and later learning without becoming checkbox self-attestation?
-
-Decision:
-
-`ACCEPT_NARROW | DEFER | REJECT`
-
-### Gate Q2 — finding lifecycle value
-
-Question:
-
-> Can structured finding/disposition/remediation/re-review relations improve learning and long-PR review continuity without taking consumer adjudication authority?
-
-Decision:
-
-`ACCEPT_NARROW | DEFER | REJECT`
-
-### Gate Q3 — falsification value
-
-Question:
-
-> Does targeted falsification reduce unsupported HIGH/CRITICAL findings enough to justify its cost and latency?
-
-Decision:
-
-`ACCEPT_NARROW | DEFER | REJECT`
-
-### Gate K1 — defect-pattern/counterexample value
-
-Question:
-
-> Do transferable pattern/scenario libraries improve recall or reduce misses without leaking historical answers into evaluation cases?
-
-Decision:
-
-`ACCEPT_NARROW | DEFER | REJECT`
-
-### Gate S1 — multi-pass orchestration value
-
-Question:
-
-> After a strong single-reviewer baseline exists, does `REVIEW_RUN_V1` with asymmetric roles materially improve quality per unit cost/latency?
-
-Decision:
-
-`ACCEPT_NARROW | DEFER | REJECT`
+However, **the current reviewer-promotion lifecycle does not automatically authorize strategy promotion**. Exact strategy-promotion semantics require a separate accepted architecture decision.
 
 ### Gate S2 — adaptive strategy value
 
 Question:
 
-> Can explainable risk features allocate review depth better than a fixed strategy without hiding critical misses or creating unstable policy behavior?
+> Can explainable risk features allocate review depth better than a fixed strategy without hiding critical misses or creating unstable authority behavior?
 
-Decision:
+Decision: `ACCEPT_NARROW | DEFER | REJECT`.
 
-`ACCEPT_NARROW | DEFER | REJECT`
+## 11. Experimental controls inherited from PR #6
 
-## 13. Recommended implementation/research sequence
+PR #6 remains valuable predecessor research and provenance. Its strongest experimental controls should remain part of this unified program.
 
-The architecture plan is unified, but implementation should remain narrow and staged.
+### 11.1 Positive, stale, hidden-defect, and false-positive controls
+
+A useful experiment suite includes materially different cases:
+
+- accepted exact target where `PASS` is possible;
+- superseded target that must fail currentness rather than be accepted merely because old objects remain fetchable;
+- known defective immutable target where expected findings/count are hidden;
+- rejected/false-positive historical cases.
+
+A PASS-shaped response alone is not reviewer-quality evidence.
+
+### 11.2 Answer-leakage control
+
+Expected findings, categories, counts, later fixes, and adjudicated dispositions must be stored outside candidate-reviewer-visible input when measuring blind review quality.
+
+### 11.3 Unchanged-caller control
+
+Changed producer/API semantics while an unchanged caller still relies on old behavior.
+
+Purpose: distinguish local diff inspection from repository impact exploration.
+
+### 11.4 Similar-name false-reference control
+
+Multiple plausible same/similar symbols.
+
+Purpose: compare heuristic search with precise navigation and prevent false completeness.
+
+### 11.5 Dynamic registration/configuration control
+
+Behavior connected through registry/plugin/configuration rather than an obvious static call graph.
+
+Purpose: falsify graph-only completeness assumptions.
+
+### 11.6 Large-repository/context-pressure control
+
+Relevant unchanged evidence lies outside obvious context/shard/ranking boundaries.
+
+Purpose: compare deterministic packing with agentic search and explicit oversize behavior.
+
+### 11.7 Validation-value control
+
+Static reading yields a plausible candidate issue that focused validation confirms or disproves.
+
+Purpose: measure precision gain from bounded validation.
+
+### 11.8 FIXED false-positive control
+
+Reviewer sees the materially fixed state without being told it is fixed.
+
+Purpose: prevent a stronger reviewer from merely repeating memorized historical findings.
+
+### 11.9 Governance self-change control
+
+PR changes reviewer/governance instructions in HEAD.
+
+Purpose: prove accepted BASE-derived authority still governs rather than allowing proposed HEAD policy to grade itself.
+
+### 11.10 Fair comparison
+
+When comparing context or strategy variants where technically possible:
+
+- freeze repository/BASE/HEAD/policy identities;
+- freeze reviewer/model/reasoning budget where possible;
+- hide expected findings;
+- preserve raw result artifacts;
+- use governed adjudication rather than majority vote;
+- compare BUGGY and corresponding FIXED cases;
+- record materially different evidence exposure between variants rather than pretending the experiment is perfectly controlled.
+
+## 12. Recommended dependency-ordered sequence
+
+The architecture plan is unified, but implementation should remain narrow and separately governed.
 
 ### Phase 0 — finish Track R atomic execution
 
-Prove:
+Pass E0 first.
 
-- one exact launch;
-- exact correlated result;
-- durable publication;
-- source-currentness recheck;
-- exact return/wake;
-- restart recovery;
-- ambiguous launch/publication/delivery reconciliation;
-- no blind duplicate launch/wake.
+### Phase 1 — context baseline
 
-### Phase 1 — context baseline experiments
-
-Run A/B/C on a small governed hidden corpus.
-
-Decide C1 before building a large repository-context subsystem.
+Run A/B/C on a small governed hidden corpus and decide C1.
 
 ### Phase 2 — capability expansion only if justified
 
-Evaluate D structural navigation and E bounded validation sequentially.
+Evaluate D structural navigation and E bounded validation sequentially through C2/C3.
 
 Do not assume graph or execution is required until data show value.
 
-### Phase 3 — semantic observability first implementation slice
+### Phase 3 — semantic observability
 
-If Q1 is accepted narrowly, prefer the first production slice to be:
+If Q1 is accepted narrowly, prefer an initial production slice around:
 
 ```text
 AUTHORITY/EVIDENCE indexing
@@ -1255,7 +1213,7 @@ REVIEW_COVERAGE
 FINDING_V1 companion artifacts
 ```
 
-Do not start with multi-agent orchestration.
+Do not begin with multi-agent orchestration.
 
 ### Phase 4 — finding knowledge
 
@@ -1267,97 +1225,126 @@ If Q2 is accepted:
 - correlation hints;
 - false-positive/miss causal classification.
 
-### Phase 5 — targeted falsification
+### Phase 5 — falsification research and contract
 
-If Q3 is accepted:
+Measure falsification value on research-only typed artifacts where appropriate.
 
-- HIGH/CRITICAL/uncertain candidate findings first;
-- one bounded falsification attempt;
-- explicit `UNRESOLVED` rather than recursion.
+For production use, Q3 also requires a separately accepted typed falsification execution/result contract.
+
+Do not encode:
+
+```text
+SUPPORTED / REJECTED / UNRESOLVED
+```
+
+as:
+
+```text
+PASS / FINDINGS / ABSTAIN
+```
+
+and do not launch a falsifier as ordinary current `REVIEW_JOB_V1` merely to reuse existing transport.
 
 ### Phase 6 — defect-pattern and counterexample memory
 
 If K1 is accepted:
 
 - derive generic patterns from adjudicated evidence;
-- add adversarial scenarios without expected-answer leakage;
-- evaluate patterns on holdout/replay cases.
+- attach adversarial scenarios without expected-answer leakage;
+- evaluate on replay/holdout evidence.
 
 ### Phase 7 — review-run orchestration
 
-Only after the strong single-reviewer path is proven:
+Only after:
 
-- introduce `REVIEW_RUN_V1`;
-- add `review_strategy_ref`;
-- measure asymmetric specialist/falsifier/gap passes;
-- preserve one-job/one-execution semantics below.
+- E0 passes;
+- a strong single-reviewer path is established;
+- the relevant semantic-observability layers are accepted where needed; and
+- every subordinate execution role has an accepted compatible typed result contract.
 
-### Phase 8 — adaptive depth and strategy evolution
+Then S1 may evaluate:
+
+- `REVIEW_RUN_V1`;
+- `review_strategy_ref`;
+- bounded asymmetric roles;
+- typed falsification where separately accepted;
+- gap/coverage passes;
+- explicit unresolved outcomes;
+- LoopGuard.
+
+### Phase 8 — adaptive strategy evolution
 
 Only after enough outcome data exist:
 
 - use explainable risk features;
-- compare fixed versus adaptive strategies;
+- compare fixed and adaptive strategies;
 - build reviewer/strategy profiles;
-- account for cost/latency;
-- establish governed strategy-evaluation/promotion semantics if justified.
+- measure cost/latency;
+- define separately governed strategy-evaluation/promotion semantics if justified.
 
-## 14. Relationship to existing MimiSeek stages
+## 13. Relationship to current MimiSeek stages
 
-This research does not replace the current Stage 1–11 reviewer-evolution roadmap.
+This research does not replace the accepted Stage 1–11 reviewer-evolution roadmap.
 
-Instead, it clarifies what reviewer artifact/capability/strategy may later be learned, evaluated, and released.
+It clarifies what future reviewer capabilities, semantic artifacts, and orchestration strategy may later be learned, evaluated, and released.
 
 Expected relationships:
 
 - Stage 1 historical reconciliation provides initial governed BUGGY/FIXED/false-positive evidence;
-- Stage 2 structured evidence export should preserve enough exact identities/findings/dispositions to support future finding lifecycle and replay;
-- Stage 3 normalized outcome store becomes the canonical machine learning/evaluation input rather than raw review-job ledger state;
-- Stage 4 learning events can later distinguish coverage/reasoning/evidence/falsification misses;
+- Stage 2 structured evidence export should preserve exact identities/findings/dispositions sufficient for later lifecycle/replay work;
+- Stage 3 normalized outcome store becomes the canonical learning/evaluation input rather than raw review-job ledger state;
+- Stage 4 learning events may later distinguish coverage/reasoning/evidence/authority/falsification misses;
 - before Stage 5 creates a promotion-eligible reviewer candidate, accepted reviewer capability architecture and fixed evaluation policy must be sufficiently resolved for that candidate;
-- Stage 6 regression/protected-capability evaluation can later test both reviewer methodology and accepted context/exploration capabilities;
+- Stage 6 regression/protected-capability evaluation may later test reviewer methodology and accepted context/exploration capabilities;
 - Stage 7 promotion remains independent and policy-bound;
 - Stage 8 consumer distribution remains separate and safety-gated;
-- Track R remains the bounded operational review execution path and does not itself imply reviewer promotion or consumer installation.
+- Track R remains bounded operational review execution and does not imply reviewer promotion or consumer installation.
 
-## 15. What should become canonical later versus remain research
+## 14. Strong principles versus open questions
 
-### Strong candidate principles already well supported
+### 14.1 Strong candidate principles already supported
 
 - exact immutable review identity;
 - accepted policy/authority identity;
 - repository-wide evidence must be reachable somehow;
 - unchanged code can be material review evidence;
 - silent context truncation is incompatible with authoritative PASS;
-- graphs/search/indexes are retrieval mechanisms rather than source truth;
+- graph/search/index results are retrieval mechanisms, not source truth;
 - candidate findings should be evidence-backed and falsifiable;
 - false positives are first-class quality failures;
 - reviewer quality and execution-transport reliability must be measured separately;
-- one review job should remain one fresh execution/result;
+- one current review job remains one fresh whole-review execution/result;
+- current `REVIEW_RESULT_V1` semantics are not repurposed for narrower challenge roles;
 - reviewer agreement is not ground truth;
 - context strategy, reviewer methodology, and orchestration strategy should be independently identifiable.
 
-### Still open research questions
+### 14.2 Open research questions
 
 - deterministic snapshot versus agentic repository session;
 - exact primitive repository tool set;
-- need/value of structural graph/index;
-- need/value of bounded runnable tests/static tools;
-- exact `REVIEW_PLAN/COVERAGE/FINDING` schemas;
+- value/need of structural graph/index;
+- value/need of bounded runnable tests/static tools;
+- exact `REVIEW_PLAN`, `REVIEW_COVERAGE`, and `FINDING_V1` schemas;
 - exact finding correlation/fingerprint algorithm;
 - falsification trigger policy;
+- **exact typed falsification execution/result contract and its relationship to current `REVIEW_JOB_V1` / `REVIEW_RESULT_V1`;**
 - exact defect-pattern representation;
 - whether/when `REVIEW_RUN_V1` materially improves quality;
-- risk-model inputs and thresholds;
+- which subordinate roles are compatible with current review-job semantics and which require separate typed contracts;
+- risk-model inputs/thresholds;
 - exact strategy-promotion lifecycle;
 - acceptable latency/compute after semantic-quality floors exist.
 
-## 16. Explicit non-goals
+## 15. Explicit non-goals
 
 This research plan does not authorize:
 
 - changing current `REVIEW_JOB_V1` semantics;
-- turning one review job into a voting pool;
+- changing current `REVIEW_RESULT_V1` terminal semantics;
+- turning one review job into a worker/result/voting pool;
+- encoding candidate-level `SUPPORTED / REJECTED / UNRESOLVED` as current `REVIEW_RESULT_V1` `PASS / FINDINGS / ABSTAIN`;
+- hiding an orchestration-critical falsification result only in free-form report text;
+- launching an independent falsifier as ordinary `REVIEW_JOB_V1` before a compatible typed challenge contract is separately accepted;
 - a universal fixed semantic checklist;
 - trusting model self-reported coverage without evidence;
 - using model confidence percentages as correctness proof;
@@ -1371,27 +1358,29 @@ This research plan does not authorize:
 - strategy promotion without a separately accepted fixed evaluation boundary;
 - treating this research document itself as canonical production architecture.
 
-## 17. PR #6 and PR #18 consolidation policy
+## 16. PR #6 and PR #18 consolidation policy
 
-This document is intended to become the single research owner for the semantic reviewer architecture question if independently accepted.
+This document is intended to become the single research owner for the semantic-review architecture question if independently accepted.
 
-PR #6 remains a valuable predecessor research branch containing detailed reviewer-context experiments and external-practice notes. It should not be merged in its old architectural context merely to preserve those ideas.
+PR #6 remains valuable predecessor research containing detailed reviewer-context experiments and external-practice notes. It should not be merged in its old architectural context merely to preserve those ideas.
 
-PR #18 is the current consolidation vehicle because it is based on the modern accepted architecture after ADR 0013, `REVIEW_JOB_V1`, and the MimiSeek-owned durable ledger/publication slice.
+PR #18 is the consolidation vehicle because it is based on the modern accepted architecture after ADR 0013, the accepted atomic review-job foundation, and the MimiSeek-owned durable ledger/publication slice.
 
 If this unified plan is accepted:
 
-- PR #6 may be closed as superseded by the accepted unified research plan while retaining its Git/PR history as research provenance;
-- the older `REVIEW_QUALITY_ORCHESTRATION.md` research draft is replaced by this broader plan rather than maintained as a competing owner;
-- later architecture decisions should cite this plan but accept/reject specific gates rather than treating all hypotheses here as one all-or-nothing production decision.
+- PR #6 may be closed as superseded while retaining its Git/PR history as research provenance;
+- older narrower research drafts should not remain competing semantic-architecture owners;
+- later decisions should cite this plan but accept/reject individual gates rather than treating every hypothesis here as an all-or-nothing production decision.
 
-## 18. Decision boundary
+Closing PR #6 after this plan is accepted would be repository housekeeping. It would **not** mean that snapshot, agentic exploration, structural navigation, bounded execution, multi-pass review, or any other #6 hypothesis was accepted for production.
+
+## 17. Decision boundary
 
 This document is intentionally **not** an ADR.
 
 It defines one coherent research program and dependency order.
 
-Each consequence-bearing architecture choice should later use a separate governed decision based on measured evidence, with bounded outcomes such as:
+Each consequence-bearing architecture choice should later use a separately governed evidence-based decision with bounded outcomes such as:
 
 ```text
 ACCEPT_NARROW
@@ -1399,20 +1388,24 @@ DEFER
 REJECT
 ```
 
-The immediate architectural priority remains:
+The immediate research/implementation order remains:
 
 ```text
 reliable atomic REVIEW_JOB_V1 E2E
     ↓
 measure strong single-reviewer context/capability architecture
     ↓
-add semantic planning/coverage/structured findings
+add planning / evidence indexing / coverage / structured findings
     ↓
-learn finding lifecycle + defect patterns
+add finding lifecycle + outcome memory
     ↓
-targeted falsification
+measure defect-pattern/counterexample value
     ↓
-only then measure multi-pass/adaptive strategy value
+measure falsification and separately resolve its typed result contract
+    ↓
+only then measure compatible multi-pass orchestration
+    ↓
+only after sufficient data measure adaptive strategy/evolution
 ```
 
-Until the relevant gates are independently accepted, the candidate schemas, tools, profiles, risk model, multi-pass procedure, and strategy lifecycle in this document remain research hypotheses only.
+Until the relevant gates are independently accepted, every candidate schema, tool, profile, pattern library, challenge contract, risk model, multi-pass procedure, and strategy lifecycle described here remains a research hypothesis only.
