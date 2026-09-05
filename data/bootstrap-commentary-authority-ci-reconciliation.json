@@ -26,7 +26,11 @@
       "github_evidence": {
         "codex_review_id": 5043917353,
         "codex_review_comment_id": 3874358302,
-        "owner_reply_comment_id": 3874609972
+        "codex_review_comment_updated_at": "2026-08-27T17:50:12Z",
+        "codex_review_comment_body_sha256": "1361b84d58bf7a7267d5be4277698fcf101a6665080a58f286d63c9edbb065b8",
+        "owner_reply_comment_id": 3874609972,
+        "owner_reply_updated_at": "2026-08-27T18:15:36Z",
+        "owner_reply_body_sha256": "539788844ccbc49638018be9fa300a7b64168c06b1f049edda7ba333c89adb54"
       },
       "authority_sync_evidence": {
         "code_docs_head": "9af22cdcbb60501dca968fd10f12dc1d40ee6482",
@@ -83,7 +87,7 @@
         ]
       },
       "reconciliation_status": "SUPPORTED_SAME_PR_AUTHORITY_SYNC_EVIDENCE",
-      "authority_limit": "The evidence supports only the authenticated F055 source-note claim that the named current architecture authorities and metadata were synchronized from the reviewed unstarted/idle description to the owner-declared active-review state on exact same-PR heads. It does not make those historical documents current authority today and does not infer universal semantic correctness from owner prose, ancestry, CI, or later reviewer silence."
+      "authority_limit": "The evidence supports only the authenticated F055 source-note claim that the named current architecture authorities and metadata were synchronized from the reviewed unstarted/idle description to the owner-declared active-review state on exact same-PR heads. The exact Codex finding and owner reply bodies are digest-bound with exact GitHub updated_at identities so edited, negating, swapped, or unrelated commentary fails closed. It does not make those historical documents current authority today and does not infer universal semantic correctness from owner prose, ancestry, CI, or later reviewer silence."
     },
     {
       "finding_id": "F056",
@@ -98,7 +102,11 @@
       "github_evidence": {
         "codex_review_id": 5043917353,
         "codex_review_comment_id": 3874358316,
-        "owner_reply_comment_id": 3874610894
+        "codex_review_comment_updated_at": "2026-08-27T17:50:12Z",
+        "codex_review_comment_body_sha256": "12ad205280e98315394846421a4bdfc1d8e9341ee0a8bdeaf5669afee0efa227",
+        "owner_reply_comment_id": 3874610894,
+        "owner_reply_updated_at": "2026-08-27T18:15:43Z",
+        "owner_reply_body_sha256": "71ec212ead6ebd6098e52845b596c48e1026263120d82c0057d00a9ed859dc00"
       },
       "exact_head_ci_evidence": {
         "code_head": "9af22cdcbb60501dca968fd10f12dc1d40ee6482",
@@ -146,13 +154,14 @@
         ]
       },
       "reconciliation_status": "SUPPORTED_EXACT_HEAD_CI_REFRESH_EVIDENCE",
-      "authority_limit": "The evidence supports only the authenticated F056 source-note claim that the declared five-job PR CI was rerun successfully on the exact code-bearing head and again on the exact metadata head, and that the metadata record names the refreshed code-head evidence. CI is execution evidence, not semantic fix proof, and this status does not make later reviewer silence or owner prose correctness authority."
+      "authority_limit": "The evidence supports only the authenticated F056 source-note claim that the declared five-job PR CI was rerun successfully on the exact code-bearing head and again on the exact metadata head, and that the metadata record names the refreshed code-head evidence. The exact Codex finding and owner reply bodies are digest-bound with exact GitHub updated_at identities so edited, negating, swapped, or unrelated commentary fails closed. CI is execution evidence, not semantic fix proof, and this status does not make later reviewer silence or owner prose correctness authority."
     }
   ],
   "rules": [
     "bootstrap-v1 source projections remain immutable",
     "F055 and F056 remain distinct findings even though they share one reviewed head and one original Codex review",
     "authenticated source commentary is not promoted to truth merely because it exists",
+    "the exact Codex finding body and exact owner-reply body for each finding must match their governed SHA-256 digest and exact GitHub updated_at identity; IDs or evidence-token occurrence alone are insufficient",
     "authority synchronization evidence must bind exact historical review/comment/reply identities, exact same-PR Git ranges, and immutable content on the declared heads",
     "exact-head CI evidence must bind each historical Actions run to the exact repository, workflow, PR event, run number, head SHA, completed-success state, and exact expected successful job set",
     "historical Actions evidence may be read from the public GitHub API without widening the CAP/UV source GitHub App permissions",
