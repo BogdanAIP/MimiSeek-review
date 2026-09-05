@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "MimiSeek development failure pattern v1",
-  "description": "Cross-cutting self-development repeat-prevention record for confirmed MimiSeek development defects. This is not reviewer-evolution DEFECT_PATTERN_V1 authority.",
+  "description": "Cross-cutting self-development repeat-prevention record for confirmed MimiSeek development defects. This is not reviewer-evolution DEFECT_PATTERN_V1 authority. Repository path authority (tracked regular Git files, not checkout-only state or symlinks) is enforced by the executable validator.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -102,6 +102,7 @@
           "then": {
             "properties": {
               "guard_refs": {"maxItems": 0},
+              "regression_refs": {"maxItems": 0},
               "manual_only_reason": {"type": "string", "minLength": 1}
             }
           }
