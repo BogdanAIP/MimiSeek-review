@@ -87,7 +87,7 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         patterns = guard.load_registry(REGISTRY, ROOT)
         self.assertEqual(
             [item["pattern_id"] for item in patterns],
-            ["DFP-0001", "DFP-0002", "DFP-0003"],
+            ["DFP-0001", "DFP-0002", "DFP-0003", "DFP-0004"],
         )
         seed = patterns[0]
         self.assertEqual(seed["failure_class"], "evidence.semantic_binding_missing")
@@ -116,6 +116,18 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         self.assertEqual(patterns[1]["origin"]["evidence_locator"], "review_comment:3941887912")
         self.assertEqual(patterns[2]["failure_class"], "governance.duplicate_canonical_owner")
         self.assertEqual(patterns[2]["origin"]["evidence_locator"], "review_comment:3941887906")
+
+        incident = patterns[3]
+        self.assertEqual(incident["failure_class"], "workflow.noop_head_mutation")
+        self.assertEqual(incident["origin"]["source_kind"], "PROCESS_INCIDENT")
+        self.assertEqual(incident["origin"]["evidence_locator"], "pr_comment:5554652018")
+        self.assertEqual(incident["prevention"]["kind"], "MANUAL_ONLY")
+        self.assertEqual(len(incident["occurrences"]), 2)
+        self.assertEqual(incident["occurrences"][1]["relation"], "REPEAT")
+        self.assertEqual(
+            incident["occurrences"][1]["prevention_failure_reason"],
+            "NO_GUARD",
+        )
 
     def test_executable_pattern_requires_guard_and_regression_refs(self) -> None:
         pattern = load_seed()
