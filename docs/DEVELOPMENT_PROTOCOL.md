@@ -17,6 +17,8 @@ Follow `AGENTS.md`, then independently resolve live GitHub state. A new chat mus
 
 If those answers cannot be reconstructed from the repository, fix the canonical owners rather than creating a per-chat handoff note.
 
+Before material implementation, validate and inspect active self-development repeat-prevention patterns according to `docs/DEVELOPMENT_REPEAT_PREVENTION.md`. Known patterns are a risk scaffold, not an exhaustive checklist and not permission to skip open-ended engineering/review.
+
 ## Normal repository implementation cycle
 
 ```text
@@ -29,6 +31,8 @@ tests / CI when configured or required
 fresh independent exact-head review under immutable review_policy_ref
     ↓
 adjudicate + fix confirmed findings
+    ↓
+close repeat-prevention loop for confirmed material defects
     ↓
 repeat review on the new exact head when fixes move HEAD
     ↓
@@ -48,6 +52,35 @@ The terminal result itself must also be durable and independently resolvable. Pe
 After merge, `docs/EVIDENCE_INDEX.md` may index the accepted result, merge identity and other evidence without pretending that the post-merge index update retroactively created the independent review.
 
 Consumer repositories may use different local review sequences. MimiSeek may consume their accepted structured outcomes and, once Track R is implemented, coordinate an explicitly requested bounded independent review job under `docs/INTEGRATION_CONTRACT.md`. It still does not own consumer finding adjudication, remediation, re-review policy, terminal acceptance, or merge consequences.
+
+## Development repeat prevention
+
+MimiSeek self-development uses the cross-cutting closed-loop process defined in `docs/DEVELOPMENT_REPEAT_PREVENTION.md` and the machine registry `data/development-failure-patterns.jsonl`.
+
+Before material implementation, the development chat must run or otherwise equivalently inspect:
+
+```text
+python tools/validate_development_failure_patterns.py --list-active
+```
+
+and compare active trigger conditions/applicable scope to the planned changed concepts.
+
+After a material MimiSeek defect is confirmed and remediated, the remediation is not process-complete until the development workflow has:
+
+1. identified the root cause below the immediate symptom;
+2. mapped the defect to an existing `failure_class` or created a new governed class;
+3. searched the applicable repository surface for other current instances of the same mechanism;
+4. fixed discovered instances or recorded bounded durable follow-up;
+5. added/strengthened executable prevention plus regression coverage when feasible, or recorded an explicit `MANUAL_ONLY` reason;
+6. recorded the origin/repeat/related occurrence in the durable registry.
+
+If the mechanism already exists as an active failure class, do not create a duplicate pattern. Record a `REPEAT` occurrence and classify why the previous prevention failed (`NO_GUARD`, `GUARD_TOO_NARROW`, `GUARD_NOT_IN_CI`, `PATTERN_NOT_RETRIEVED`, `SCOPE_WRONG`, `NEW_VARIANT`, or `UNKNOWN_PENDING_ANALYSIS`).
+
+A repeat is therefore both a new code/process defect and evidence that the prior prevention loop was insufficient. The prevention mechanism itself must be strengthened when supported by the evidence.
+
+Rejected/unresolved review assertions are not automatically failure patterns. The registry is MimiSeek self-development state only and does not instantiate future reviewer-learning `DEFECT_PATTERN_V1`, consumer adjudication authority, learning events, baseline/candidate/stable state, or distribution authority.
+
+Any repeat-prevention fix that moves the PR HEAD has the same freshness consequence as any other fix: prior terminal exact-head review evidence becomes stale and a fresh review is required.
 
 ## Track R review-job development versus consumer workflow
 
