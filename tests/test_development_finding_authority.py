@@ -147,6 +147,7 @@ class AuthorityTests(unittest.TestCase):
         record, payload = self.process_record()
         bound = a.bind_process_incidents([record], lambda _: payload)
         self.assertIn(("DFP-4", "O1"), bound)
+        self.assertEqual(bound[("DFP-4", "O1")]["pr"], 21)
         for field, value in (("updated_at", "2026-01-01T00:00:01Z"), ("body", "edited")):
             changed = dict(payload)
             changed[field] = value
@@ -173,6 +174,7 @@ class AuthorityTests(unittest.TestCase):
         kinds = {("DFP-4", "O1"): "PROCESS_INCIDENT"}
         a.occurrence_authority(patterns, kinds, {}, bindings)
         for field, value in (
+            ("pr", 999),
             ("head_sha", "c" * 40),
             ("relation", "RELATED"),
             ("prevention_failure_reason", "NEW_VARIANT"),

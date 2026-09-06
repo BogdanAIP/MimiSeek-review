@@ -107,7 +107,7 @@ def bind_process_incidents(records,get):
    if not isinstance(o,dict) or set(o)!=of or not isinstance(o.get('occurrence_id'),str) or not SHA.fullmatch(str(o.get('head_sha',''))) or o.get('head_sha') not in body: raise E(f'{label}: occurrence binding invalid')
    k=(pid,o.get('occurrence_id'))
    if k in out: raise E('duplicate process-incident occurrence binding')
-   out[k]={'source_comment_id':cid,'failure_class':fc,**o}
+   out[k]={'source_comment_id':cid,'failure_class':fc,'pr':PR,**o}
  return out
 def occurrence_authority(patterns,src,adjudications,process_bindings):
  seen=set(); seen_process=set()
@@ -125,7 +125,7 @@ def occurrence_authority(patterns,src,adjudications,process_bindings):
     m=PRC.fullmatch(str(loc)); b=process_bindings.get(k)
     if not m or b is None: raise E(f'{pid}/{oid}: lacks exact process-incident binding')
     if b.get('source_comment_id')!=int(m.group(1)) or b.get('failure_class')!=fc: raise E(f'{pid}/{oid}: process-incident claim differs')
-    for f in ('head_sha','relation','prevention_failure_reason'):
+    for f in ('pr','head_sha','relation','prevention_failure_reason'):
      if b.get(f)!=o.get(f): raise E(f'{pid}/{oid}: process-incident {f} differs')
     seen_process.add(k)
  if seen!=set(src): raise E('occurrence source registry has extra/missing rows')
