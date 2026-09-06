@@ -5,7 +5,10 @@ from pathlib import Path
 REPO='BogdanAIP/MimiSeek-review'; PR=21
 LEDGER='data/development-finding-adjudications.jsonl'; PATTERNS='data/development-failure-patterns.jsonl'; SOURCES='data/development-occurrence-sources.jsonl'
 FINDING=(5558483395,'2026-09-06T10:00:17Z','89d402bfc7af9087440dfd33a9d68158f9fefbed6d58b8b386803be728c564ea','DEVELOPMENT_FINDING_ADJUDICATION_MANIFEST_V2\n')
-SUPPLEMENT=(5558687674,'2026-09-06T10:42:38Z','07fb1ebabc7792083d5088ab7001621aadd1892998909d54b209857e7412aa11','DEVELOPMENT_FINDING_ADJUDICATION_SUPPLEMENT_V1\n')
+SUPPLEMENTS=(
+ (5558687674,'2026-09-06T10:42:38Z','07fb1ebabc7792083d5088ab7001621aadd1892998909d54b209857e7412aa11','DEVELOPMENT_FINDING_ADJUDICATION_SUPPLEMENT_V1\n'),
+ (5560866728,'2026-09-06T17:19:27Z','485e51cab194b5ba66e2cf8e25a3bfe3d84fb2a9e28b0b23118c0bf73b046a3d','DEVELOPMENT_FINDING_ADJUDICATION_SUPPLEMENT_V1\n'),
+)
 PROCESS=(5559836346,'2026-09-06T14:20:19Z','2b164e3e9c46c69b6c4349569260a385d3893ba356e14352befd9e72559f1659','DEVELOPMENT_PROCESS_INCIDENT_BINDING_MANIFEST_V2\n')
 REVIEW=re.compile(r'^review_comment:([1-9][0-9]*)$'); PRC=re.compile(r'^pr_comment:([1-9][0-9]*)$'); SHA=re.compile(r'^[0-9a-f]{40}$')
 class E(RuntimeError): pass
@@ -59,7 +62,11 @@ def finding_manifest(get):
  rows=m.get('records')
  if not isinstance(rows,list) or not rows: raise E('finding manifest records missing')
  return rows
-def supplement_manifest(get): return one_line_manifest(get,SUPPLEMENT,'DEVELOPMENT_FINDING_ADJUDICATION_SUPPLEMENT_V1',{'adjudication_pr':PR,'adjudicator_role':'development_workflow'})
+def supplement_manifest(get,spec): return one_line_manifest(get,spec,'DEVELOPMENT_FINDING_ADJUDICATION_SUPPLEMENT_V1',{'adjudication_pr':PR,'adjudicator_role':'development_workflow'})
+def finding_records(get):
+ rows=list(finding_manifest(get))
+ for spec in SUPPLEMENTS: rows.extend(supplement_manifest(get,spec))
+ return rows
 def process_manifest(get): return one_line_manifest(get,PROCESS,'DEVELOPMENT_PROCESS_INCIDENT_BINDING_MANIFEST_V2',{'authority_pr':PR})
 def key(r): return (r.get('repository'),r.get('pr'),r.get('head_sha'),r.get('evidence_locator'))
 def bind_ledger(ledger,records):
@@ -134,12 +141,13 @@ def occurrence_authority(patterns,src,adjudications,process_bindings):
  if seen!=set(src): raise E('occurrence source registry has extra/missing rows')
  if seen_process!=set(process_bindings): raise E('process-incident manifest has extra/missing occurrence bindings')
 def verify(root,get):
- ledger=jsonl(root,LEDGER); pats=jsonl(root,PATTERNS); src=sources(jsonl(root,SOURCES)); recs=finding_manifest(get)+supplement_manifest(get); adj=bind_ledger(ledger,recs)
+ ledger=jsonl(root,LEDGER); pats=jsonl(root,PATTERNS); src=sources(jsonl(root,SOURCES)); recs=finding_records(get); adj=bind_ledger(ledger,recs)
  for r in recs: source_review(r,get)
  occurrence_authority(pats,src,adj,bind_process_incidents(process_manifest(get),get))
 def main():
  root=Path(__file__).resolve().parents[1]
  try: verify(root,fetcher())
  except (E,OSError,json.JSONDecodeError) as x: print(f'development finding authority verification failed: {x}'); return 1
- print(f'development finding authority verified: finding_manifest_comment={FINDING[0]} finding_supplement_comment={SUPPLEMENT[0]} process_manifest_comment={PROCESS[0]}'); return 0
+ supplements=','.join(str(spec[0]) for spec in SUPPLEMENTS)
+ print(f'development finding authority verified: finding_manifest_comment={FINDING[0]} finding_supplement_comments={supplements} process_manifest_comment={PROCESS[0]}'); return 0
 if __name__=='__main__': raise SystemExit(main())
