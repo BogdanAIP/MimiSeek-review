@@ -49,7 +49,7 @@ Path:
 
 `cli/packages/coding-agent/src/disco/skills/distill-ml-knowledge/SKILL.md`
 
-Relevant upstream pattern:
+Useful pattern:
 
 ```text
 anchor
@@ -65,7 +65,7 @@ verify
 accepted operating graph + construction record
 ```
 
-The workflow preserves source/version/trust boundaries, exclusions, conflicts, inaccessible material, assumptions, evidence, verification targets, routing decisions, and unresolved blockers.
+The useful part for MimiSeek is the explicit preservation of source/version/trust boundaries, exclusions, conflicts, inaccessible material, assumptions, evidence, verification targets, routing decisions, and unresolved blockers.
 
 ### 1.2 `verify-repo-skill`
 
@@ -73,10 +73,10 @@ Path:
 
 `cli/packages/coding-agent/src/disco/skills/verify-repo-skill/SKILL.md`
 
-Relevant upstream patterns:
+Useful patterns:
 
 - generated skill content is not accepted merely because it exists;
-- runtime skill artifacts are separated from verification/test/report artifacts;
+- runtime skill artifacts are separate from verification/test/report artifacts;
 - representative native repository checks are preferred where available;
 - missing required execution environment remains visibly blocked rather than converted into a pass;
 - routing/classification happens after verification and must be source-supported;
@@ -88,45 +88,43 @@ Path:
 
 `cli/packages/coding-agent/src/disco/skills/refresh-repo-skill/SKILL.md`
 
-Relevant upstream patterns:
+Useful patterns:
 
-- current upstream repository becomes the source of truth;
-- old skill identity can be preserved while stale claims are audited and refreshed;
+- current upstream state becomes the refresh authority;
+- old skill identity can be preserved while stale claims are audited;
 - staleness is explicit rather than silently ignored;
 - claims are divided into still-supported, stale/changed, newly relevant, and unknown;
-- refreshed knowledge is verified again before managed replacement.
+- refreshed knowledge is verified again before replacement.
 
-### 1.4 progressive-disclosure repository router
+### 1.4 progressive-disclosure router
 
 Path:
 
 `skills/repositories/repo-skills-router/SKILL.md`
 
-Relevant upstream patterns:
+Useful patterns:
 
 - route from broad area to family to repository root to relevant sub-skill;
-- read only one or two likely branches rather than the full skill collection;
+- inspect only one or two likely branches rather than the whole library;
 - choose the smallest useful set of skills;
 - do not force a match when no exact route is supported;
-- generated routing pages are projections of structured routing state rather than manually maintained truth.
+- generated routing pages should be projections of structured routing state rather than manually maintained truth.
 
-### 1.5 provenance / transactional import patterns
+### 1.5 provenance and transactional activation
 
-The AREX workflows use repository provenance, source commit/version identity, external verification artifacts, routing handoffs, dedicated import/update helpers, locks, staging, validation, and rollback.
-
-The important idea for MimiSeek is not the exact directory layout. It is that:
+The important transferable idea is:
 
 ```text
 candidate knowledge != active knowledge
 ```
 
-and activation should preserve source identity, verification identity, routing identity, and rollback/recovery semantics.
+Activation should preserve source identity, verification identity, routing identity, and rollback/recovery semantics.
 
 ## 2. What MimiSeek should take
 
-### 2.1 Take the `scope -> ground -> construct -> verify` lifecycle
+### 2.1 `scope -> ground -> construct -> verify`
 
-MimiSeek should not create reviewer operating knowledge by asking a model to read a README and write a permanent skill.
+MimiSeek should not create durable reviewer operating knowledge by asking a model to read one README and write a permanent skill.
 
 Research target lifecycle:
 
@@ -193,11 +191,11 @@ Verify source support, internal links/graph structure, representative use, execu
 
 A candidate with unresolved required evidence remains unverified or blocked; it does not silently become active knowledge.
 
-### 2.2 Take source-bound provenance as a first-class object
+### 2.2 Source-bound provenance is a first-class object
 
-MimiSeek should record enough identity to answer:
+MimiSeek should be able to answer:
 
-> What exact external state did this operating skill describe when it was verified?
+> What exact external content did this operating skill describe when it was verified?
 
 Research-only candidate:
 
@@ -210,10 +208,13 @@ source_repository
 source_commit
 source_tree_or_tag
 source_version
-source_urls[]
-source_evidence_paths[]
 source_license
 working_state_if_relevant
+
+source_evidence_items[]:
+  locator
+  immutable_revision | immutable_snapshot_ref | content_digest
+  retained_path_or_surface
 
 verification_environment[]
 verification_evidence_refs[]
@@ -228,9 +229,21 @@ verified_at
 
 For repository-backed knowledge, `source_commit` should normally be immutable and exact.
 
-A skill such as "Playwright guidance" without a supported source/version identity should not be treated as durable reviewer knowledge.
+For **every retained evidence item**, repository-backed or not, provenance must bind the exact content used during verification. A mutable URL or nominal version alone is not sufficient.
 
-### 2.3 Take explicit stale/refresh semantics
+For documentation, papers, specifications, service/API descriptions, or other sources that can change in place, retain at least one independently recoverable immutable identity:
+
+- immutable upstream revision;
+- immutable archived/snapshot reference; or
+- cryptographic content digest of the exact retained bytes/content representation.
+
+The human-readable locator may still be stored, but it is not the content identity.
+
+Refresh/currentness must compare against these bound evidence-item identities. If MimiSeek cannot re-resolve or otherwise establish the exact content relationship, the result is `UNKNOWN`, `STALE`, or blocked according to the later accepted contract — never silently `CURRENT`.
+
+A skill such as “Playwright guidance” without supported source/version/content identity should not be durable reviewer knowledge.
+
+### 2.3 Explicit stale/refresh semantics
 
 Operating knowledge decays as dependencies, APIs, CLIs, documentation, or source behavior change.
 
@@ -251,7 +264,7 @@ Possible refresh sequence:
 ```text
 existing skill + old provenance
         ↓
-current source identity
+current source/content identity
         ↓
 staleness audit
         ↓
@@ -268,7 +281,7 @@ independent re-verification
 
 Old claims must not survive merely because they were previously useful.
 
-### 2.4 Take progressive disclosure / bounded routing
+### 2.4 Progressive disclosure / bounded routing
 
 MimiSeek should never inject the entire operating-knowledge library into every review.
 
@@ -288,7 +301,7 @@ selected root skill(s)
 selected sub-skills/references only
 ```
 
-Routing rules to preserve from AREX in adapted form:
+Routing rules:
 
 - inspect only the smallest useful number of candidate branches;
 - select multiple skills only when they contribute distinct capabilities;
@@ -298,7 +311,7 @@ Routing rules to preserve from AREX in adapted form:
 
 The router is a retrieval mechanism, not semantic authority.
 
-### 2.5 Take separation of runtime skill from verification evidence
+### 2.5 Separate runtime skill from verification evidence
 
 MimiSeek should keep operating instructions separate from evidence that justified activating them.
 
@@ -322,17 +335,17 @@ evidence/
       independent-review-result
 ```
 
-The runtime reviewer should receive concise operating knowledge, not a self-congratulatory verification report that biases it toward trusting the skill.
+The runtime reviewer should receive concise operating knowledge, not a verification report that biases it toward trusting the skill.
 
-### 2.6 Take representative-use and native-evidence verification
+### 2.6 Representative-use and native-evidence verification
 
-Synthetic tests can verify that a skill gives internally coherent guidance, but they cannot substitute for required real execution evidence.
+Synthetic tests can verify internal coherence, but they cannot substitute for required real execution evidence.
 
 Adapted rule:
 
-> If a skill claims knowledge about a behavior that can only be established in a specific environment/backend/runtime, the required environment must be observed or the claim remains visibly blocked/limited.
+> If a skill claims knowledge about behavior that can only be established in a specific environment/backend/runtime, that environment must be observed or the claim remains visibly blocked/limited.
 
-Possible verification states:
+Research-only verification states may later include:
 
 ```text
 PASS
@@ -348,11 +361,9 @@ UNVERIFIED
 
 Exact production enums remain future schema work.
 
-### 2.7 Take classification after verification
+### 2.7 Classification only after verification
 
 Routing/classification should not be based on generated skill prose alone.
-
-A managed reusable skill should be classified only after verification using evidence from the original source.
 
 Do not accept:
 
@@ -363,7 +374,7 @@ Do not accept:
 
 If no exact route exists, `unclassified`/no-match is safer than an invented assignment.
 
-### 2.8 Take candidate-versus-active separation and transactional activation
+### 2.8 Candidate-versus-active separation and transactional activation
 
 Research candidate activation flow:
 
@@ -389,9 +400,9 @@ On failure:
 rollback skill state + route state
 ```
 
-A partially imported skill/router combination must not become the live reviewer context.
+A partially imported skill/router combination must not become live reviewer context.
 
-### 2.9 Take project-specific versus reusable scope separation
+### 2.9 Project-specific versus reusable scope
 
 MimiSeek needs at least two knowledge scopes.
 
@@ -404,8 +415,6 @@ Examples:
 - project-specific test/runtime workflow;
 - local terminology and constraints.
 
-Candidate location/ownership remains future design work.
-
 #### Reusable operating knowledge
 
 Examples:
@@ -417,14 +426,14 @@ Examples:
 
 Reusable knowledge requires stronger provenance, independent verification, refresh semantics, and reuse evidence than one project-local skill.
 
-### 2.10 Take recovery knowledge, not only happy-path instructions
+### 2.10 Recovery knowledge, not only happy-path instructions
 
 A useful operating skill should include what to do when expected behavior fails.
 
 Examples:
 
 ```text
-if source version mismatches -> mark stale / refresh
+if source version/content mismatches -> mark stale / refresh
 if required backend unavailable -> BLOCKED_REQUIRED_ENVIRONMENT
 if evidence conflicts -> SOURCE_CONFLICT / investigate
 if API symbol disappeared -> verify release/source replacement
@@ -452,23 +461,11 @@ NEW INDEPENDENT READ-ONLY VERIFIER
 VERIFIED / FINDINGS / ABSTAIN
 ```
 
-Reason:
-
-```text
-same model misunderstanding source
-    ↓
-writes wrong skill
-    ↓
-checks skill using same misunderstanding
-    ↓
-false verification
-```
-
 Independent verification reduces correlated self-confirmation. Exact implementation/worker identity remains future architecture work.
 
 ### 3.2 Generalize ML backend concepts into verification environments
 
-Do not import the AREX CPU/CUDA/ROCm/MPS assumptions as a MimiSeek core abstraction.
+Do not import CPU/CUDA/ROCm/MPS assumptions as a MimiSeek core abstraction.
 
 MimiSeek needs a generic concept such as:
 
@@ -509,7 +506,7 @@ It must never independently authorize:
 
 The reviewer still reconstructs governing authority and evaluates the exact target independently.
 
-### 3.4 Do not expose expected findings or answer keys
+### 3.4 No answer-key or post-target leakage
 
 Operating knowledge is a capability scaffold, not benchmark leakage.
 
@@ -521,9 +518,30 @@ It must not say:
 
 > In this target PR the expected defect is at file X line Y.
 
-This matches the existing MimiSeek research requirement that review planning remain open-ended and not leak expected finding text/count or later fix knowledge.
+The same restriction applies to **reviewer-visible target evidence**, not only to the skill text.
 
-### 3.5 Do not make the router a proof of relevance or completeness
+For historical paired-review evaluation, both arms must use the same frozen evidence surface bound to a target cutoff. The allowed snapshot must exclude evidence created after the target state when that evidence can reveal the answer key, including where applicable:
+
+- later review comments;
+- later reviewer summaries;
+- fix/remediation commits not part of the target snapshot;
+- later owner replies that reveal the fix;
+- later dispositions/adjudications;
+- other post-target artifacts that identify expected findings.
+
+The experiment must record:
+
+- exact target PR/base/head;
+- evidence cutoff/snapshot identity;
+- allowed reviewer-visible evidence surfaces;
+- excluded post-target surfaces;
+- any detected leakage.
+
+If answer-key leakage is detected, that case is invalid for a blind-value claim such as Gate OK1. Do not silently keep it in the numerator or denominator as though the comparison remained blind.
+
+This is consistent with the accepted research leakage boundary in `docs/research/SEMANTIC_REVIEWER_ARCHITECTURE_PLAN.md`.
+
+### 3.5 Do not make the router proof of relevance or completeness
 
 No-match must not mean safe.
 
@@ -537,9 +555,9 @@ The ordinary semantic reviewer must retain an open-ended pass after using routed
 
 The 5000+ upstream skill collection is not itself MimiSeek architecture.
 
-MimiSeek should not bulk-import the library as trusted reviewer context because:
+MimiSeek should not bulk-import it as trusted reviewer context because:
 
-- its verification standard is designed for a different product purpose;
+- its verification standard serves a different product purpose;
 - individual skills may be stale relative to a target dependency version;
 - reviewer independence/authority boundaries differ;
 - routing taxonomy is ML/scientific-computing oriented;
@@ -547,33 +565,31 @@ MimiSeek should not bulk-import the library as trusted reviewer context because:
 
 External AREX skills may later serve as candidate source material, never automatically active MimiSeek truth.
 
-### 4.2 Do not copy AREX's taxonomy as MimiSeek's taxonomy
+### 4.2 Do not copy AREX taxonomy as MimiSeek taxonomy
 
-MimiSeek's routing should be driven by review-relevant concepts, technologies, runtime surfaces, and verification needs.
-
-The AREX area/family hierarchy is useful as a progressive-disclosure example but is not an accepted MimiSeek classification.
+MimiSeek routing should be driven by review-relevant concepts, technologies, runtime surfaces, and verification needs.
 
 ### 4.3 Do not copy the home-directory managed-library layout
 
 Paths such as `~/.disco/agent/skills/...` are DisCo implementation details.
 
-MimiSeek needs repository/product-owned storage and durable state appropriate to its accepted architecture.
+MimiSeek needs repository/product-owned storage appropriate to its accepted architecture.
 
 ### 4.4 Do not couple production knowledge to source-checkout paths
 
-Public/reusable skill content should be self-contained or use durable source identities, not instructions such as "open my local checkout at path X".
+Public/reusable skill content should use durable source identities, not instructions such as “open my local checkout at path X”.
 
 ### 4.5 Do not silently reuse code without license handling
 
 AREX-Skill is Apache-2.0 at the inspected upstream commit.
 
-If MimiSeek later copies/modifies upstream code rather than independently reimplementing an idea, the implementation work must explicitly preserve required license/attribution notices and evaluate any `NOTICE` obligations at the exact copied source revision.
+If MimiSeek later copies/modifies upstream code rather than independently reimplementing an idea, implementation work must preserve required license/attribution notices and evaluate `NOTICE` obligations at the exact copied source revision.
 
 This research document records architecture inspiration only; it does not itself import AREX code.
 
 ## 5. Candidate MimiSeek contracts
 
-No schema below is accepted production authority. These are research targets for later experiments.
+No schema below is accepted production authority. These are research targets only.
 
 ### 5.1 `OPERATING_SKILL_V1`
 
@@ -598,7 +614,7 @@ verification_state_ref
 
 ### 5.2 `OPERATING_SKILL_PROVENANCE_V1`
 
-See section 2.2.
+See section 2.2. Any future production schema must preserve **per-retained-item immutable content identity** rather than weakening the research requirement back to mutable URL/version identity.
 
 ### 5.3 `OPERATING_SKILL_VERIFICATION_RESULT_V1`
 
@@ -642,7 +658,9 @@ affected_skill_surfaces[]
 refresh_required
 ```
 
-### 5.5 structured router state
+`CURRENT` must be justified by exact source/content identity checks, not merely by the continued existence of a URL or unchanged human version label.
+
+### 5.5 Structured router state
 
 Routing source of truth should be structured machine state.
 
@@ -706,7 +724,7 @@ Operating knowledge asks:
 
 > How does a reviewer gain trustworthy, versioned, source-grounded knowledge about technologies/workflows before a relevant failure has ever been seen?
 
-If Development Repeat Prevention is later accepted, its failure-pattern machinery should not be reused as the operating-skill registry. The namespaces, authorities, lifecycle, and trust semantics are different.
+The failure-pattern registry must not become the operating-skill registry. Their namespaces, authorities, lifecycle, and trust semantics are different.
 
 Possible future interaction:
 
@@ -736,12 +754,12 @@ Recommended initial candidate: a well-versioned repository/framework with:
 - recurring semantic review risk;
 - enough historical PRs/cases to compare reviewer performance.
 
-Practical candidates include Playwright or another repository-backed technology used in agent/browser development. GitHub Actions/provider behavior is also highly relevant but may require multiple authoritative sources rather than one clean repository anchor.
+Practical candidates include Playwright or another repository-backed technology used in agent/browser development. GitHub Actions/provider behavior is also relevant but may require multiple authoritative sources rather than one clean repository anchor.
 
 ### Prototype sequence
 
 ```text
-choose exact source commit/version
+choose exact source commit/version/content identities
         ↓
 SCOPE
         ↓
@@ -752,6 +770,8 @@ construct one small skill graph
 independent skill verification
         ↓
 freeze VERIFIED candidate
+        ↓
+freeze target evidence snapshot/cutoff
         ↓
 run paired review evaluation
   A: reviewer without skill
@@ -771,7 +791,7 @@ Measure whether the skill improves:
 - review coverage;
 - reviewer token/context cost;
 - review latency/cost where measurable;
-- stale-version errors;
+- stale-version/content errors;
 - ability to recover from failed verification/reproduction.
 
 Do not select production architecture because the skill subjectively feels useful.
@@ -780,7 +800,11 @@ Do not select production architecture because the skill subjectively feels usefu
 
 - same exact target PR/base/head;
 - same reviewer model/configuration where possible;
-- no expected finding text leaked into skill;
+- same frozen reviewer-visible evidence snapshot/cutoff for both arms;
+- no expected finding text leaked into either skill or reviewer-visible target evidence;
+- no post-target review comments, later fixes, later dispositions, or equivalent answer-key artifacts in a blind historical comparison;
+- record the allowed evidence surface and any leakage discovered;
+- invalidate a leaked historical case for blind Gate OK1 claims rather than counting it as a clean comparison;
 - skill built only from evidence available independently of target answer key;
 - independent skill verifier distinct from builder;
 - target adjudication remains governed independently;
@@ -792,7 +816,7 @@ Do not select production architecture because the skill subjectively feels usefu
 
 Question:
 
-> Does one independently verified, source-bound operating skill materially improve governed review outcomes over the same reviewer without the skill?
+> Does one independently verified, source-bound operating skill materially improve governed review outcomes over the same reviewer without the skill under a genuinely blind, evidence-cutoff-bound comparison?
 
 Decision:
 
@@ -802,7 +826,7 @@ Decision:
 
 Question:
 
-> Can MimiSeek reliably detect and fail closed on stale or mismatched operating knowledge before it influences a review materially?
+> Can MimiSeek bind every retained source-evidence item to immutable content identity and reliably fail closed on stale, mismatched, or unrecoverable operating knowledge before it influences a review materially?
 
 Decision:
 
@@ -851,7 +875,7 @@ OK-B one manual candidate skill
   ↓
 OK-C independent verification artifact
   ↓
-OK-D paired reviewer experiment
+OK-D paired reviewer experiment with evidence cutoff/leakage control
   ↓
 OK-E staleness/refresh experiment
   ↓
@@ -866,9 +890,7 @@ Do **not** begin with a generic distiller that can generate thousands of skills 
 
 ## 11. Reuse-versus-reimplementation decision
 
-AREX-Skill's Apache-2.0 license permits modification and redistribution subject to its license conditions.
-
-Future implementation should decide component by component:
+Future implementation should decide component by component.
 
 ### Likely reimplement from ideas first
 
@@ -876,10 +898,9 @@ Future implementation should decide component by component:
 - authority boundary;
 - independent verification semantics;
 - review-specific router inputs;
-- stale-skill effect on review acceptance/context;
+- stale-skill effect on review context;
+- historical evaluation leakage controls;
 - integration with MimiSeek evidence and reviewer architecture.
-
-These are MimiSeek-specific and should not inherit unrelated DisCo assumptions.
 
 ### Candidates for code-level adaptation after inspection
 
@@ -913,11 +934,13 @@ The highest-value AREX/DisCo contribution to MimiSeek is not the existing catalo
 ```text
 source-bound scope
   + provenance-preserving grounding
+  + immutable per-item content identity
   + structured skill construction
-  + explicit verification
+  + independent verification
   + progressive disclosure
   + staleness/refresh
   + transactional activation
+  + blind evaluation with explicit evidence cutoffs
 ```
 
 MimiSeek should adapt this lifecycle under stricter review-specific rules:
@@ -927,7 +950,9 @@ builder != terminal verifier
 operating knowledge != authority
 no route != safe
 verified != permanently current
+URL/version != immutable content identity
 synthetic evidence != required real-runtime evidence
+historical target != permission to see post-target answer key
 candidate != active
 ```
 

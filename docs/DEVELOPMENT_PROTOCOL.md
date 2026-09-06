@@ -4,7 +4,11 @@
 
 Enable MimiSeek Review itself to be developed by ChatGPT across many disposable chats without depending on previous-chat memory.
 
+Canonical owner for the MimiSeek cross-chat development process: this document.
+
 This document governs development of the MimiSeek improvement system. It does not own the ordinary review/fix/merge loop of CAP, UV, or other consumer projects. Under the accepted narrow coordination boundary, MimiSeek may eventually coordinate an explicitly requested independent review job, but consumer project authority and consequences remain outside MimiSeek.
+
+Supporting documents may explain or index this process, but they do not independently define normative cross-chat development rules. In particular, `docs/DEVELOPMENT_REPEAT_PREVENTION.md` is explanatory reference material only.
 
 ## Starting a new development chat
 
@@ -16,6 +20,14 @@ Follow `AGENTS.md`, then independently resolve live GitHub state. A new chat mus
 4. Which accepted decisions and authority boundaries must not be silently changed?
 
 If those answers cannot be reconstructed from the repository, fix the canonical owners rather than creating a per-chat handoff note.
+
+Before material MimiSeek implementation, validate and inspect active self-development failure patterns:
+
+```text
+python tools/validate_development_failure_patterns.py --list-active
+```
+
+Compare their trigger conditions/applicable scope to the planned changed concepts. Known patterns are a risk scaffold, not an exhaustive checklist and not permission to skip open-ended engineering/review. A `BOUNDED_FOLLOW_UP` active pattern is unresolved process debt and its durable follow-up must remain visible; do not silently reinterpret it as complete.
 
 ## Normal repository implementation cycle
 
@@ -29,6 +41,8 @@ tests / CI when configured or required
 fresh independent exact-head review under immutable review_policy_ref
     ↓
 adjudicate + fix confirmed findings
+    ↓
+close repeat-prevention loop for confirmed material defects
     ↓
 repeat review on the new exact head when fixes move HEAD
     ↓
@@ -48,6 +62,92 @@ The terminal result itself must also be durable and independently resolvable. Pe
 After merge, `docs/EVIDENCE_INDEX.md` may index the accepted result, merge identity and other evidence without pretending that the post-merge index update retroactively created the independent review.
 
 Consumer repositories may use different local review sequences. MimiSeek may consume their accepted structured outcomes and, once Track R is implemented, coordinate an explicitly requested bounded independent review job under `docs/INTEGRATION_CONTRACT.md`. It still does not own consumer finding adjudication, remediation, re-review policy, terminal acceptance, or merge consequences.
+
+## Development repeat prevention
+
+This section is the sole normative owner of MimiSeek self-development repeat prevention. Machine state lives in `data/development-failure-patterns.jsonl`; its schema identity is `DEVELOPMENT_FAILURE_PATTERN_V1`; the executable local validator is `tools/validate_development_failure_patterns.py`.
+
+The registry is self-development state only. It does not instantiate future reviewer-learning `DEFECT_PATTERN_V1`, consumer adjudication authority, Stage 4 learning events, baseline/candidate/stable reviewer state, distribution state, or `REVIEW_JOB_V1` / `REVIEW_RESULT_V1` semantics.
+
+### Eligible confirmed defects
+
+After this control is accepted, a material MimiSeek development defect is eligible for durable repeat-prevention closure only when repository-governed evidence establishes it strongly enough to remediate, for example an actionable fresh independent review finding or a reproducible durable CI/runtime incident with established root cause.
+
+Rejected or unresolved reviewer assertions are not automatically failure patterns. Non-material editorial corrections need no pattern unless they expose a broader guardable mechanism.
+
+### Required closure
+
+After an eligible material defect is confirmed and remediated, the remediation is not process-complete until the development workflow has:
+
+1. identified the root cause below the immediate symptom;
+2. mapped the defect to an existing `failure_class` or created a new governed class at mechanism level;
+3. searched the applicable repository surface for other current instances of that same mechanism;
+4. fixed discovered instances or recorded a durable bounded follow-up;
+5. added or strengthened executable prevention plus regression/invariant coverage where feasible, otherwise recorded an explicit `MANUAL_ONLY` reason;
+6. recorded the durable origin/repeat/related occurrence in the registry when the occurrence model applies.
+
+Failure classes must generalize the mechanism rather than memorize one filename, SHA, comment ID, or exact old answer. Conversely, materially different mechanisms must not be collapsed solely to avoid creating a new class.
+
+### Repository-wide search states
+
+`repository_search.status=COMPLETED` means the declared applicable search scope has been searched at the failure-mechanism level and no unresolved same-class current instance remains.
+
+`repository_search.status=BOUNDED_FOLLOW_UP` means closure is intentionally incomplete and `follow_up_refs` identify durable work that must finish it. Each follow-up reference must be independently recoverable as either an exact `https://github.com/BogdanAIP/MimiSeek-review/issues/<n>` locator or a tracked regular file in the exact checked-out Git `HEAD` tree. Free-form promises, foreign-repository URLs, malformed issue locators, checkout-only files, and symlinks do not satisfy bounded follow-up authority. A bounded follow-up must not be represented as complete merely because CI can validate the registry shape.
+
+Search declarations, `discovered_instances`, executable `guard_refs`, and `regression_refs` are repository-authority claims. The executable validator must resolve local repository-file references only against tracked regular files in the exact checked-out Git `HEAD` tree. `.git` metadata, untracked or staged-only checkout files, tracked symlinks, submodules, or paths resolving outside repository authority do not satisfy these claims.
+
+CI can prove that declared machine references satisfy this bounded contract; it cannot by itself prove that a semantic repository-wide search was complete or that the failure-class mapping is correct. Fresh semantic review remains responsible for those claims.
+
+### Prevention
+
+Prefer the strongest feasible executable prevention: schema/state invariant, safe shared abstraction, regression/invariant test, static repository guard, CI verifier, or fail-closed identity/authority check.
+
+`prevention.kind=EXECUTABLE` requires at least one tracked regular-file guard reference and at least one tracked regular-file regression reference.
+
+`prevention.kind=MANUAL_ONLY` is exceptional. It carries no executable guard/regression references and requires a concrete explanation of why automation is genuinely unavailable or disproportionate. It is not a shortcut for skipping a feasible protection.
+
+### Repeat identity
+
+One stable `failure_class` has one pattern identity. Do not create a second pattern merely because the same established mechanism appears in another file or PR.
+
+The first occurrence is `ORIGIN`. A later established same-class defect is `REPEAT`; a materially connected but not-established-same-class occurrence may be `RELATED`.
+
+A `REPEAT` must classify why prior prevention did not stop recurrence using one of:
+
+- `NO_GUARD`;
+- `GUARD_TOO_NARROW`;
+- `GUARD_NOT_IN_CI`;
+- `PATTERN_NOT_RETRIEVED`;
+- `SCOPE_WRONG`;
+- `NEW_VARIANT`;
+- `UNKNOWN_PENDING_ANALYSIS`.
+
+`UNKNOWN_PENDING_ANALYSIS` is a temporary fail-closed classification, not permission to finish remediation without determining whether the prevention loop itself needs strengthening. While any occurrence remains `UNKNOWN_PENDING_ANALYSIS`, the pattern must remain `BOUNDED_FOLLOW_UP` with a durable `follow_up_ref`, and active-pattern retrieval must expose the pending occurrence identity so it cannot disappear across chats.
+
+A failure pattern may be `RETIRED` only after `repository_search.status=COMPLETED`, all durable follow-ups are closed/removed from the record, and no `UNKNOWN_PENDING_ANALYSIS` occurrence remains. Retirement must never make unresolved debt disappear from active-pattern retrieval.
+
+A repeat is therefore both a new code/process defect and evidence that the prior prevention loop was insufficient.
+
+### Review-time use
+
+When a fresh reviewer finds a material MimiSeek defect, development adjudication must check whether an active `failure_class` already describes the mechanism. If yes, determine whether the occurrence is `REPEAT` or only `RELATED`, why prior prevention/retrieval/scope did not catch it, and whether the prevention needs strengthening repository-wide.
+
+Known patterns supplement rather than replace open-ended semantic review. Absence of a matching pattern is never proof that a change is safe.
+
+Any repeat-prevention remediation that moves the PR HEAD has the same freshness consequence as any other consequence-bearing fix: previous terminal exact-head review evidence becomes stale and a fresh independent review is required.
+
+### Repository write hygiene
+
+A repository Contents write is consequence-bearing because it can move the exact reviewed HEAD even when the intended operation is not a repository-file byte change.
+
+Before a ChatGPT-driven MimiSeek repository file create/update:
+
+1. classify whether the intended effect is an actual repository-file byte change or a non-file GitHub operation such as PR metadata/comment/thread housekeeping or branch-ref movement;
+2. use the dedicated non-content action for non-file operations rather than a repository Contents write;
+3. for replacement writes, fetch the current blob and compare the complete intended bytes; if they are byte-identical, do not invoke the Contents update action;
+4. when a repository content write is intentional, expect HEAD to move and treat previous exact-head CI/review evidence as stale.
+
+An unintended Contents write that moves HEAD is a development process incident under `workflow.noop_head_mutation`, including a byte-identical replacement or a wrong-action write used for a non-file operation. If it occurs, preserve the incident evidence and apply the normal repeat-prevention closure. This tool-selection boundary is currently external to repository code/CI, so `MANUAL_ONLY` is acceptable only while the execution substrate provides no machine-enforceable write-intent/no-op fence.
 
 ## Track R review-job development versus consumer workflow
 
