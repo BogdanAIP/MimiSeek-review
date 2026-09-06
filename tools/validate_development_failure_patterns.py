@@ -4,20 +4,30 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import os
 import re
 import subprocess
+import urllib.error
+import urllib.request
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import urlparse
 
 SCHEMA_VERSION = "DEVELOPMENT_FAILURE_PATTERN_V1"
+ADJUDICATION_SCHEMA_VERSION = "DEVELOPMENT_FINDING_ADJUDICATION_V1"
 REPOSITORY = "BogdanAIP/MimiSeek-review"
+REGISTRY_PATH = "data/development-failure-patterns.jsonl"
+SCHEMA_PATH = "data/schemas/development-failure-pattern-v1.schema.json"
+ADJUDICATIONS_PATH = "data/development-finding-adjudications.jsonl"
+ADJUDICATION_SCHEMA_PATH = "data/schemas/development-finding-adjudication-v1.schema.json"
 REPOSITORY_ISSUE_PREFIX = "https://github.com/BogdanAIP/MimiSeek-review/issues/"
 PATTERN_ID_RE = re.compile(r"^DFP-[0-9]{4}$")
 OCCURRENCE_ID_RE = re.compile(r"^DFP-[0-9]{4}-O[0-9]{3}$")
+ADJUDICATION_ID_RE = re.compile(r"^DFA-[0-9]{4}$")
 FAILURE_CLASS_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 LOCATOR_RE = re.compile(r"^(review_comment|issue_comment|review_thread|pr_comment):.+$")
+REVIEW_COMMENT_RE = re.compile(r"^review_comment:([1-9][0-9]*)$")
 REGULAR_GIT_MODES = {"100644", "100755"}
 
 TOP_FIELDS = {"schema_version", "pattern_id", "status", "title", "failure_class", "origin", "root_cause", "failure_mechanism", "violated_invariant", "trigger_conditions", "applicable_scope", "non_applicable_scope", "repository_search", "prevention", "occurrences"}
@@ -25,6 +35,7 @@ ORIGIN_FIELDS = {"source_kind", "repository", "pr", "head_sha", "evidence_locato
 SEARCH_FIELDS = {"status", "searched_scope", "discovered_instances", "follow_up_refs", "notes"}
 PREVENTION_FIELDS = {"kind", "guard_refs", "regression_refs", "manual_only_reason"}
 OCCURRENCE_FIELDS = {"occurrence_id", "relation", "pr", "head_sha", "evidence_locator", "prevention_failure_reason"}
+ADJUDICATION_FIELDS = {"schema_version", "adjudication_id", "repository", "pr", "head_sha", "evidence_locator", "disposition", "claim", "basis"}
 REPEAT_FAILURE_REASONS = {"NO_GUARD", "GUARD_TOO_NARROW", "GUARD_NOT_IN_CI", "PATTERN_NOT_RETRIEVED", "SCOPE_WRONG", "NEW_VARIANT", "UNKNOWN_PENDING_ANALYSIS"}
 
 
@@ -68,6 +79,37 @@ def unique_strings(value: Any, label: str, allow_empty: bool=False) -> list[str]
     return value
 
 
+def git_head(root: Path) -> str:
+    try:
+        value = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise DevelopmentFailurePatternError("repeat-prevention validation requires an exact Git HEAD") from exc
+    return sha40(value, "git HEAD")
+
+
+def git_toplevel(root: Path) -> Path:
+    try:
+        top = subprocess.run(["git", "-C", str(root), "rev-parse", "--show-toplevel"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise DevelopmentFailurePatternError("repeat-prevention validation requires a Git repository") from exc
+    resolved = Path(top).resolve()
+    if resolved != root.resolve():
+        raise DevelopmentFailurePatternError(f"repeat-prevention root is not the Git toplevel: root={root.resolve()} git={resolved}")
+    return resolved
+
+
+def git_head_text(root: Path, path: str) -> str:
+    repo_relative(path, f"HEAD path {path}")
+    try:
+        raw = subprocess.run(["git", "-C", str(root), "show", f"HEAD:{path}"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise DevelopmentFailurePatternError(f"missing canonical exact-HEAD file: {path}") from exc
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise DevelopmentFailurePatternError(f"canonical exact-HEAD file is not UTF-8: {path}") from exc
+
+
 def repo_relative(value: str, label: str) -> str:
     raw = value.split("#",1)[0]
     p = Path(raw)
@@ -79,11 +121,8 @@ def repo_relative(value: str, label: str) -> str:
 
 
 def tracked_regular_files(root: Path) -> set[str]:
-    root = root.resolve()
+    root = git_toplevel(root)
     try:
-        top = subprocess.run(["git","-C",str(root),"rev-parse","--show-toplevel"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True).stdout.strip()
-        if Path(top).resolve() != root:
-            raise DevelopmentFailurePatternError(f"repeat-prevention root is not the Git toplevel: root={root} git={top}")
         raw = subprocess.run(["git","-C",str(root),"ls-tree","-r","-z","--full-tree","HEAD"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
     except (OSError, subprocess.CalledProcessError) as exc:
         raise DevelopmentFailurePatternError("repeat-prevention validation requires an exact Git HEAD tree") from exc
@@ -118,26 +157,103 @@ def tracked_ref(root: Path, value: str, label: str, tracked: set[str]) -> str:
     return path
 
 
-def follow_up_ref(root: Path, value: str, label: str, tracked: set[str]) -> str:
+def parse_issue_ref(value: str, label: str) -> int | None:
+    if not value.startswith("https://"):
+        return None
+    parsed = urlparse(value)
+    if parsed.scheme != "https" or parsed.netloc != "github.com" or parsed.query or parsed.fragment or not value.startswith(REPOSITORY_ISSUE_PREFIX):
+        raise DevelopmentFailurePatternError(f"{label} must be an exact MimiSeek issue URL or tracked regular file")
+    tail = value[len(REPOSITORY_ISSUE_PREFIX):]
+    if not tail.isdigit() or int(tail) < 1 or "/" in tail:
+        raise DevelopmentFailurePatternError(f"{label} must be an exact MimiSeek issue URL or tracked regular file")
+    return int(tail)
+
+
+def github_issue_resolver_from_env() -> Callable[[int], None]:
+    api = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    repository = os.environ.get("GITHUB_REPOSITORY", REPOSITORY)
+    if repository != REPOSITORY:
+        raise DevelopmentFailurePatternError(f"live follow-up verification requires GITHUB_REPOSITORY={REPOSITORY}")
+    if not token:
+        raise DevelopmentFailurePatternError("live follow-up verification requires GH_TOKEN or GITHUB_TOKEN")
+
+    def resolve(issue_number: int) -> None:
+        request = urllib.request.Request(
+            f"{api}/repos/{REPOSITORY}/issues/{issue_number}",
+            headers={"Accept":"application/vnd.github+json", "Authorization":f"Bearer {token}", "X-GitHub-Api-Version":"2022-11-28"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                payload = json.load(response)
+        except urllib.error.HTTPError as exc:
+            raise DevelopmentFailurePatternError(f"bounded follow-up issue does not resolve: {issue_number} HTTP {exc.code}") from exc
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            raise DevelopmentFailurePatternError(f"bounded follow-up issue resolution failed: {issue_number}") from exc
+        if payload.get("number") != issue_number or "pull_request" in payload:
+            raise DevelopmentFailurePatternError(f"bounded follow-up locator is not the declared MimiSeek issue: {issue_number}")
+        if payload.get("state") != "open":
+            raise DevelopmentFailurePatternError(f"bounded follow-up issue is not open: {issue_number}")
+
+    return resolve
+
+
+def follow_up_ref(root: Path, value: str, label: str, tracked: set[str], issue_resolver: Callable[[int], None] | None=None) -> str:
     ref = nonempty(value, label)
-    if ref.startswith("https://"):
-        parsed = urlparse(ref)
-        if parsed.scheme != "https" or parsed.netloc != "github.com" or parsed.query or parsed.fragment or not ref.startswith(REPOSITORY_ISSUE_PREFIX):
-            raise DevelopmentFailurePatternError(f"{label} must be an exact MimiSeek issue URL or tracked regular file")
-        tail = ref[len(REPOSITORY_ISSUE_PREFIX):]
-        if not tail.isdigit() or int(tail) < 1 or "/" in tail:
-            raise DevelopmentFailurePatternError(f"{label} must be an exact MimiSeek issue URL or tracked regular file")
+    issue_number = parse_issue_ref(ref, label)
+    if issue_number is not None:
+        if issue_resolver is not None:
+            issue_resolver(issue_number)
         return ref
     try:
         tracked_ref(root, ref, label, tracked)
     except DevelopmentFailurePatternError as exc:
-        raise DevelopmentFailurePatternError(
-            f"{label} must be an exact MimiSeek issue URL or tracked regular file"
-        ) from exc
+        raise DevelopmentFailurePatternError(f"{label} must be an exact MimiSeek issue URL or tracked regular file") from exc
     return ref
 
 
-def validate_origin(value: Any, label: str) -> dict[str, Any]:
+def load_adjudications(root: Path) -> dict[tuple[str,int,str,str], dict[str,Any]]:
+    raw_text = git_head_text(root, ADJUDICATIONS_PATH)
+    result: dict[tuple[str,int,str,str], dict[str,Any]] = {}
+    ids: set[str] = set()
+    previous: str | None = None
+    for line_number, line in enumerate(raw_text.splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            raw = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise DevelopmentFailurePatternError(f"{ADJUDICATIONS_PATH}:{line_number}: invalid JSON: {exc.msg}") from exc
+        item = exact_object(raw, ADJUDICATION_FIELDS, f"{ADJUDICATIONS_PATH}:{line_number}")
+        if item["schema_version"] != ADJUDICATION_SCHEMA_VERSION:
+            raise DevelopmentFailurePatternError(f"{ADJUDICATIONS_PATH}:{line_number}.schema_version is unsupported")
+        aid = nonempty(item["adjudication_id"], "adjudication_id")
+        if not ADJUDICATION_ID_RE.fullmatch(aid):
+            raise DevelopmentFailurePatternError(f"invalid adjudication_id {aid}")
+        if aid in ids or (previous is not None and aid <= previous):
+            raise DevelopmentFailurePatternError("adjudication ledger must have unique increasing adjudication_id")
+        previous = aid; ids.add(aid)
+        if item["repository"] != REPOSITORY:
+            raise DevelopmentFailurePatternError("adjudication repository scope mismatch")
+        positive_int(item["pr"], "adjudication.pr")
+        sha40(item["head_sha"], "adjudication.head_sha")
+        locator = nonempty(item["evidence_locator"], "adjudication.evidence_locator")
+        if not REVIEW_COMMENT_RE.fullmatch(locator):
+            raise DevelopmentFailurePatternError("adjudication evidence_locator must be review_comment:<id>")
+        if item["disposition"] not in {"CONFIRMED", "REJECTED", "UNRESOLVED"}:
+            raise DevelopmentFailurePatternError("adjudication disposition is unsupported")
+        nonempty(item["claim"], "adjudication.claim")
+        nonempty(item["basis"], "adjudication.basis")
+        key = (item["repository"], item["pr"], item["head_sha"], locator)
+        if key in result:
+            raise DevelopmentFailurePatternError(f"duplicate adjudication target {key}")
+        result[key] = item
+    if not result:
+        raise DevelopmentFailurePatternError("development finding adjudication ledger must not be empty")
+    return result
+
+
+def validate_origin(value: Any, label: str, adjudications: dict[tuple[str,int,str,str],dict[str,Any]] | None=None) -> dict[str, Any]:
     origin = exact_object(value, ORIGIN_FIELDS, label)
     if origin["source_kind"] not in {"REVIEW_FINDING", "PROCESS_INCIDENT"}:
         raise DevelopmentFailurePatternError(f"{label}.source_kind is unsupported")
@@ -147,10 +263,19 @@ def validate_origin(value: Any, label: str) -> dict[str, Any]:
     loc = nonempty(origin["evidence_locator"], f"{label}.evidence_locator")
     if not LOCATOR_RE.fullmatch(loc):
         raise DevelopmentFailurePatternError(f"{label}.evidence_locator is invalid")
+    if origin["source_kind"] == "REVIEW_FINDING":
+        if not REVIEW_COMMENT_RE.fullmatch(loc):
+            raise DevelopmentFailurePatternError(f"{label}.REVIEW_FINDING requires review_comment:<id>")
+        if adjudications is None:
+            raise DevelopmentFailurePatternError(f"{label}.REVIEW_FINDING requires exact-HEAD adjudication context")
+        key = (origin["repository"], origin["pr"], origin["head_sha"], loc)
+        record = adjudications.get(key)
+        if record is None or record["disposition"] != "CONFIRMED":
+            raise DevelopmentFailurePatternError(f"{label}.REVIEW_FINDING is not backed by a CONFIRMED exact-HEAD adjudication record")
     return origin
 
 
-def validate_repository_search(value: Any, root: Path, label: str, tracked: set[str]) -> dict[str, Any]:
+def validate_repository_search(value: Any, root: Path, label: str, tracked: set[str], issue_resolver: Callable[[int],None] | None=None) -> dict[str, Any]:
     search = exact_object(value, SEARCH_FIELDS, label)
     if search["status"] not in {"COMPLETED", "BOUNDED_FOLLOW_UP"}:
         raise DevelopmentFailurePatternError(f"{label}.status is unsupported")
@@ -169,7 +294,7 @@ def validate_repository_search(value: Any, root: Path, label: str, tracked: set[
     for i, instance in enumerate(discovered, 1):
         tracked_ref(root, instance, f"{label}.discovered_instances[{i}]", tracked)
     for i, ref in enumerate(follows, 1):
-        follow_up_ref(root, ref, f"{label}.follow_up_refs[{i}]", tracked)
+        follow_up_ref(root, ref, f"{label}.follow_up_refs[{i}]", tracked, issue_resolver)
     return search
 
 
@@ -194,7 +319,7 @@ def validate_prevention(value: Any, root: Path, label: str, tracked: set[str]) -
         tracked_ref(root, ref, f"{label}.regression_refs[{i}]", tracked)
 
 
-def validate_occurrences(value: Any, pattern_id: str, origin: dict[str, Any], label: str) -> list[dict[str, Any]]:
+def validate_occurrences(value: Any, pattern_id: str, origin: dict[str, Any], label: str, adjudications: dict[tuple[str,int,str,str],dict[str,Any]] | None=None) -> list[dict[str, Any]]:
     if not isinstance(value, list) or not value:
         raise DevelopmentFailurePatternError(f"{label} must be a non-empty array")
     result: list[dict[str, Any]] = []; seen: set[str] = set(); previous: str | None = None; origin_count = 0
@@ -215,6 +340,13 @@ def validate_occurrences(value: Any, pattern_id: str, origin: dict[str, Any], la
         locator = nonempty(item["evidence_locator"], f"{label}.evidence_locator")
         if not LOCATOR_RE.fullmatch(locator):
             raise DevelopmentFailurePatternError(f"{item_label}.evidence_locator is invalid")
+        if REVIEW_COMMENT_RE.fullmatch(locator):
+            if adjudications is None:
+                raise DevelopmentFailurePatternError(f"{item_label} review-comment occurrence requires exact-HEAD adjudication context")
+            key = (REPOSITORY, item["pr"], item["head_sha"], locator)
+            record = adjudications.get(key)
+            if record is None or record["disposition"] != "CONFIRMED":
+                raise DevelopmentFailurePatternError(f"{item_label} review-comment occurrence is not backed by a CONFIRMED exact-HEAD adjudication record")
         reason = item["prevention_failure_reason"]
         if relation == "REPEAT":
             if reason not in REPEAT_FAILURE_REASONS:
@@ -231,7 +363,7 @@ def validate_occurrences(value: Any, pattern_id: str, origin: dict[str, Any], la
     return result
 
 
-def validate_pattern(value: Any, root: Path, label: str, *, tracked: set[str] | None=None) -> dict[str, Any]:
+def validate_pattern(value: Any, root: Path, label: str, *, tracked: set[str] | None=None, adjudications: dict[tuple[str,int,str,str],dict[str,Any]] | None=None, issue_resolver: Callable[[int],None] | None=None) -> dict[str, Any]:
     tracked = tracked if tracked is not None else tracked_regular_files(root)
     pattern = exact_object(value, TOP_FIELDS, label)
     if pattern["schema_version"] != SCHEMA_VERSION:
@@ -245,46 +377,57 @@ def validate_pattern(value: Any, root: Path, label: str, *, tracked: set[str] | 
     fclass = nonempty(pattern["failure_class"], f"{label}.failure_class")
     if not FAILURE_CLASS_RE.fullmatch(fclass):
         raise DevelopmentFailurePatternError(f"{label}.failure_class is invalid")
-    origin = validate_origin(pattern["origin"], f"{label}.origin")
+    origin = validate_origin(pattern["origin"], f"{label}.origin", adjudications)
     for field in ("root_cause", "failure_mechanism", "violated_invariant"):
         nonempty(pattern[field], f"{label}.{field}")
     unique_strings(pattern["trigger_conditions"], f"{label}.trigger_conditions")
     unique_strings(pattern["applicable_scope"], f"{label}.applicable_scope")
     unique_strings(pattern["non_applicable_scope"], f"{label}.non_applicable_scope", allow_empty=True)
-    search = validate_repository_search(pattern["repository_search"], root, f"{label}.repository_search", tracked)
+    search = validate_repository_search(pattern["repository_search"], root, f"{label}.repository_search", tracked, issue_resolver)
     validate_prevention(pattern["prevention"], root, f"{label}.prevention", tracked)
-    occurrences = validate_occurrences(pattern["occurrences"], pid, origin, f"{label}.occurrences")
+    occurrences = validate_occurrences(pattern["occurrences"], pid, origin, f"{label}.occurrences", adjudications)
     pending_unknown = [o for o in occurrences if o["relation"] == "REPEAT" and o["prevention_failure_reason"] == "UNKNOWN_PENDING_ANALYSIS"]
     if pending_unknown and search["status"] != "BOUNDED_FOLLOW_UP":
         raise DevelopmentFailurePatternError(f"{label} UNKNOWN_PENDING_ANALYSIS requires BOUNDED_FOLLOW_UP")
     if pattern["status"] == "RETIRED" and (search["status"] == "BOUNDED_FOLLOW_UP" or pending_unknown):
-        raise DevelopmentFailurePatternError(
-            f"{label} RETIRED pattern cannot hide unresolved follow-up or pending repeat analysis"
-        )
+        raise DevelopmentFailurePatternError(f"{label} RETIRED pattern cannot hide unresolved follow-up or pending repeat analysis")
     return pattern
 
 
+def _schema_has_pending_rule(raw: dict[str, Any]) -> bool:
+    for rule in raw.get("allOf", []):
+        try:
+            contains = rule["if"]["properties"]["occurrences"]["contains"]
+            then_status = rule["then"]["properties"]["repository_search"]["properties"]["status"]["const"]
+        except (KeyError, TypeError):
+            continue
+        props = contains.get("properties", {}) if isinstance(contains, dict) else {}
+        if props.get("relation", {}).get("const") == "REPEAT" and props.get("prevention_failure_reason", {}).get("const") == "UNKNOWN_PENDING_ANALYSIS" and then_status == "BOUNDED_FOLLOW_UP":
+            return True
+    return False
+
+
 def validate_schema_identity(root: Path) -> None:
-    path = root / "data/schemas/development-failure-pattern-v1.schema.json"
-    if not path.is_file():
-        raise DevelopmentFailurePatternError(f"missing schema file: {path}")
-    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw = json.loads(git_head_text(root, SCHEMA_PATH))
     if raw.get("properties",{}).get("schema_version",{}).get("const") != SCHEMA_VERSION:
         raise DevelopmentFailurePatternError("validator/schema DEVELOPMENT_FAILURE_PATTERN_V1 identity drift")
+    if not _schema_has_pending_rule(raw):
+        raise DevelopmentFailurePatternError("validator/schema UNKNOWN_PENDING_ANALYSIS closure drift")
+    adjudication_schema = json.loads(git_head_text(root, ADJUDICATION_SCHEMA_PATH))
+    if adjudication_schema.get("properties",{}).get("schema_version",{}).get("const") != ADJUDICATION_SCHEMA_VERSION:
+        raise DevelopmentFailurePatternError("validator/schema DEVELOPMENT_FINDING_ADJUDICATION_V1 identity drift")
 
 
-def load_registry(path: Path, root: Path) -> list[dict[str, Any]]:
-    if not path.is_file():
-        raise DevelopmentFailurePatternError(f"missing registry: {path}")
+def load_registry_text(text: str, root: Path, label: str, *, adjudications: dict[tuple[str,int,str,str],dict[str,Any]], issue_resolver: Callable[[int],None] | None=None) -> list[dict[str, Any]]:
     tracked = tracked_regular_files(root); patterns=[]; ids=set(); classes=set(); previous=None
-    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+    for line_number, line in enumerate(text.splitlines(), 1):
         if not line.strip():
             continue
         try:
             raw=json.loads(line)
         except json.JSONDecodeError as exc:
-            raise DevelopmentFailurePatternError(f"{path}:{line_number}: invalid JSON: {exc.msg}") from exc
-        pattern=validate_pattern(raw, root, f"{path}:{line_number}", tracked=tracked)
+            raise DevelopmentFailurePatternError(f"{label}:{line_number}: invalid JSON: {exc.msg}") from exc
+        pattern=validate_pattern(raw, root, f"{label}:{line_number}", tracked=tracked, adjudications=adjudications, issue_resolver=issue_resolver)
         pid=pattern["pattern_id"]; fclass=pattern["failure_class"]
         if pid in ids:
             raise DevelopmentFailurePatternError(f"duplicate pattern_id {pid}")
@@ -298,17 +441,37 @@ def load_registry(path: Path, root: Path) -> list[dict[str, Any]]:
     return patterns
 
 
+def load_canonical_registry(root: Path, *, issue_resolver: Callable[[int],None] | None=None) -> list[dict[str,Any]]:
+    adjudications = load_adjudications(root)
+    return load_registry_text(git_head_text(root, REGISTRY_PATH), root, REGISTRY_PATH, adjudications=adjudications, issue_resolver=issue_resolver)
+
+
 def active_summary(pattern: dict[str, Any]) -> dict[str, Any]:
     pending=[o["occurrence_id"] for o in pattern["occurrences"] if o["relation"]=="REPEAT" and o["prevention_failure_reason"]=="UNKNOWN_PENDING_ANALYSIS"]
     return {"pattern_id":pattern["pattern_id"],"failure_class":pattern["failure_class"],"title":pattern["title"],"trigger_conditions":pattern["trigger_conditions"],"applicable_scope":pattern["applicable_scope"],"search_status":pattern["repository_search"]["status"],"follow_up_refs":pattern["repository_search"]["follow_up_refs"],"pending_repeat_analysis":pending,"guard_refs":pattern["prevention"]["guard_refs"],"regression_refs":pattern["prevention"]["regression_refs"]}
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
     parser=argparse.ArgumentParser(description="Validate MimiSeek self-development repeat-prevention patterns")
-    parser.add_argument("--root",type=Path,default=Path(__file__).resolve().parents[1]); parser.add_argument("--registry",type=Path,default=Path("data/development-failure-patterns.jsonl")); parser.add_argument("--list-active",action="store_true")
-    args=parser.parse_args(); root=args.root.resolve(); registry=args.registry if args.registry.is_absolute() else root/args.registry
+    parser.add_argument("--root",type=Path,default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--expected-head")
+    parser.add_argument("--verify-live-followups",action="store_true")
+    parser.add_argument("--list-active",action="store_true")
+    return parser
+
+
+def main(argv: list[str] | None=None) -> int:
+    args=build_parser().parse_args(argv); root=args.root.resolve()
     try:
-        validate_schema_identity(root); patterns=load_registry(registry, root)
+        git_toplevel(root)
+        actual_head = git_head(root)
+        if args.expected_head is not None:
+            expected = sha40(args.expected_head, "--expected-head")
+            if actual_head != expected:
+                raise DevelopmentFailurePatternError(f"checked-out HEAD mismatch: expected={expected} actual={actual_head}")
+        validate_schema_identity(root)
+        resolver = github_issue_resolver_from_env() if args.verify_live_followups else None
+        patterns=load_canonical_registry(root, issue_resolver=resolver)
     except (DevelopmentFailurePatternError,OSError,json.JSONDecodeError) as exc:
         print(f"development failure-pattern validation failed: {exc}"); return 1
     if args.list_active:
@@ -316,7 +479,7 @@ def main() -> int:
             if pattern["status"]=="ACTIVE":
                 print(json.dumps(active_summary(pattern),ensure_ascii=False,sort_keys=True))
     else:
-        print(f"development failure-pattern registry valid: patterns={len(patterns)} active={sum(p['status']=='ACTIVE' for p in patterns)}")
+        print(f"development failure-pattern registry valid: head={actual_head} patterns={len(patterns)} active={sum(p['status']=='ACTIVE' for p in patterns)}")
     return 0
 
 if __name__ == "__main__":

@@ -18,6 +18,14 @@ Schema identity and shape documentation:
 
 `data/schemas/development-failure-pattern-v1.schema.json`
 
+Exact-HEAD development finding adjudication records used to establish which reviewer findings are eligible to seed or extend the self-development registry:
+
+`data/development-finding-adjudications.jsonl`
+
+Adjudication record schema:
+
+`data/schemas/development-finding-adjudication-v1.schema.json`
+
 Executable registry validator:
 
 `tools/validate_development_failure_patterns.py`
@@ -26,7 +34,9 @@ Normative process rules, including development-start retrieval, repository-searc
 
 `docs/DEVELOPMENT_PROTOCOL.md`
 
-This page intentionally does **not** copy the current pattern count, pattern identities, live search statuses, follow-up issue numbers, or occurrence inventory. Those are mutable machine facts owned by the JSONL registry and should be inspected from that canonical source rather than manually synchronized here.
+The machine validator reads the canonical registry, its schema, and finding-adjudication state from the exact checked-out Git `HEAD`. Acceptance CI additionally binds the checkout to the immutable PR head and resolves issue-based bounded follow-ups. A review-comment locator by itself is not confirmation; eligible reviewer-finding records require a separate exact-HEAD `CONFIRMED` adjudication record.
+
+This page intentionally does **not** copy the current pattern count, pattern identities, live search statuses, follow-up issue numbers, adjudication inventory, or occurrence inventory. Those are mutable machine facts owned by the JSONL records and should be inspected from their canonical sources rather than manually synchronized here.
 
 ## Scope boundary
 
