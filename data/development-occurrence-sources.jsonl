@@ -1,0 +1,10 @@
+{"pattern_id":"DFP-0001","occurrence_id":"DFP-0001-O001","source_kind":"REVIEW_FINDING"}
+{"pattern_id":"DFP-0002","occurrence_id":"DFP-0002-O001","source_kind":"REVIEW_FINDING"}
+{"pattern_id":"DFP-0003","occurrence_id":"DFP-0003-O001","source_kind":"REVIEW_FINDING"}
+{"pattern_id":"DFP-0003","occurrence_id":"DFP-0003-O002","source_kind":"REVIEW_FINDING"}
+{"pattern_id":"DFP-0004","occurrence_id":"DFP-0004-O001","source_kind":"PROCESS_INCIDENT"}
+{"pattern_id":"DFP-0004","occurrence_id":"DFP-0004-O002","source_kind":"PROCESS_INCIDENT"}
+{"pattern_id":"DFP-0004","occurrence_id":"DFP-0004-O003","source_kind":"PROCESS_INCIDENT"}
+{"pattern_id":"DFP-0005","occurrence_id":"DFP-0005-O001","source_kind":"REVIEW_FINDING"}
+{"pattern_id":"DFP-0006","occurrence_id":"DFP-0006-O001","source_kind":"REVIEW_FINDING"}
+{"pattern_id":"DFP-0006","occurrence_id":"DFP-0006-O002","source_kind":"REVIEW_FINDING"}
