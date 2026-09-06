@@ -6,7 +6,7 @@ REPO='BogdanAIP/MimiSeek-review'; PR=21
 LEDGER='data/development-finding-adjudications.jsonl'; PATTERNS='data/development-failure-patterns.jsonl'; SOURCES='data/development-occurrence-sources.jsonl'
 FINDING=(5558483395,'2026-09-06T10:00:17Z','89d402bfc7af9087440dfd33a9d68158f9fefbed6d58b8b386803be728c564ea','DEVELOPMENT_FINDING_ADJUDICATION_MANIFEST_V2\n')
 SUPPLEMENT=(5558687674,'2026-09-06T10:42:38Z','07fb1ebabc7792083d5088ab7001621aadd1892998909d54b209857e7412aa11','DEVELOPMENT_FINDING_ADJUDICATION_SUPPLEMENT_V1\n')
-PROCESS=(5558670963,'2026-09-06T10:39:06Z','cffbfe3a2b9fdca5e1627e1ce9dbe230a89f1acb9c4c3e9b08a035cd2b39f468','DEVELOPMENT_PROCESS_INCIDENT_BINDING_MANIFEST_V1\n')
+PROCESS=(5559836346,'2026-09-06T14:20:19Z','2b164e3e9c46c69b6c4349569260a385d3893ba356e14352befd9e72559f1659','DEVELOPMENT_PROCESS_INCIDENT_BINDING_MANIFEST_V2\n')
 REVIEW=re.compile(r'^review_comment:([1-9][0-9]*)$'); PRC=re.compile(r'^pr_comment:([1-9][0-9]*)$'); SHA=re.compile(r'^[0-9a-f]{40}$')
 class E(RuntimeError): pass
 def h(s): return hashlib.sha256(s.encode()).hexdigest()
@@ -60,7 +60,7 @@ def finding_manifest(get):
  if not isinstance(rows,list) or not rows: raise E('finding manifest records missing')
  return rows
 def supplement_manifest(get): return one_line_manifest(get,SUPPLEMENT,'DEVELOPMENT_FINDING_ADJUDICATION_SUPPLEMENT_V1',{'adjudication_pr':PR,'adjudicator_role':'development_workflow'})
-def process_manifest(get): return one_line_manifest(get,PROCESS,'DEVELOPMENT_PROCESS_INCIDENT_BINDING_MANIFEST_V1',{'pr':PR})
+def process_manifest(get): return one_line_manifest(get,PROCESS,'DEVELOPMENT_PROCESS_INCIDENT_BINDING_MANIFEST_V2',{'authority_pr':PR})
 def key(r): return (r.get('repository'),r.get('pr'),r.get('head_sha'),r.get('evidence_locator'))
 def bind_ledger(ledger,records):
  fields=('repository','pr','head_sha','evidence_locator','disposition','claim','basis'); byid={r.get('adjudication_id'):r for r in records}
@@ -93,12 +93,12 @@ def sources(rows):
   out[k]=r.get('source_kind')
  return out
 def bind_process_incidents(records,get):
- out={}; rf={'source_comment_id','source_author_login','source_updated_at','source_body_sha256','pattern_id','failure_class','occurrences'}; of={'occurrence_id','head_sha','relation','prevention_failure_reason'}
+ out={}; rf={'source_comment_id','source_pr','source_author_login','source_updated_at','source_body_sha256','pattern_id','failure_class','occurrences'}; of={'occurrence_id','head_sha','relation','prevention_failure_reason'}
  for n,r in enumerate(records,1):
   label=f'process manifest record {n}'
   if not isinstance(r,dict) or set(r)!=rf: raise E(f'{label}: shape differs')
-  cid=r.get('source_comment_id'); p=get(f'/repos/{REPO}/issues/comments/{cid}'); body=p.get('body')
-  if not isinstance(cid,int) or cid<1 or p.get('id')!=cid or not str(p.get('issue_url','')).endswith(f'/repos/{REPO}/issues/{PR}'): raise E(f'{label}: source comment identity differs')
+  cid=r.get('source_comment_id'); source_pr=r.get('source_pr'); p=get(f'/repos/{REPO}/issues/comments/{cid}'); body=p.get('body')
+  if not isinstance(cid,int) or cid<1 or not isinstance(source_pr,int) or isinstance(source_pr,bool) or source_pr<1 or p.get('id')!=cid or not str(p.get('issue_url','')).endswith(f'/repos/{REPO}/issues/{source_pr}'): raise E(f'{label}: source comment identity differs')
   if (p.get('user') or {}).get('login')!=r.get('source_author_login') or p.get('updated_at')!=r.get('source_updated_at'): raise E(f'{label}: source actor/update differs')
   if not isinstance(body,str) or h(body)!=r.get('source_body_sha256'): raise E(f'{label}: source body digest differs')
   pid=r.get('pattern_id'); fc=r.get('failure_class'); occs=r.get('occurrences')
@@ -107,7 +107,7 @@ def bind_process_incidents(records,get):
    if not isinstance(o,dict) or set(o)!=of or not isinstance(o.get('occurrence_id'),str) or not SHA.fullmatch(str(o.get('head_sha',''))) or o.get('head_sha') not in body: raise E(f'{label}: occurrence binding invalid')
    k=(pid,o.get('occurrence_id'))
    if k in out: raise E('duplicate process-incident occurrence binding')
-   out[k]={'source_comment_id':cid,'failure_class':fc,'pr':PR,**o}
+   out[k]={'source_comment_id':cid,'failure_class':fc,'pr':source_pr,**o}
  return out
 def occurrence_authority(patterns,src,adjudications,process_bindings):
  seen=set(); seen_process=set()

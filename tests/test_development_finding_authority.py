@@ -32,10 +32,12 @@ class AuthorityTests(unittest.TestCase):
         }
         return record, body
 
-    def process_record(self):
-        body = "PROCESS_INCIDENT\nclass=workflow.noop_head_mutation\n" + "b" * 40
+    def process_record(self, *, source_pr=21, comment_id=9, occurrence_id="O1", head_char="b"):
+        head = head_char * 40
+        body = "PROCESS_INCIDENT\nclass=workflow.noop_head_mutation\n" + head
         record = {
-            "source_comment_id": 9,
+            "source_comment_id": comment_id,
+            "source_pr": source_pr,
             "source_author_login": "BogdanAIP",
             "source_updated_at": "2026-01-01T00:00:00Z",
             "source_body_sha256": hashlib.sha256(body.encode()).hexdigest(),
@@ -43,16 +45,16 @@ class AuthorityTests(unittest.TestCase):
             "failure_class": "workflow.noop_head_mutation",
             "occurrences": [
                 {
-                    "occurrence_id": "O1",
-                    "head_sha": "b" * 40,
+                    "occurrence_id": occurrence_id,
+                    "head_sha": head,
                     "relation": "REPEAT",
                     "prevention_failure_reason": "GUARD_TOO_NARROW",
                 }
             ],
         }
         payload = {
-            "id": 9,
-            "issue_url": f"https://api.github.com/repos/{a.REPO}/issues/21",
+            "id": comment_id,
+            "issue_url": f"https://api.github.com/repos/{a.REPO}/issues/{source_pr}",
             "user": {"login": "BogdanAIP"},
             "updated_at": record["source_updated_at"],
             "body": body,
@@ -143,7 +145,7 @@ class AuthorityTests(unittest.TestCase):
                 {},
             )
 
-    def test_process_source_binds_exact_body_and_update(self):
+    def test_process_source_binds_exact_body_update_and_declared_pr(self):
         record, payload = self.process_record()
         bound = a.bind_process_incidents([record], lambda _: payload)
         self.assertIn(("DFP-4", "O1"), bound)
@@ -153,6 +155,55 @@ class AuthorityTests(unittest.TestCase):
             changed[field] = value
             with self.assertRaises(a.E):
                 a.bind_process_incidents([record], lambda _, q=changed: q)
+        wrong_pr = copy.deepcopy(record)
+        wrong_pr["source_pr"] = 22
+        with self.assertRaises(a.E):
+            a.bind_process_incidents([wrong_pr], lambda _: payload)
+
+    def test_process_bindings_support_mixed_source_prs(self):
+        first, first_payload = self.process_record()
+        second, second_payload = self.process_record(
+            source_pr=22,
+            comment_id=10,
+            occurrence_id="O2",
+            head_char="c",
+        )
+        payloads = {9: first_payload, 10: second_payload}
+
+        def get(path):
+            return payloads[int(path.rsplit("/", 1)[1])]
+
+        bindings = a.bind_process_incidents([first, second], get)
+        self.assertEqual(bindings[("DFP-4", "O1")]["pr"], 21)
+        self.assertEqual(bindings[("DFP-4", "O2")]["pr"], 22)
+        patterns = [{
+            "pattern_id": "DFP-4",
+            "failure_class": "workflow.noop_head_mutation",
+            "origin": {"source_kind": "PROCESS_INCIDENT"},
+            "occurrences": [
+                {
+                    "occurrence_id": "O1",
+                    "relation": "REPEAT",
+                    "pr": 21,
+                    "head_sha": "b" * 40,
+                    "evidence_locator": "pr_comment:9",
+                    "prevention_failure_reason": "GUARD_TOO_NARROW",
+                },
+                {
+                    "occurrence_id": "O2",
+                    "relation": "REPEAT",
+                    "pr": 22,
+                    "head_sha": "c" * 40,
+                    "evidence_locator": "pr_comment:10",
+                    "prevention_failure_reason": "GUARD_TOO_NARROW",
+                },
+            ],
+        }]
+        kinds = {
+            ("DFP-4", "O1"): "PROCESS_INCIDENT",
+            ("DFP-4", "O2"): "PROCESS_INCIDENT",
+        }
+        a.occurrence_authority(patterns, kinds, {}, bindings)
 
     def test_process_occurrence_requires_claim_specific_binding(self):
         record, payload = self.process_record()
