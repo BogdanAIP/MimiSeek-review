@@ -97,8 +97,11 @@ def bind_process_incidents(records,get):
  for n,r in enumerate(records,1):
   label=f'process manifest record {n}'
   if not isinstance(r,dict) or set(r)!=rf: raise E(f'{label}: shape differs')
-  cid=r.get('source_comment_id'); source_pr=r.get('source_pr'); p=get(f'/repos/{REPO}/issues/comments/{cid}'); body=p.get('body')
-  if not isinstance(cid,int) or cid<1 or not isinstance(source_pr,int) or isinstance(source_pr,bool) or source_pr<1 or p.get('id')!=cid or not str(p.get('issue_url','')).endswith(f'/repos/{REPO}/issues/{source_pr}'): raise E(f'{label}: source comment identity differs')
+  cid=r.get('source_comment_id'); source_pr=r.get('source_pr')
+  if not isinstance(cid,int) or isinstance(cid,bool) or cid<1 or not isinstance(source_pr,int) or isinstance(source_pr,bool) or source_pr<1: raise E(f'{label}: source identity invalid')
+  p=get(f'/repos/{REPO}/issues/comments/{cid}'); parent=get(f'/repos/{REPO}/pulls/{source_pr}'); body=p.get('body')
+  if p.get('id')!=cid or not str(p.get('issue_url','')).endswith(f'/repos/{REPO}/issues/{source_pr}'): raise E(f'{label}: source comment identity differs')
+  if not isinstance(parent,dict) or parent.get('number')!=source_pr: raise E(f'{label}: source PR identity differs')
   if (p.get('user') or {}).get('login')!=r.get('source_author_login') or p.get('updated_at')!=r.get('source_updated_at'): raise E(f'{label}: source actor/update differs')
   if not isinstance(body,str) or h(body)!=r.get('source_body_sha256'): raise E(f'{label}: source body digest differs')
   pid=r.get('pattern_id'); fc=r.get('failure_class'); occs=r.get('occurrences')

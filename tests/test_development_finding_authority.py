@@ -61,6 +61,26 @@ class AuthorityTests(unittest.TestCase):
         }
         return record, payload
 
+    def process_get(self, payloads, *, pull_numbers=None):
+        comments = {p["id"]: p for p in payloads}
+        if pull_numbers is None:
+            pull_numbers = {
+                int(p["issue_url"].rsplit("/", 1)[1])
+                for p in payloads
+            }
+
+        def get(path):
+            number = int(path.rsplit("/", 1)[1])
+            if "/issues/comments/" in path:
+                return comments[number]
+            if "/pulls/" in path:
+                if number in pull_numbers:
+                    return {"number": number}
+                return {"message": "Not Found"}
+            raise AssertionError(f"unexpected path: {path}")
+
+        return get
+
     def test_ledger_claim_is_bound(self):
         record, _ = self.review_record()
         ledger = {
@@ -147,35 +167,42 @@ class AuthorityTests(unittest.TestCase):
 
     def test_process_source_binds_exact_body_update_and_declared_pr(self):
         record, payload = self.process_record()
-        bound = a.bind_process_incidents([record], lambda _: payload)
+        get = self.process_get([payload])
+        bound = a.bind_process_incidents([record], get)
         self.assertIn(("DFP-4", "O1"), bound)
         self.assertEqual(bound[("DFP-4", "O1")]["pr"], 21)
         for field, value in (("updated_at", "2026-01-01T00:00:01Z"), ("body", "edited")):
             changed = dict(payload)
             changed[field] = value
             with self.assertRaises(a.E):
-                a.bind_process_incidents([record], lambda _, q=changed: q)
+                a.bind_process_incidents([record], self.process_get([changed]))
         wrong_pr = copy.deepcopy(record)
         wrong_pr["source_pr"] = 22
         with self.assertRaises(a.E):
-            a.bind_process_incidents([wrong_pr], lambda _: payload)
+            a.bind_process_incidents([wrong_pr], self.process_get([payload], pull_numbers={22}))
+
+    def test_process_source_parent_must_be_pull_request(self):
+        record, payload = self.process_record(source_pr=22)
+        with self.assertRaises(a.E):
+            a.bind_process_incidents(
+                [record],
+                self.process_get([payload], pull_numbers=set()),
+            )
 
     def test_process_bindings_support_mixed_source_prs(self):
         first, first_payload = self.process_record()
         second, second_payload = self.process_record(
-            source_pr=22,
+            source_pr=23,
             comment_id=10,
             occurrence_id="O2",
             head_char="c",
         )
-        payloads = {9: first_payload, 10: second_payload}
-
-        def get(path):
-            return payloads[int(path.rsplit("/", 1)[1])]
-
-        bindings = a.bind_process_incidents([first, second], get)
+        bindings = a.bind_process_incidents(
+            [first, second],
+            self.process_get([first_payload, second_payload], pull_numbers={21, 23}),
+        )
         self.assertEqual(bindings[("DFP-4", "O1")]["pr"], 21)
-        self.assertEqual(bindings[("DFP-4", "O2")]["pr"], 22)
+        self.assertEqual(bindings[("DFP-4", "O2")]["pr"], 23)
         patterns = [{
             "pattern_id": "DFP-4",
             "failure_class": "workflow.noop_head_mutation",
@@ -192,7 +219,7 @@ class AuthorityTests(unittest.TestCase):
                 {
                     "occurrence_id": "O2",
                     "relation": "REPEAT",
-                    "pr": 22,
+                    "pr": 23,
                     "head_sha": "c" * 40,
                     "evidence_locator": "pr_comment:10",
                     "prevention_failure_reason": "GUARD_TOO_NARROW",
@@ -207,7 +234,7 @@ class AuthorityTests(unittest.TestCase):
 
     def test_process_occurrence_requires_claim_specific_binding(self):
         record, payload = self.process_record()
-        bindings = a.bind_process_incidents([record], lambda _: payload)
+        bindings = a.bind_process_incidents([record], self.process_get([payload]))
         occurrence = {
             "occurrence_id": "O1",
             "relation": "REPEAT",
@@ -242,7 +269,7 @@ class AuthorityTests(unittest.TestCase):
 
     def test_extra_process_manifest_binding_is_rejected(self):
         record, payload = self.process_record()
-        bindings = a.bind_process_incidents([record], lambda _: payload)
+        bindings = a.bind_process_incidents([record], self.process_get([payload]))
         patterns = [{
             "pattern_id": "DFP-1",
             "failure_class": "x",
