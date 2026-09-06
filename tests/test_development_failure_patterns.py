@@ -111,7 +111,7 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         self.assertEqual(patterns[5]["occurrences"][1]["relation"], "REPEAT")
         self.assertEqual(patterns[5]["occurrences"][1]["prevention_failure_reason"], "GUARD_TOO_NARROW")
         records = guard.load_adjudications(ROOT)
-        self.assertEqual(len(records), 7)
+        self.assertEqual(len(records), 8)
         for pattern in patterns:
             for occurrence in pattern["occurrences"]:
                 if occurrence["evidence_locator"].startswith("review_comment:"):
@@ -232,7 +232,7 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
             link=root/"escape.py"; outside=Path(outside_tmp)/"outside.py"; outside.write_text("x",encoding="utf-8")
             try: os.symlink(outside,link)
             except (OSError,NotImplementedError) as exc: self.skipTest(str(exc))
-            git(root,"add","escape.py"); subprocess.run(["git","-c","user.name=Test","-c","user.email=test@example.invalid","commit","-qm","symlink"],cwd=root,check=True)
+            git(root,"add","escape.py"); subprocess.run(["git","-c","user.name=Test","-c","user.email=test@example.invalid", "commit","-qm","symlink"],cwd=root,check=True)
             p=fixture_process_pattern(); p["prevention"]["guard_refs"]=["escape.py"]
             with self.assertRaisesRegex(guard.DevelopmentFailurePatternError,"not a tracked regular file in exact HEAD"):
                 guard.validate_pattern(p,root,"p",tracked=guard.tracked_regular_files(root),adjudications={})
@@ -248,7 +248,9 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         p=seed(); p["occurrences"].append({"occurrence_id":"DFP-0001-O999","relation":"REPEAT","pr":21,"head_sha":"5be33a8d09534e412bc08ae752beba86f788cf57","evidence_locator":"review_comment:3942225446","prevention_failure_reason":None})
         with self.assertRaisesRegex(guard.DevelopmentFailurePatternError,"requires a prevention_failure_reason"):
             guard.validate_pattern(p,ROOT,"p",tracked=tracked,adjudications=records)
-        p=seed(); q=copy.deepcopy(p); q["pattern_id"]="DFP-9999"; q["occurrences"][0]["occurrence_id"]="DFP-9999-O001"
+        p=seed(); q=copy.deepcopy(p); q["pattern_id"]="DFP-9999"
+        for i, occurrence in enumerate(q["occurrences"], 1):
+            occurrence["occurrence_id"] = f"DFP-9999-O{i:03d}"
         text=json.dumps(p)+"\n"+json.dumps(q)+"\n"
         with self.assertRaisesRegex(guard.DevelopmentFailurePatternError,"duplicate failure_class"):
             guard.load_registry_text(text,ROOT,"fixture",adjudications=records)
