@@ -109,9 +109,14 @@ class BootstrapCommentarySemanticBindingTests(unittest.TestCase):
                 changed = copy.deepcopy(raw)
                 changed["direct_records"][0][field] = value
                 path = self._write_manifest(changed)
+                expected = (
+                    "issue comments cannot claim review-thread fields"
+                    if field == "surface"
+                    else "family coverage differs"
+                )
                 with self.assertRaisesRegex(
                     semantic.SemanticBindingError,
-                    "family coverage differs",
+                    expected,
                 ):
                     semantic.validate_registry_coverage(path, ROOT)
 
