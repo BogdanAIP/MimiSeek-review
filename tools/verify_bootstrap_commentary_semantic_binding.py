@@ -149,8 +149,12 @@ def validate_snapshot(snapshot: dict[str, Any], path: Path = DEFAULT_PATH) -> in
             raise SemanticBindingError(f"{label}: actor differs")
         if live.get("updated_at") != expected["updated_at"]:
             raise SemanticBindingError(f"{label}: updated_at differs")
-        if _body_sha256(live.get("body")) != expected["body_sha256"]:
-            raise SemanticBindingError(f"{label}: body digest differs")
+        actual_digest = _body_sha256(live.get("body"))
+        if actual_digest != expected["body_sha256"]:
+            raise SemanticBindingError(
+                f"{label}: body digest differs "
+                f"expected={expected['body_sha256']} actual={actual_digest}"
+            )
 
         if expected["surface"] == "review_comment":
             for field in ("pull_request_review_id", "in_reply_to_id", "original_commit_id"):
