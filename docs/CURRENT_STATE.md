@@ -1,13 +1,13 @@
 # Current State
 
-Last synchronized: 2026-09-05
+Last synchronized: 2026-09-08
 
 ## Repository state
 
 - Project: MimiSeek Review
 - Repository: `BogdanAIP/MimiSeek-review`
 - Stable branch: `main`
-- Development status: Stage 1 in progress — authenticated collector active, first backfill durable, structural BUGGY/FIXED/VERIFIED provenance accepted, bounded F050/F051, F052, F053/F054, F058, and F057 multi-review-progression source-commentary reconciliations accepted; bounded F055/F056 authority/exact-head-CI reconciliation is represented in this development tree; clean unchanged-source collector no-op and large-PR commit collection accepted; remaining source-commentary reconciliation, reviewer-policy refs, classification, and baseline seed remain pending
+- Development status: Stage 1 in progress — authenticated collector active, first backfill durable, structural BUGGY/FIXED/VERIFIED provenance accepted, bounded F050/F051, F052, F053/F054, F058, F057 multi-review-progression, and distinct F055/F056 authority/exact-head-CI source-commentary reconciliations accepted; clean unchanged-source collector no-op and large-PR commit collection accepted; remaining source-commentary reconciliation, reviewer-policy refs, generic/project-specific classification, and baseline seed remain pending
 - Stage 0 implementation foundation: accepted and merged
 - Stage 1 bootstrap-data/evidence-intake foundation: accepted and merged
 - Stage 1 structural bootstrap commit provenance: accepted and merged
@@ -16,13 +16,15 @@ Last synchronized: 2026-09-05
 - Stage 1 same-PR material-fix evidence reconciliation (F053/F054): accepted and merged
 - Stage 1 same-PR material-fix-baseline reconciliation (F058): accepted and merged
 - Stage 1 same-PR multi-review progression reconciliation (F057 → distinct F059/F061): accepted and merged in PR #19
-- Stage 1 authority/exact-head-CI reconciliation (distinct F055/F056): represented in this tree; acceptance remains PR-scoped until fresh exact-head review/merge
+- Stage 1 authority/exact-head-CI reconciliation (distinct F055/F056): accepted and merged in PR #20
 - Stage 1 collector clean no-op and large-PR support: accepted and merged
 - Review-job coordination research: accepted in PR #14
 - Review-job coordination architecture: `ACCEPT_NARROW` selected by ADR 0013
 - Semantic reviewer architecture research plan: accepted PR #18 consolidates predecessor PR #6, review-quality orchestration research, and later finding/strategy ideas as research only; no production context/orchestration architecture was selected
 - Review-job local foundation: accepted PR #16 implements the `REVIEW_JOB_V1` public schema/state-machine/validation boundary
-- Review-job durability slice in this tree: MimiSeek-owned GitHub ledger/publication adapter implemented with revision/identity fencing, immutable exact-result blob publication, and explicit ambiguous-publication reconciliation; physical production enablement and external CAP/session integration remain pending acceptance/separate verification
+- Review-job durability slice in this tree: MimiSeek-owned GitHub ledger/publication adapter implemented and accepted in PR #17 with revision/identity fencing, immutable exact-result blob publication, and explicit ambiguous-publication reconciliation; physical production enablement and external CAP/session integration remain pending acceptance/separate verification
+- Self-development repeat prevention: accepted PR #21 establishes the governed Development Repeat Prevention loop and machine registry/authority checks for MimiSeek repository development; it is separate from reviewer-learning defect memory
+- Operating-knowledge research: accepted PR #23 adapts AREX/DisCo ideas for source-grounded, versioned, independently verified operating knowledge; it is research only and selects no production operating-skill architecture
 - Track R implementation may proceed in parallel with remaining Stage 1 work, but live external launch/wake remains blocked until separately accepted/verified generic external session capabilities are resolved
 - Stable reviewer version: **not established yet**
 - Bootstrap baseline seed: none
@@ -68,9 +70,9 @@ Accepted PR #13 establishes the bounded same-PR material-fix-baseline evidence s
 
 Accepted PR #19 establishes the bounded same-PR multi-review progression evidence shape for UV PR #71 finding F057 from reviewed head `aafddd3b37476a65558d56755edd2ae440648b74`. Its authenticated Note says `Fixed by complete typed delegation matching and later stronger namespace reservation.` The progression preserves three distinct normalized findings and reviewed heads rather than collapsing them: F057 binds its exact owner response head `9af22cdcbb60501dca968fd10f12dc1d40ee6482` and complete-typed matching evidence; later F059 on reviewed head `10643bd160c65b8d8df690266390725d5d0dd6eb` binds the stronger existing-identity namespace collision and response head `7c8280721d96e7822d3c56e08e00ff6cb3868349`; later F061 on that `7c828072...` reviewed head binds the further proposal-created namespace collision and response code/docs head `1467bd3c97511f8349b574d00a6029e8e98b3fe7`. `SUPPORTED_SAME_PR_MULTI_REVIEW_PROGRESSION_EVIDENCE` records only that bounded source-note progression with exact review/comment/reply, ancestry, exact GitHub PR commit ordering, source-PR membership, chronology, and immutable response-head content. The relation labels are Stage-1 evidence descriptors only: they do not instantiate future `FINDING_V1` lifecycle authority, do not turn F057/F059/F061 into one defect identity, and do not infer universal semantic correctness from owner prose, tests, CI, ancestry, or later reviewer silence.
 
-This development tree adds a bounded authority/exact-head-CI evidence shape for distinct UV PR #71 findings F055 and F056, both reviewed on `aafddd3b37476a65558d56755edd2ae440648b74`. F055 binds the exact original architecture-sync finding/reply, the four-commit reviewed→code/docs baseline ending at `9af22cdcbb60501dca968fd10f12dc1d40ee6482`, immutable current-architecture/map text classifying Stage 17 as `ACTIVE REVIEW` rather than `NEXT`/idle, and the one-commit metadata update to `10643bd160c65b8d8df690266390725d5d0dd6eb`. F056 independently binds the exact original stale-CI finding/reply, the same code/metadata heads, exact code→metadata range, and public historical PR CI runs #3488 (`33101350599`) and #3490 (`33102045907`) to their exact HEADs, workflow identity, completed-success state, and exact five successful permanent jobs. `SUPPORTED_SAME_PR_AUTHORITY_SYNC_EVIDENCE` and `SUPPORTED_EXACT_HEAD_CI_REFRESH_EVIDENCE` remain separate bounded evidence statuses. Historical CI is execution evidence, not semantic correctness proof; historical active-review documents are evidence about that source-PR state, not present-day UV authority. The source GitHub App permissions remain unchanged/read-only; public Actions evidence is read through a separate unauthenticated client.
+Accepted PR #20 establishes the bounded authority/exact-head-CI evidence shape for distinct UV PR #71 findings F055 and F056, both reviewed on `aafddd3b37476a65558d56755edd2ae440648b74`. F055 binds the exact original architecture-sync finding/reply, the four-commit reviewed→code/docs baseline ending at `9af22cdcbb60501dca968fd10f12dc1d40ee6482`, immutable historical architecture/map text classifying Stage 17 as `ACTIVE REVIEW` rather than `NEXT`/idle, and the one-commit metadata update to `10643bd160c65b8d8df690266390725d5d0dd6eb`. F056 independently binds the exact original stale-CI finding/reply, the same code/metadata heads, exact code→metadata range, and public historical PR CI runs #3488 (`33101350599`) and #3490 (`33102045907`) to their exact HEADs, workflow identity, completed-success state, and exact five successful permanent jobs. `SUPPORTED_SAME_PR_AUTHORITY_SYNC_EVIDENCE` and `SUPPORTED_EXACT_HEAD_CI_REFRESH_EVIDENCE` remain separate bounded evidence statuses. Historical CI is execution evidence, not semantic correctness proof; historical active-review documents are evidence about that source-PR state, not present-day UV authority. The source GitHub App permissions remain unchanged/read-only; public Actions evidence is read through a separate unauthenticated client.
 
-All accepted commentary slices explicitly report that global source-commentary reconciliation is incomplete. The proposed F055/F056 slice makes the same bounded claim and remains PR-scoped until fresh exact-head acceptance/merge. Other material source-commentary/disposition assertions still require governed reconciliation before baseline derivation.
+All accepted commentary slices explicitly report that global source-commentary reconciliation is incomplete. The accepted F055/F056 slice makes the same bounded claim. Other material source-commentary/disposition assertions still require governed reconciliation before baseline derivation.
 
 Stage 1 is therefore still incomplete. Material source-commentary/disposition reconciliation is only partially covered, CAP/UV accepted reviewer-policy refs are unresolved here, generic-versus-project-specific classification is unfinished, and no baseline seed exists.
 
@@ -149,9 +151,15 @@ GitHub-native Codex reviews, PR comments, review comments, commits, and owner ad
 
 Fresh ordinary-ChatGPT terminal reviews that existed only inside ChatGPT and were never durably exported into the consumer PR cannot be reconstructed from GitHub alone. Stage 2 must define/implement structured consumer evidence export so future fresh terminal results are also captured automatically. Historical chat-only gaps must remain explicit rather than being inferred from absence.
 
-Once this ledger/publication adapter is accepted and physically enabled, Track R durable review-job results can reduce future chat-only result loss. Those results are still source review evidence, not automatically adjudicated learning outcomes, and they do not replace Stage 2/3 evidence/export/normalization requirements.
+With the ledger/publication adapter accepted in PR #17, physical Track R enablement can reduce future chat-only result loss once separately verified and enabled. Those results are still source review evidence, not automatically adjudicated learning outcomes, and they do not replace Stage 2/3 evidence/export/normalization requirements.
 
-Authenticated workbook commentary can contain material fix/adjudication hints. Structural commit reconciliation is not enough to promote those hints. Accepted F050/F051, F052, F053/F054, F058, and F057/F059/F061 progression slices plus the proposed F055/F056 authority/CI slice demonstrate bounded patterns for preserving explicit unknowns, binding positive follow-up claims, binding exact-head clean re-review chains, binding exact same-PR fix commits, binding owner-declared multi-commit code-bearing baselines, preserving stronger later findings without collapsing distinct reviewed heads, synchronizing historical authority descriptions, and binding historical exact-head CI refresh evidence. None of those shapes silently converts source commentary into universal semantic correctness. The rest of the material commentary corpus still needs the same treatment.
+Authenticated workbook commentary can contain material fix/adjudication hints. Structural commit reconciliation is not enough to promote those hints. Accepted F050/F051, F052, F053/F054, F058, F057/F059/F061 progression, and F055/F056 authority/CI slices demonstrate bounded patterns for preserving explicit unknowns, binding positive follow-up claims, binding exact-head clean re-review chains, binding exact same-PR fix commits, binding owner-declared multi-commit code-bearing baselines, preserving stronger later findings without collapsing distinct reviewed heads, synchronizing historical authority descriptions, and binding historical exact-head CI refresh evidence. None of those shapes silently converts source commentary into universal semantic correctness. The rest of the material commentary corpus still needs the same treatment.
+
+## Accepted cross-cutting research and development controls
+
+Accepted PR #18 provides a research-only semantic-reviewer architecture plan. Accepted PR #23 provides research-only AREX/DisCo operating-knowledge adaptation, including immutable external-content identity and blind historical-evaluation leakage controls. Neither research PR selects production reviewer context/orchestration/operating-skill architecture or changes current Stage/Track authority.
+
+Accepted PR #21 adds Development Repeat Prevention for MimiSeek's own repository-development workflow. The canonical normative process remains in `docs/DEVELOPMENT_PROTOCOL.md`, while machine state lives in the development failure-pattern/adjudication/occurrence registries. This self-development layer is not reviewer-learning `DEFECT_PATTERN_V1`, Stage 4 learning state, consumer adjudication, or reviewer promotion authority.
 
 ## Next canonical action
 
@@ -177,6 +185,8 @@ With the MimiSeek-owned ledger/publication slice accepted:
 5. run the required cross-origin physical E2E/restart/ambiguous-delivery experiments before treating Track R as routine review infrastructure.
 
 The accepted local state foundation plus accepted durability adapter do not satisfy those later external/physical acceptance gates by themselves.
+
+Accepted research PR #23 additionally makes a small operating-skill A/B prototype available as a **research option**, not as a new Stage 1 or Track R prerequisite. Any such prototype must be a separate bounded research PR and must not silently displace the current Stage 1/Track R canonical work.
 
 Stage 2 then adds structured consumer evidence export/binding, including durable fresh ordinary-ChatGPT result export. Stage 3 later completes the normalized operational collector/outcome-store contract and owns operational outcome schemas rather than appending records to bootstrap-v1 files.
 
@@ -204,3 +214,4 @@ All repository changes continue through normal post-bootstrap branch/PR acceptan
 - Before routine use, physical ledger branch/ref behavior must be verified under MimiSeek-owned credentials; code-level CAS tests alone are not external durability evidence.
 - MimiSeek must not silently depend on an unaccepted or moving external CAP/session runtime contract.
 - Track R must not grow into consumer-specific development orchestration or treat reviewer PASS as merge/promotion authority.
+- Active self-development `BOUNDED_FOLLOW_UP` debt remains governed by `data/development-failure-patterns.jsonl`; documentation synchronization must not hide or reinterpret those machine-owned follow-ups as resolved.

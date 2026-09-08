@@ -463,7 +463,62 @@ Accepted PR #13 establishes:
    - literal HEAD and PR merge-ref tree both resolved to `45aab0e917e666ab65c82d952b5e93ac1afba749`;
    - fresh independent terminal review: `CURRENT PASS`, 0 findings.
 
-Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available. Material source commentary remains only partially reconciled; F057 and other material commentary remain pending, reviewer-policy refs and generic/project-specific classification remain unresolved, and no baseline seed exists.
+### Accepted same-PR multi-review progression reconciliation — PR #19
+
+PR #19 — `Stage 1: reconcile F057 multi-review progression` established the bounded progression evidence for distinct UV PR #71 findings F057, F059, and F061 without collapsing them into one production finding identity.
+
+Acceptance identity:
+
+- BASE: `33df01469deee473740b4896cb686895ac3a09e2`
+- accepted exact PR HEAD: `0744da386cc1fd775aea6884ed0f884d1872ddfc`
+- `review_policy_ref`: `33df01469deee473740b4896cb686895ac3a09e2`
+- changed files: `8`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- durable GitHub terminal-result comment id: `5552160411`
+- exact-head CI run: `33959304688` (CI #132)
+- CI state: `PASS`
+- merge commit on `main`: `d90dc700e64f79304e283223620f6af4e178c795`
+
+Accepted PR #19 proves each reviewed→response stage plus cross-stage progression using a separately collector-validated exact GitHub PR commit sequence rather than timestamp-sorted snapshot order. F057, F059, and F061 remain separate normalized findings with separate immutable reviewed-head identities, and the evidence status remains narrower than universal semantic correctness.
+
+Review/remediation chronology:
+
+1. HEAD `1201217e7f2e9421e0e50bcd1784f11dab785b9e` lacked proof of the cross-stage progression relation; remediation added ancestry/chronology composition.
+2. HEAD `cf3c272af22d280c53c851c02ce7db89aff26d81` incorrectly consumed timestamp-sorted snapshot commit position as ordering authority; remediation re-read and validated the exact source PR commit sequence.
+3. Final exact HEAD `0744da386cc1fd775aea6884ed0f884d1872ddfc` passed CI `33959304688` and fresh independent semantic review; terminal PASS was persisted in comment `5552160411` before merge.
+
+### Accepted authority/exact-head-CI reconciliation — PR #20
+
+PR #20 — `Stage 1: reconcile F055/F056 authority and exact-head CI evidence` established distinct bounded evidence shapes for UV PR #71 findings F055 and F056.
+
+Acceptance identity:
+
+- BASE: `d90dc700e64f79304e283223620f6af4e178c795`
+- accepted exact PR HEAD: `34d964d47328ca89c81d66f04cce67a99eff06c0`
+- `review_policy_ref`: `d90dc700e64f79304e283223620f6af4e178c795`
+- changed files: `7`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- durable GitHub terminal-result comment id: `5554129428`
+- exact-head CI run: `33972038089` (CI #143)
+- CI state: `PASS`
+- merge commit on `main`: `71f3c53073a5876119867ec90e8c7398f870524c`
+
+Accepted PR #20 binds F055 historical authority-sync evidence separately from F056 historical exact-head CI-refresh evidence. It binds the four historical Codex/owner-comment bodies to exact IDs, `original_commit_id`, actors, exact `updated_at`, and SHA-256 of unnormalized UTF-8 body bytes; public historical Actions evidence remains execution evidence only, and source-App permissions remain read-only.
+
+Review/remediation chronology:
+
+1. Prior exact HEAD `a6a79485db9caac3cf68a6a9049a0a6ef9cd1c26` received one P1 finding because the verifier authenticated selected comment identities but did not bind their semantic bodies.
+2. Final HEAD `34d964d47328ca89c81d66f04cce67a99eff06c0` replaced token-only semantics with exact body/update bindings and negative edited/swapped/negating regressions; CI `33972038089` passed and terminal PASS was persisted in comment `5554129428` before merge.
+
+Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available. Material source commentary remains only partially reconciled; other material commentary/disposition assertions remain pending, reviewer-policy refs and generic/project-specific classification remain unresolved, and no baseline seed exists.
 
 ## Track R — Independent review-job coordination
 
@@ -596,6 +651,112 @@ PR #16 did **not** implement a durable GitHub ledger/publication adapter, extern
    - exact-head/current-base CI `33893841665`: PASS;
    - fresh independent terminal review: `CURRENT PASS`, 0 findings;
    - durable terminal result persisted before merge as comment `5543673541`.
+
+### Accepted durable GitHub ledger/publication adapter — PR #17
+
+PR #17 — `Track R: add durable GitHub ledger publication adapter` implemented the second MimiSeek-local Track R slice after PR #16.
+
+Acceptance identity:
+
+- BASE: `e8b1600b4560fea0c3d82ab47690a6b76f75ec28`
+- accepted exact PR HEAD: `899cf91f291f13025b19724303e5d36968cecead`
+- `review_policy_ref`: `e8b1600b4560fea0c3d82ab47690a6b76f75ec28`
+- changed files: `10`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- durable GitHub terminal-result comment id: `5545230802`
+- exact-head/current-base CI run: `33905748369` (CI #115)
+- CI state: `PASS`
+- merge commit on `main`: `26d5ee0930887e1d672036c4488115b89f447e1e`
+
+Accepted PR #17 establishes the repository-scoped GitHub ledger facade, isolated `mimiseek-review-jobs-v1` branch state, exact one-revision durable snapshots, immutable result Git blobs, atomic result/snapshot publication, result-less bounded outcome publication, non-force CAS semantics, ambiguous-publication fencing/reconciliation, and public-state privacy boundaries. It does not initialize live production ledger state, call CAP/session runtime, launch a Temporary Chat, perform return/wake delivery, or grant consumer merge/promotion authority.
+
+Review/remediation chronology:
+
+1. Prior HEAD `85853a60944196502db25a6500f5af90837bcd6f` received one HIGH finding because the supported backend exposed an unrestricted `api_base`, permitting authenticated publication to diverge from the canonical `api.github.com` authority claimed by result locators.
+2. Final HEAD `899cf91f291f13025b19724303e5d36968cecead` pinned the supported backend to canonical GitHub API authority and added regression coverage; CI `33905748369` passed and terminal PASS was persisted in comment `5545230802` before merge.
+
+Physical production-ledger enablement/recovery and external generic session capability acceptance remain separate Track R work.
+
+## Accepted cross-cutting research and self-development controls
+
+### Accepted semantic-reviewer architecture research — PR #18
+
+PR #18 — `Research: unify MimiSeek semantic reviewer architecture plan` consolidated prior semantic-review research into one research-only architecture plan without selecting production architecture.
+
+Acceptance identity:
+
+- BASE: `26d5ee0930887e1d672036c4488115b89f447e1e`
+- accepted exact PR HEAD: `70ee040773db4f0554335e5a58f1fbcc78d4d15c`
+- `review_policy_ref`: `26d5ee0930887e1d672036c4488115b89f447e1e`
+- changed files: `1`
+- reviewer profile: `semantic_acceptance_review`
+- reviewer source: `openai:gpt-5.6-sol`
+- review context: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- reported findings: `0`
+- durable GitHub terminal-result comment id: `5550187371`
+- exact-head CI run: `33951157534` (CI #121)
+- CI state: `PASS`
+- merge commit on `main`: `33df01469deee473740b4896cb686895ac3a09e2`
+
+Accepted PR #18 keeps current `REVIEW_JOB_V1`/`REVIEW_RESULT_V1`, consumer authority, Track R, promotion/distribution, and merge semantics unchanged. Its research sequence covers reviewer context/capabilities, planning/evidence indexing, structured findings, finding lifecycle, reusable defect/counterexample knowledge, typed falsification, compatible multi-pass orchestration, and adaptive strategy/evaluation.
+
+Review/remediation chronology includes a prior HIGH on HEAD `1e0f44e006ffc8241ff3cdaecbbfb7ae8c41ab01` for trying to model candidate-level falsification as ordinary whole-review `REVIEW_JOB_V1`; a later PASS on `aad43f492f888d5f23d64812111e23dce3396c76` became stale after valid remaining Codex-thread defects were remediated; final HEAD `70ee040773db4f0554335e5a58f1fbcc78d4d15c` then received terminal PASS in comment `5550187371` with CI `33951157534` green.
+
+### Accepted Development Repeat Prevention — PR #21
+
+PR #21 — `Self-development: add closed-loop repeat prevention` established the governed cross-chat self-development repeat-prevention loop for MimiSeek repository development, separate from future reviewer-learning `DEFECT_PATTERN_V1` or consumer authority.
+
+Acceptance identity:
+
+- BASE: `71f3c53073a5876119867ec90e8c7398f870524c`
+- accepted exact PR HEAD: `d756d0c6d1bd4cee52f51128fac5d1b96d9c9f97`
+- `review_policy_ref`: `71f3c53073a5876119867ec90e8c7398f870524c`
+- changed files: `13`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review status: `PASS`
+- material actionable findings: `0`
+- durable GitHub terminal-result comment id: `5560655016`
+- exact-head Development Finding Authority run: `34040746274` (#7) — `PASS`
+- exact-head CI run: `34040746282` (CI #190) — `PASS`
+- merge commit on `main`: `51dd5e17841070206398e88d5917bc77cd57acc1`
+
+Accepted PR #21 makes `docs/DEVELOPMENT_PROTOCOL.md` the sole normative owner of the self-development loop and introduces machine-governed failure-pattern/adjudication/occurrence state plus exact-HEAD validation and externally bound finding/process-incident authority. The final PROCESS_INCIDENT remediation requires per-record source PR identity, exact immutable comment binding, and independent Pull Requests API resolution so an ordinary issue cannot masquerade as a PR source.
+
+The remediation chronology is intentionally preserved in PR history; the final fresh independent review rechecked the complete 51-commit/13-file BASE..HEAD effect and exact-head Authority #7 / CI #190 before terminal PASS was durably persisted in comment `5560655016` and the merge used the exact accepted HEAD.
+
+### Accepted AREX/DisCo operating-knowledge research — PR #23
+
+PR #23 — `Research: adapt AREX/DisCo operating knowledge for MimiSeek` established a research-only adaptation of operating-knowledge ideas without activating a production operating-skill architecture.
+
+Acceptance identity:
+
+- BASE: `51dd5e17841070206398e88d5917bc77cd57acc1`
+- accepted exact PR HEAD: `90b533fd1f2de743dfe388fc1e9747658039f1e1`
+- `review_policy_ref`: `51dd5e17841070206398e88d5917bc77cd57acc1`
+- changed files: `7`
+- reviewer identity/class: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review status: `PASS`
+- material actionable findings: `0`
+- findings: `NONE`
+- durable GitHub terminal-result comment id: `5580826108`
+- exact-head Development Finding Authority run: `34048543567` (#10) — `PASS`
+- exact-head CI run: `34048543634` (CI #193) — `PASS`
+- merge commit on `main`: `c673c11bd0490b3b8218a11173e30c90d5b783a0`
+
+Accepted PR #23 adapts `scope → ground → construct → verify`, exact source provenance, candidate-versus-active separation, independent verification, progressive disclosure, refresh/staleness and transactional activation as research hypotheses. It does not change `REVIEW_JOB_V1`, `REVIEW_RESULT_V1`, consumer authority, Track R authority, reviewer promotion/distribution, current roadmap stages, or production reviewer state.
+
+The original HEAD `cc706ef32247bd3d2061d63e9a761383e9cb4b66` had two confirmed Codex P2 findings. They became development adjudications `DFA-0009`/`DFA-0010` and patterns `DFP-0007`/`DFP-0008`: historical blind-evaluation leakage and mutable external source identity not bound to exact content. Final research semantics require the same frozen pre-target reviewer-visible evidence surface for paired historical experiments and immutable revision/snapshot/digest identity for retained mutable external evidence. External adjudication authority was appended in PR #21 comment `5560866728`.
+
+Intermediate HEAD `73dfc167699d0413e017f708e837395727b4e769` correctly failed Authority #9 and CI #192 on incomplete supplement/cardinality and stale seed-test expectations. Final HEAD `90b533fd1f2de743dfe388fc1e9747658039f1e1` added aggregate multi-supplement authority support and regression/seed updates; Authority #10 and CI #193 passed. A fresh independent terminal review then returned PASS with no material actionable findings, persisted in comment `5580826108`. The merge used `expected_head_sha=90b533fd1f2de743dfe388fc1e9747658039f1e1` and produced merge commit `c673c11bd0490b3b8218a11173e30c90d5b783a0`.
 
 ## Later stages
 
