@@ -1,7 +1,7 @@
 {
-  "schema_version": "bootstrap_commentary_semantic_bindings_v1",
+  "schema_version": "bootstrap_commentary_semantic_bindings_v2",
   "authority": "exact_live_identity_binding_for_claim_bearing_bootstrap_commentary",
-  "records": [
+  "direct_records": [
     {
       "repository": "BogdanAIP/chat-agent-platform",
       "pr": 121,
@@ -135,58 +135,6 @@
     {
       "repository": "BogdanAIP/uv-studio",
       "pr": 71,
-      "role": "F055_FINDING",
-      "surface": "review_comment",
-      "comment_id": 3874358302,
-      "actor": "chatgpt-codex-connector[bot]",
-      "updated_at": "2026-08-27T17:50:12Z",
-      "body_sha256": "1361b84d58bf7a7267d5be4277698fcf101a6665080a58f286d63c9edbb065b8",
-      "pull_request_review_id": 5043917353,
-      "in_reply_to_id": null,
-      "original_commit_id": "aafddd3b37476a65558d56755edd2ae440648b74"
-    },
-    {
-      "repository": "BogdanAIP/uv-studio",
-      "pr": 71,
-      "role": "F055_OWNER_REPLY",
-      "surface": "review_comment",
-      "comment_id": 3874609972,
-      "actor": "BogdanAIP",
-      "updated_at": "2026-08-27T18:15:36Z",
-      "body_sha256": "539788844ccbc49638018be9fa300a7b64168c06b1f049edda7ba333c89adb54",
-      "pull_request_review_id": null,
-      "in_reply_to_id": 3874358302,
-      "original_commit_id": "aafddd3b37476a65558d56755edd2ae440648b74"
-    },
-    {
-      "repository": "BogdanAIP/uv-studio",
-      "pr": 71,
-      "role": "F056_FINDING",
-      "surface": "review_comment",
-      "comment_id": 3874358316,
-      "actor": "chatgpt-codex-connector[bot]",
-      "updated_at": "2026-08-27T17:50:12Z",
-      "body_sha256": "12ad205280e98315394846421a4bdfc1d8e9341ee0a8bdeaf5669afee0efa227",
-      "pull_request_review_id": 5043917353,
-      "in_reply_to_id": null,
-      "original_commit_id": "aafddd3b37476a65558d56755edd2ae440648b74"
-    },
-    {
-      "repository": "BogdanAIP/uv-studio",
-      "pr": 71,
-      "role": "F056_OWNER_REPLY",
-      "surface": "review_comment",
-      "comment_id": 3874610894,
-      "actor": "BogdanAIP",
-      "updated_at": "2026-08-27T18:15:43Z",
-      "body_sha256": "71ec212ead6ebd6098e52845b596c48e1026263120d82c0057d00a9ed859dc00",
-      "pull_request_review_id": null,
-      "in_reply_to_id": 3874358316,
-      "original_commit_id": "aafddd3b37476a65558d56755edd2ae440648b74"
-    },
-    {
-      "repository": "BogdanAIP/uv-studio",
-      "pr": 71,
       "role": "F057_FINDING",
       "surface": "review_comment",
       "comment_id": 3874358356,
@@ -287,6 +235,32 @@
       "pull_request_review_id": null,
       "in_reply_to_id": 3874801219,
       "original_commit_id": "7c8280721d96e7822d3c56e08e00ff6cb3868349"
+    }
+  ],
+  "delegated_records": [
+    {
+      "role": "F055_FINDING",
+      "owner_path": "data/bootstrap-commentary-authority-ci-reconciliation.json",
+      "finding_id": "F055",
+      "party": "finding"
+    },
+    {
+      "role": "F055_OWNER_REPLY",
+      "owner_path": "data/bootstrap-commentary-authority-ci-reconciliation.json",
+      "finding_id": "F055",
+      "party": "owner_reply"
+    },
+    {
+      "role": "F056_FINDING",
+      "owner_path": "data/bootstrap-commentary-authority-ci-reconciliation.json",
+      "finding_id": "F056",
+      "party": "finding"
+    },
+    {
+      "role": "F056_OWNER_REPLY",
+      "owner_path": "data/bootstrap-commentary-authority-ci-reconciliation.json",
+      "finding_id": "F056",
+      "party": "owner_reply"
     }
   ]
 }

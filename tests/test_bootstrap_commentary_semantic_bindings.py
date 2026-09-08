@@ -1,7 +1,9 @@
 import copy
+import hashlib
 import importlib.util
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -36,9 +38,12 @@ def compact_live(record):
 
 class BootstrapCommentarySemanticBindingTests(unittest.TestCase):
     def setUp(self):
-        self.records = semantic.load_bindings(BINDINGS)
+        self.manifest = semantic.load_manifest(BINDINGS)
+        self.records = semantic.validate_registry_coverage(BINDINGS, ROOT)
 
     def test_registry_is_exact_complete_current_family(self):
+        self.assertEqual(len(self.manifest["direct_records"]), 18)
+        self.assertEqual(len(self.manifest["delegated_records"]), 4)
         self.assertEqual(len(self.records), 22)
         self.assertEqual(
             {item["role"] for item in self.records},
@@ -51,156 +56,168 @@ class BootstrapCommentarySemanticBindingTests(unittest.TestCase):
                 "F059_FINDING", "F059_OWNER_REPLY", "F061_FINDING", "F061_OWNER_REPLY",
             },
         )
-
-    def test_all_claim_bearing_comment_ids_in_accepted_reconciliations_are_bound(self):
-        expected = set()
-        base_doc = json.loads((ROOT / "data/bootstrap-commentary-reconciliation.json").read_text(encoding="utf-8"))
-        for entry in base_doc["entries"]:
-            expected.add(entry["github_evidence"]["codex_review_comment_id"])
-
-        rereview = json.loads((ROOT / "data/bootstrap-commentary-rereview-reconciliation.json").read_text(encoding="utf-8"))
-        entry = rereview["entries"][0]
-        expected.add(entry["github_evidence"]["codex_review_comment_id"])
-        expected.update(
-            entry["resolution_evidence"][key]
-            for key in ("owner_reply_comment_id", "rereview_request_comment_id", "clean_codex_result_comment_id")
+        self.assertEqual(
+            {semantic.binding_key(item) for item in self.records},
+            semantic.expected_inventory(ROOT),
         )
 
-        fix = json.loads((ROOT / "data/bootstrap-commentary-fix-evidence-reconciliation.json").read_text(encoding="utf-8"))
-        for entry in fix["entries"]:
-            expected.add(entry["github_evidence"]["codex_review_comment_id"])
-            expected.add(entry["github_evidence"]["owner_reply_comment_id"])
+    def test_f055_f056_mutable_facts_have_one_canonical_owner(self):
+        raw = json.loads(BINDINGS.read_text(encoding="utf-8"))
+        delegated = raw["delegated_records"]
+        self.assertEqual(
+            {item["role"] for item in delegated},
+            {"F055_FINDING", "F055_OWNER_REPLY", "F056_FINDING", "F056_OWNER_REPLY"},
+        )
+        for item in delegated:
+            self.assertEqual(
+                set(item),
+                {"role", "owner_path", "finding_id", "party"},
+            )
+            self.assertEqual(
+                item["owner_path"],
+                "data/bootstrap-commentary-authority-ci-reconciliation.json",
+            )
+            for forbidden in (
+                "repository", "pr", "surface", "comment_id", "actor",
+                "updated_at", "body_sha256", "pull_request_review_id",
+                "in_reply_to_id", "original_commit_id",
+            ):
+                self.assertNotIn(forbidden, item)
 
-        baseline = json.loads((ROOT / "data/bootstrap-commentary-fix-baseline-reconciliation.json").read_text(encoding="utf-8"))
-        entry = baseline["entries"][0]
-        expected.add(entry["github_evidence"]["codex_review_comment_id"])
-        expected.add(entry["github_evidence"]["owner_reply_comment_id"])
+        delegated_effective = {
+            item["role"]: item
+            for item in self.records
+            if item["role"] in {d["role"] for d in delegated}
+        }
+        for item in delegated_effective.values():
+            self.assertEqual(
+                item["binding_owner"],
+                "data/bootstrap-commentary-authority-ci-reconciliation.json",
+            )
 
-        progression = json.loads((ROOT / "data/bootstrap-commentary-multi-review-progression-reconciliation.json").read_text(encoding="utf-8"))
-        entry = progression["entries"][0]
-        expected.add(entry["initial_fix_evidence"]["codex_review_comment_id"])
-        expected.add(entry["initial_fix_evidence"]["owner_reply_comment_id"])
-        for followup in entry["followup_reviews"]:
-            expected.add(followup["codex_review_comment_id"])
-            expected.add(followup["owner_reply_comment_id"])
+    def test_repository_pr_surface_role_or_comment_drift_fails_family_coverage(self):
+        raw = json.loads(BINDINGS.read_text(encoding="utf-8"))
+        mutations = {
+            "repository": "example/wrong",
+            "pr": 999,
+            "surface": "issue_comment",
+            "role": "F050_WRONG",
+            "comment_id": 999999,
+        }
+        for field, value in mutations.items():
+            with self.subTest(field=field):
+                changed = copy.deepcopy(raw)
+                changed["direct_records"][0][field] = value
+                path = self._write_manifest(changed)
+                with self.assertRaisesRegex(
+                    semantic.SemanticBindingError,
+                    "family coverage differs",
+                ):
+                    semantic.validate_registry_coverage(path, ROOT)
 
-        authority_ci = json.loads((ROOT / "data/bootstrap-commentary-authority-ci-reconciliation.json").read_text(encoding="utf-8"))
-        for entry in authority_ci["entries"]:
-            expected.add(entry["github_evidence"]["codex_review_comment_id"])
-            expected.add(entry["github_evidence"]["owner_reply_comment_id"])
+    def test_unbound_repository_pr_fails_closed_instead_of_zero_success(self):
+        with self.assertRaisesRegex(
+            semantic.SemanticBindingError,
+            "no required semantic bindings are registered",
+        ):
+            semantic.validate_snapshot(
+                {
+                    "repository": "example/unbound",
+                    "pr_number": 1,
+                    "review_comments": [],
+                    "issue_comments": [],
+                },
+                BINDINGS,
+                ROOT,
+            )
 
-        self.assertEqual(expected, {item["comment_id"] for item in self.records})
-
-    def test_exact_live_record_passes_and_unbound_pr_is_noop(self):
-        import hashlib
-        record = self.records[0]
+    def test_exact_live_record_and_adversarial_body_timestamp_fail_closed(self):
+        record = copy.deepcopy(self.manifest["direct_records"][0])
         body = "fixture exact body"
-        fixture_record = dict(record)
-        fixture_record["body_sha256"] = hashlib.sha256(body.encode("utf-8")).hexdigest()
-        tmp = self._write_manifest([fixture_record])
-        live = compact_live(fixture_record)
+        record["body_sha256"] = hashlib.sha256(body.encode("utf-8")).hexdigest()
+        live = compact_live(record)
         live["body"] = body
         snapshot = {
-            "repository": fixture_record["repository"],
-            "pr_number": fixture_record["pr"],
-            "review_comments": [live] if fixture_record["surface"] == "review_comment" else [],
-            "issue_comments": [live] if fixture_record["surface"] == "issue_comment" else [],
-        }
-        self.assertEqual(semantic.validate_snapshot(snapshot, tmp), 1)
-        self.assertEqual(
-            semantic.validate_snapshot(
-                {"repository": "example/unbound", "pr_number": 1, "review_comments": [], "issue_comments": []},
-                tmp,
-            ),
-            0,
-        )
-
-    def test_edited_swapped_negating_and_updated_comment_fail_closed(self):
-        import hashlib
-        first, second = self.records[0], self.records[1]
-        bodies = {
-            first["role"]: "Fixed in abc. This is supported.",
-            second["role"]: "Different exact finding body.",
-        }
-        fixture = []
-        for record in (first, second):
-            item = dict(record)
-            item["body_sha256"] = hashlib.sha256(bodies[record["role"]].encode("utf-8")).hexdigest()
-            fixture.append(item)
-        tmp = self._write_manifest(fixture)
-        snapshot = {
-            "repository": first["repository"],
-            "pr_number": first["pr"],
-            "review_comments": [],
+            "repository": record["repository"],
+            "pr_number": record["pr"],
+            "review_comments": [live],
             "issue_comments": [],
+            "pull_request": {"user": {"login": "BogdanAIP"}},
         }
-        for record in fixture:
-            live = compact_live(record)
-            live["body"] = bodies[record["role"]]
-            snapshot["review_comments"].append(live)
-        self.assertEqual(semantic.validate_snapshot(snapshot, tmp), 2)
+        self.assertEqual(semantic._validate_records(snapshot, [record]), 1)
 
-        edited = copy.deepcopy(snapshot)
-        edited["review_comments"][0]["body"] += " edited"
-        with self.assertRaisesRegex(semantic.SemanticBindingError, "body digest differs"):
-            semantic.validate_snapshot(edited, tmp)
-
-        swapped = copy.deepcopy(snapshot)
-        swapped["review_comments"][0]["body"] = bodies[second["role"]]
-        with self.assertRaisesRegex(semantic.SemanticBindingError, "body digest differs"):
-            semantic.validate_snapshot(swapped, tmp)
-
-        negating = copy.deepcopy(snapshot)
-        negating["review_comments"][0]["body"] = "Not fixed; abc remains vulnerable."
-        with self.assertRaisesRegex(semantic.SemanticBindingError, "body digest differs"):
-            semantic.validate_snapshot(negating, tmp)
+        for changed_body in (
+            body + " edited",
+            "Different exact finding body.",
+            "Not fixed; the prior claim is negated.",
+        ):
+            changed = copy.deepcopy(snapshot)
+            changed["review_comments"][0]["body"] = changed_body
+            with self.assertRaisesRegex(semantic.SemanticBindingError, "body digest differs"):
+                semantic._validate_records(changed, [record])
 
         moved = copy.deepcopy(snapshot)
         moved["review_comments"][0]["updated_at"] = "2099-01-01T00:00:00Z"
         with self.assertRaisesRegex(semantic.SemanticBindingError, "updated_at differs"):
-            semantic.validate_snapshot(moved, tmp)
+            semantic._validate_records(moved, [record])
 
     def test_wrong_thread_or_original_head_fail_closed(self):
-        import hashlib
-        record = next(item for item in self.records if item["role"] == "F053_FINDING")
+        record = copy.deepcopy(
+            next(item for item in self.manifest["direct_records"] if item["role"] == "F053_FINDING")
+        )
         body = "exact finding"
-        fixture = dict(record)
-        fixture["body_sha256"] = hashlib.sha256(body.encode("utf-8")).hexdigest()
-        tmp = self._write_manifest([fixture])
-        live = compact_live(fixture)
+        record["body_sha256"] = hashlib.sha256(body.encode("utf-8")).hexdigest()
+        live = compact_live(record)
         live["body"] = body
+        snapshot = {
+            "repository": record["repository"],
+            "pr_number": record["pr"],
+            "review_comments": [live],
+            "issue_comments": [],
+            "pull_request": {"user": {"login": "BogdanAIP"}},
+        }
+        live["pull_request_review_id"] += 1
+        with self.assertRaisesRegex(semantic.SemanticBindingError, "pull_request_review_id differs"):
+            semantic._validate_records(snapshot, [record])
+        live["pull_request_review_id"] = record["pull_request_review_id"]
+        live["original_commit_id"] = "0" * 40
+        with self.assertRaisesRegex(semantic.SemanticBindingError, "original_commit_id differs"):
+            semantic._validate_records(snapshot, [record])
+
+    def test_delegated_owner_reply_uses_exact_live_pr_owner_actor(self):
+        record = next(item for item in self.records if item["role"] == "F055_OWNER_REPLY")
+        body = "fixture owner reply"
+        fixture = copy.deepcopy(record)
+        fixture["body_sha256"] = hashlib.sha256(body.encode("utf-8")).hexdigest()
+        live = {
+            "id": fixture["comment_id"],
+            "user": {"login": "BogdanAIP"},
+            "body": body,
+            "updated_at": fixture["updated_at"],
+            "pull_request_review_id": fixture["pull_request_review_id"],
+            "in_reply_to_id": fixture["in_reply_to_id"],
+            "original_commit_id": fixture["original_commit_id"],
+        }
         snapshot = {
             "repository": fixture["repository"],
             "pr_number": fixture["pr"],
             "review_comments": [live],
             "issue_comments": [],
+            "pull_request": {"user": {"login": "BogdanAIP"}},
         }
-        live["pull_request_review_id"] += 1
-        with self.assertRaisesRegex(semantic.SemanticBindingError, "pull_request_review_id differs"):
-            semantic.validate_snapshot(snapshot, tmp)
-        live["pull_request_review_id"] = fixture["pull_request_review_id"]
-        live["original_commit_id"] = "0" * 40
-        with self.assertRaisesRegex(semantic.SemanticBindingError, "original_commit_id differs"):
-            semantic.validate_snapshot(snapshot, tmp)
+        self.assertEqual(semantic._validate_records(snapshot, [fixture]), 1)
+        changed = copy.deepcopy(snapshot)
+        changed["review_comments"][0]["user"]["login"] = "someone-else"
+        with self.assertRaisesRegex(semantic.SemanticBindingError, "actor differs"):
+            semantic._validate_records(changed, [fixture])
 
-    def _write_manifest(self, records):
-        import tempfile
+    def _write_manifest(self, raw):
         if not hasattr(self, "_tmpdirs"):
             self._tmpdirs = []
         tmpdir = tempfile.TemporaryDirectory()
         self._tmpdirs.append(tmpdir)
         path = Path(tmpdir.name) / "bindings.json"
-        path.write_text(
-            json.dumps(
-                {
-                    "schema_version": semantic.SCHEMA_VERSION,
-                    "authority": semantic.AUTHORITY,
-                    "records": records,
-                },
-                ensure_ascii=False,
-            ),
-            encoding="utf-8",
-        )
+        path.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
         return path
 
     def tearDown(self):
