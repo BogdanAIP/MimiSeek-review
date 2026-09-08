@@ -117,7 +117,10 @@ def _process_occurrences(r,label,body,out,source_kind,incident_pr,require_failur
  pid=r.get('pattern_id'); fc=r.get('failure_class'); occs=r.get('occurrences')
  of={'occurrence_id','head_sha','relation','prevention_failure_reason'}
  if not isinstance(pid,str) or not pid or not isinstance(fc,str) or not fc or not isinstance(occs,list) or not occs: raise E(f'{label}: claim binding invalid')
- if pid not in body or (require_failure_class and fc not in body): raise E(f'{label}: claim body binding invalid')
+ if require_failure_class:
+  if fc not in body: raise E(f'{label}: claim body binding invalid')
+ elif pid not in body:
+  raise E(f'{label}: claim body binding invalid')
  for o in occs:
   if not isinstance(o,dict) or set(o)!=of or not isinstance(o.get('occurrence_id'),str) or not SHA.fullmatch(str(o.get('head_sha',''))) or o.get('head_sha') not in body: raise E(f'{label}: occurrence binding invalid')
   if not require_failure_class:
