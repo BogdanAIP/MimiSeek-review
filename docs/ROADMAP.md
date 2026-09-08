@@ -49,6 +49,8 @@ Work:
 
 The Stage 1 baseline seed is **not** stable, is not consumer-authoritative, and cannot be distributed. It is an evidence-backed bootstrap input for the first governed candidate created at Stage 5.
 
+Current accepted Stage 1 evidence already includes authenticated bootstrap projections, structural BUGGY/FIXED/VERIFIED provenance, clean collector no-op/large-PR handling, and bounded commentary/evidence shapes for F050/F051, F052, F053/F054, F058, F057→F059→F061 progression, and distinct F055/F056 authority/exact-head-CI evidence. Those accepted slices remain narrower than universal semantic correctness and do not make the overall commentary corpus reconciled.
+
 Acceptance:
 
 - source path/version/size/digest are verified before import;
@@ -64,6 +66,8 @@ Acceptance:
 - baseline seed is explicitly non-stable/non-distributable;
 - project-specific rules remain project-local.
 
+Stage 1 remains incomplete: material source-commentary/disposition reconciliation is still partial, accepted CAP/UV reviewer-policy refs remain unresolved into the baseline work, generic-versus-project-specific classification is unfinished, and no baseline seed exists.
+
 The early collector foundation is authorized only to stop evidence loss during bootstrap. It does **not** mean Stage 3 is complete.
 
 ## Track R — Independent review-job coordination — IN PROGRESS
@@ -72,7 +76,7 @@ Goal: remove routine manual prompt/result shuttling for an explicitly requested 
 
 Track R is a cross-cutting operational capability, not a reviewer-evolution stage. It may proceed in parallel with the remaining Stage 1 evidence work after the architecture decision is accepted.
 
-Accepted PR #16 established the first MimiSeek-local `REVIEW_JOB_V1` state-machine/result-correlation foundation. The durability slice proposed in the current development tree adds the MimiSeek-owned GitHub ledger/publication adapter. Neither implementation alone authorizes live external CAP/session launch or return delivery, and code-level ledger tests are not a substitute for later physical GitHub durability evidence.
+Accepted PR #16 established the first MimiSeek-local `REVIEW_JOB_V1` state-machine/result-correlation foundation. Accepted PR #17 established the MimiSeek-owned GitHub ledger/publication adapter with repository ownership fencing, revision/CAS semantics, immutable exact-result publication, and ambiguous-publication reconciliation. Neither accepted slice authorizes live external CAP/session launch or return delivery, and code-level ledger tests are not a substitute for later physical GitHub durability evidence.
 
 Target flow:
 
@@ -108,8 +112,8 @@ MimiSeek-side work:
 Current Track R implementation boundary:
 
 - accepted: immutable local job/state/result boundary from PR #16;
-- proposed in the current ledger slice: MimiSeek-repository-scoped durable job snapshots, immutable exact-result Git blob publication, revision/CAS fencing, bounded result-less outcome publication, and explicit ambiguous-publication reconciliation;
-- still pending after this slice: physical production ledger enablement/recovery evidence, exact accepted generic external capability identities, launch/result adapter, private-route return/wake adapter, and cross-origin physical E2E/restart/ambiguous-delivery evidence.
+- accepted: MimiSeek-repository-scoped durable job snapshots, immutable exact-result Git blob publication, revision/CAS fencing, bounded result-less outcome publication, and explicit ambiguous-publication reconciliation from PR #17;
+- still pending: physical production ledger enablement/recovery evidence, exact accepted generic external capability identities, launch/result adapter, private-route return/wake adapter, and cross-origin physical E2E/restart/ambiguous-delivery evidence.
 
 External prerequisites, verified rather than assumed:
 
@@ -133,6 +137,14 @@ Track R acceptance:
 - a review-job `PASS` grants neither consumer merge authority nor MimiSeek reviewer-promotion/distribution authority.
 
 Track R may operate before the first MimiSeek stable exists, but each job must explicitly bind the actual reviewer profile/source and the consumer's accepted policy authority. It must never invent a stable reviewer identity.
+
+## Accepted research inputs — non-authoritative
+
+Accepted PR #18 provides a unified semantic-reviewer architecture research plan covering context/capability exploration, planning/evidence indexing, structured findings, finding lifecycle, reusable defect knowledge, typed falsification, multi-pass orchestration, adaptive strategy, and evaluation. It deliberately selects no production reviewer-context/orchestration architecture.
+
+Accepted PR #23 adapts AREX/DisCo operating-knowledge ideas for MimiSeek research: `scope → ground → construct → verify`, exact per-source content provenance, independent verification, candidate-versus-active separation, progressive disclosure, staleness/refresh, and transactional activation/rollback. It also requires blind historical experiments to use a frozen pre-target evidence surface and requires mutable external sources to be bound to immutable revisions/snapshots/digests.
+
+These accepted research documents are inputs to later governed experiments, not stage completion or production authority. A first operating-skill prototype, if chosen, is an optional bounded research experiment in a separate PR; it is not a prerequisite that silently displaces the remaining Stage 1 or Track R work.
 
 ## Stage 2 — Consumer binding schema + evidence export contract
 
