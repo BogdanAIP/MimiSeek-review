@@ -16,6 +16,8 @@
 {"pattern_id":"DFP-0004","occurrence_id":"DFP-0004-O011","source_kind":"PROCESS_INCIDENT"}
 {"pattern_id":"DFP-0004","occurrence_id":"DFP-0004-O012","source_kind":"PROCESS_INCIDENT"}
 {"pattern_id":"DFP-0004","occurrence_id":"DFP-0004-O013","source_kind":"PROCESS_INCIDENT"}
+{"pattern_id":"DFP-0004","occurrence_id":"DFP-0004-O014","source_kind":"PROCESS_INCIDENT"}
+{"pattern_id":"DFP-0004","occurrence_id":"DFP-0004-O015","source_kind":"PROCESS_INCIDENT"}
 {"pattern_id":"DFP-0005","occurrence_id":"DFP-0005-O001","source_kind":"REVIEW_FINDING"}
 {"pattern_id":"DFP-0006","occurrence_id":"DFP-0006-O001","source_kind":"REVIEW_FINDING"}
 {"pattern_id":"DFP-0006","occurrence_id":"DFP-0006-O002","source_kind":"REVIEW_FINDING"}
