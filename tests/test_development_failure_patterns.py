@@ -119,7 +119,7 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         self.assertEqual(patterns[8]["failure_class"], "evidence.acceptance_head_merge_identity_conflation")
         self.assertEqual(patterns[8]["occurrences"][0]["evidence_locator"], "review_comment:3956260541")
         records = guard.load_adjudications(ROOT)
-        self.assertEqual(len(records), 13)
+        self.assertEqual(len(records), 16)
         for pattern in patterns:
             for occurrence in pattern["occurrences"]:
                 if occurrence["evidence_locator"].startswith("review_comment:"):
