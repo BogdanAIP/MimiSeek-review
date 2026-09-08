@@ -30,6 +30,22 @@ class FindingSupplementTests(unittest.TestCase):
             a.finding_manifest = original_finding
             a.supplement_manifest = original_supplement
 
+    def test_current_pr26_finding_supplement_is_configured(self) -> None:
+        ids = [spec[0] for spec in a.SUPPLEMENTS]
+        self.assertIn(5588130388, ids)
+
+    def test_process_issue_records_reads_every_configured_supplement(self) -> None:
+        original_specs = a.PROCESS_SUPPLEMENTS
+        original_supplement = a.process_issue_supplement_manifest
+        try:
+            a.PROCESS_SUPPLEMENTS = (("one",), ("two",))
+            a.process_issue_supplement_manifest = lambda get, spec: [{"source": spec[0]}]
+            rows = a.process_issue_records(lambda _: {})
+            self.assertEqual([row["source"] for row in rows], ["one", "two"])
+        finally:
+            a.PROCESS_SUPPLEMENTS = original_specs
+            a.process_issue_supplement_manifest = original_supplement
+
 
 if __name__ == "__main__":
     unittest.main()

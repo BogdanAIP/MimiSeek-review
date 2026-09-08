@@ -106,14 +106,20 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         guard.validate_schema_identity(ROOT)
         patterns = canonical_patterns()
         self.assertEqual([p["pattern_id"] for p in patterns], [f"DFP-{i:04d}" for i in range(1, 10)])
-        self.assertEqual(patterns[0]["repository_search"]["follow_up_refs"], ["https://github.com/BogdanAIP/MimiSeek-review/issues/22"])
+        self.assertEqual(patterns[0]["repository_search"]["status"], "COMPLETED")
+        self.assertEqual(patterns[0]["repository_search"]["follow_up_refs"], [])
+        self.assertEqual(patterns[0]["occurrences"][-1]["occurrence_id"], "DFP-0001-O003")
+        self.assertEqual(patterns[0]["occurrences"][-1]["prevention_failure_reason"], "GUARD_TOO_NARROW")
         self.assertEqual(patterns[2]["occurrences"][1]["relation"], "RELATED")
+        self.assertEqual(patterns[2]["occurrences"][-1]["occurrence_id"], "DFP-0003-O003")
+        self.assertEqual(patterns[2]["occurrences"][-1]["relation"], "REPEAT")
+        self.assertEqual(patterns[2]["occurrences"][-1]["prevention_failure_reason"], "GUARD_TOO_NARROW")
         self.assertEqual(patterns[5]["occurrences"][1]["relation"], "REPEAT")
         self.assertEqual(patterns[5]["occurrences"][1]["prevention_failure_reason"], "GUARD_TOO_NARROW")
         self.assertEqual(patterns[8]["failure_class"], "evidence.acceptance_head_merge_identity_conflation")
         self.assertEqual(patterns[8]["occurrences"][0]["evidence_locator"], "review_comment:3956260541")
         records = guard.load_adjudications(ROOT)
-        self.assertEqual(len(records), 11)
+        self.assertEqual(len(records), 16)
         for pattern in patterns:
             for occurrence in pattern["occurrences"]:
                 if occurrence["evidence_locator"].startswith("review_comment:"):
@@ -153,11 +159,11 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         records=adjudications(); tracked=guard.tracked_regular_files(ROOT)
         for ref in ("done later", "https://github.com/other/repo/issues/22", "https://github.com/BogdanAIP/MimiSeek-review/issues/0", "https://github.com/BogdanAIP/MimiSeek-review/issues/22?x=1"):
             with self.subTest(ref=ref):
-                p=seed(); p["repository_search"]["follow_up_refs"]=[ref]
+                p=seed(); p["repository_search"]["status"]="BOUNDED_FOLLOW_UP"; p["repository_search"]["follow_up_refs"]=[ref]
                 with self.assertRaisesRegex(guard.DevelopmentFailurePatternError, "exact MimiSeek issue URL or tracked regular file"):
                     guard.validate_pattern(p, ROOT, "p", tracked=tracked, adjudications=records)
         seen=[]
-        p=seed()
+        p=seed(); p["repository_search"]["status"]="BOUNDED_FOLLOW_UP"; p["repository_search"]["follow_up_refs"]=["https://github.com/BogdanAIP/MimiSeek-review/issues/22"]
         guard.validate_pattern(p, ROOT, "p", tracked=tracked, adjudications=records, issue_resolver=lambda n: seen.append(n))
         self.assertEqual(seen, [22])
         def missing(n: int) -> None:
@@ -173,7 +179,7 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
 
     def test_completed_bounded_unknown_and_retirement_consistency(self) -> None:
         records=adjudications(); tracked=guard.tracked_regular_files(ROOT)
-        p=seed(); p["repository_search"]["status"]="COMPLETED"
+        p=seed(); p["repository_search"]["follow_up_refs"]=["https://github.com/BogdanAIP/MimiSeek-review/issues/22"]
         with self.assertRaisesRegex(guard.DevelopmentFailurePatternError, "COMPLETED search must not retain follow_up_refs"):
             guard.validate_pattern(p, ROOT, "p", tracked=tracked, adjudications=records)
         p=seed(); p["occurrences"].append({"occurrence_id":"DFP-0001-O999","relation":"REPEAT","pr":21,"head_sha":"5be33a8d09534e412bc08ae752beba86f788cf57","evidence_locator":"review_comment:3942225446","prevention_failure_reason":"UNKNOWN_PENDING_ANALYSIS"})
@@ -259,7 +265,7 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
 
     def test_active_summary_is_bounded_not_answer_key(self) -> None:
         summary=guard.active_summary(seed())
-        self.assertEqual(summary["search_status"],"BOUNDED_FOLLOW_UP")
+        self.assertEqual(summary["search_status"],"COMPLETED")
         self.assertIn("pending_repeat_analysis",summary)
         self.assertNotIn("root_cause",summary); self.assertNotIn("occurrences",summary)
 
