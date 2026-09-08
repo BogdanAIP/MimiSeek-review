@@ -105,13 +105,13 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
     def test_registry_exact_seed_current_patterns_and_adjudications(self) -> None:
         guard.validate_schema_identity(ROOT)
         patterns = canonical_patterns()
-        self.assertEqual([p["pattern_id"] for p in patterns], [f"DFP-{i:04d}" for i in range(1, 7)])
+        self.assertEqual([p["pattern_id"] for p in patterns], [f"DFP-{i:04d}" for i in range(1, 9)])
         self.assertEqual(patterns[0]["repository_search"]["follow_up_refs"], ["https://github.com/BogdanAIP/MimiSeek-review/issues/22"])
         self.assertEqual(patterns[2]["occurrences"][1]["relation"], "RELATED")
         self.assertEqual(patterns[5]["occurrences"][1]["relation"], "REPEAT")
         self.assertEqual(patterns[5]["occurrences"][1]["prevention_failure_reason"], "GUARD_TOO_NARROW")
         records = guard.load_adjudications(ROOT)
-        self.assertEqual(len(records), 8)
+        self.assertEqual(len(records), 10)
         for pattern in patterns:
             for occurrence in pattern["occurrences"]:
                 if occurrence["evidence_locator"].startswith("review_comment:"):
