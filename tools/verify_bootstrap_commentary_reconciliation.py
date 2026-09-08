@@ -15,7 +15,8 @@ TOOLS_ROOT = Path(__file__).resolve().parent
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
-from collect_github_evidence import GitHubClient, build_snapshot, split_repository  # noqa: E402
+from collect_github_evidence import GitHubClient, build_snapshot as collect_build_snapshot, split_repository  # noqa: E402
+import verify_bootstrap_commentary_semantic_binding as semantic_binding  # noqa: E402
 
 SCHEMA_VERSION = "bootstrap_commentary_reconciliation_v1"
 AUTHORITY = "governed_reconciliation_of_authenticated_source_commentary"
@@ -92,6 +93,12 @@ SUPPORTED_ADDRESS_STATUS = "SUPPORTED_MATERIAL_ADDRESS_EVIDENCE"
 
 class CommentaryProvenanceError(RuntimeError):
     pass
+
+
+def build_snapshot(client: GitHubClient, repository: str, pr_number: int) -> dict[str, Any]:
+    snapshot = collect_build_snapshot(client, repository, pr_number)
+    semantic_binding.validate_snapshot(snapshot)
+    return snapshot
 
 
 def require_exact_shape(raw: Any, fields: set[str], label: str) -> dict[str, Any]:
