@@ -11,6 +11,7 @@ INDEX = "docs/EVIDENCE_INDEX.md"
 LEDGER = "data/development-finding-adjudications.jsonl"
 DFA_RE = re.compile(r"DFA-[0-9]{4}")
 DFA_RANGE_RE = re.compile(r"`?DFA-([0-9]{4})`?\s*\.\.\s*`?DFA-([0-9]{4})`?")
+HEAD_RE = re.compile(r"\bHEAD\s*:?\s*`([0-9a-f]{40})`", re.IGNORECASE)
 CHRONOLOGY_HEADING_RE = re.compile(r"^#{0,6}\s*Review/remediation chronology:?\s*$")
 NUMBERED_RE = re.compile(r"^[0-9]+\.\s")
 
@@ -50,15 +51,25 @@ def dfa_refs(text: str) -> list[str]:
     return DFA_RE.findall(DFA_RANGE_RE.sub(expand, text))
 
 
-def chronology_dfa_blocks(text: str) -> list[list[list[str]]]:
-    blocks: list[list[list[str]]] = []
-    current_block: list[list[str]] | None = None
+def head_refs(text: str) -> list[str]:
+    return HEAD_RE.findall(text)
+
+
+def chronology_blocks(text: str) -> list[list[dict[str, list[str]]]]:
+    blocks: list[list[dict[str, list[str]]]] = []
+    current_block: list[dict[str, list[str]]] | None = None
     current_event: list[str] | None = None
 
     def flush_event() -> None:
         nonlocal current_event
         if current_block is not None and current_event is not None:
-            current_block.append(dfa_refs("\n".join(current_event)))
+            event_text = "\n".join(current_event)
+            current_block.append(
+                {
+                    "dfa": dfa_refs(event_text),
+                    "heads": head_refs(event_text),
+                }
+            )
         current_event = None
 
     def flush_block() -> None:
@@ -166,38 +177,67 @@ def is_ancestor(pr: int, older: str, newer: str) -> bool:
     )
 
 
-def assert_dfa_order(events: list[list[str]], records: dict[str, dict]) -> None:
-    last_by_pr: dict[int, tuple[str, str]] = {}
-    seen: set[str] = set()
-    for refs in events:
-        for aid in refs:
-            if aid in seen:
-                continue
-            seen.add(aid)
+def assert_chronology_order(events: list[dict[str, list[str]]], records: dict[str, dict]) -> None:
+    source_prs: set[int] = set()
+    for event in events:
+        for aid in event["dfa"]:
             if aid not in records:
                 raise AssertionError(f"EVIDENCE_INDEX chronology references unknown adjudication {aid}")
-            row = records[aid]
-            pr = row["pr"]
-            head = row["head_sha"]
-            previous = last_by_pr.get(pr)
-            if previous is not None:
-                previous_aid, previous_head = previous
-                if not is_ancestor(pr, previous_head, head):
+            source_prs.add(records[aid]["pr"])
+
+    if not source_prs:
+        return
+
+    seen_dfa: set[str] = set()
+    last_by_pr: dict[int, tuple[str, str]] = {}
+
+    for event_number, event in enumerate(events, 1):
+        event_prs = {records[aid]["pr"] for aid in event["dfa"] if aid in records}
+
+        for pr in sorted(source_prs):
+            heads: list[tuple[str, str]] = []
+
+            if event["heads"]:
+                if len(source_prs) == 1 or event_prs == {pr}:
+                    for head in event["heads"]:
+                        heads.append((f"event-{event_number}-HEAD", head))
+                elif not event_prs:
                     raise AssertionError(
-                        f"chronology reverses source PR #{pr}: {previous_aid}@{previous_head} "
-                        f"is not an ancestor of {aid}@{head}"
+                        f"chronology block has ambiguous explicit HEAD event {event_number} "
+                        f"across source PRs {sorted(source_prs)}"
                     )
-            last_by_pr[pr] = (aid, head)
+
+            for aid in event["dfa"]:
+                if aid in seen_dfa:
+                    continue
+                row = records[aid]
+                if row["pr"] == pr:
+                    head = row["head_sha"]
+                    if all(existing_head != head for _, existing_head in heads):
+                        heads.append((aid, head))
+
+            for label, head in heads:
+                previous = last_by_pr.get(pr)
+                if previous is not None:
+                    previous_label, previous_head = previous
+                    if not is_ancestor(pr, previous_head, head):
+                        raise AssertionError(
+                            f"chronology reverses source PR #{pr}: "
+                            f"{previous_label}@{previous_head} is not an ancestor of {label}@{head}"
+                        )
+                last_by_pr[pr] = (label, head)
+
+        seen_dfa.update(event["dfa"])
 
 
 class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
-    def test_canonical_dfa_chronology_follows_source_git_order(self) -> None:
+    def test_canonical_chronology_follows_source_git_order(self) -> None:
         records = ledger_by_id()
-        blocks = chronology_dfa_blocks(git_text(INDEX))
-        dfa_blocks = [events for events in blocks if any(events)]
-        self.assertTrue(dfa_blocks, "expected at least one DFA reference in canonical chronology")
-        for events in dfa_blocks:
-            assert_dfa_order(events, records)
+        blocks = chronology_blocks(git_text(INDEX))
+        governed_blocks = [events for events in blocks if any(event["dfa"] for event in events)]
+        self.assertTrue(governed_blocks, "expected at least one DFA reference in canonical chronology")
+        for events in governed_blocks:
+            assert_chronology_order(events, records)
 
     def test_compact_range_expands_every_adjudication(self) -> None:
         self.assertEqual(
@@ -205,16 +245,44 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
             ["DFA-0014", "DFA-0015", "DFA-0016"],
         )
 
+    def test_continuation_lines_are_part_of_numbered_event(self) -> None:
+        blocks = chronology_blocks(
+            "Review/remediation chronology:\n"
+            "\n"
+            "1. Review completed.\n"
+            "   - finding: `DFA-0014`\n"
+            "2. Later event `DFA-0012`.\n"
+            "\n"
+            "# next\n"
+        )
+        self.assertEqual(blocks[0][0]["dfa"], ["DFA-0014"])
+        self.assertEqual(blocks[0][1]["dfa"], ["DFA-0012"])
+
     def test_repeated_summary_refs_do_not_create_new_events(self) -> None:
         records = ledger_by_id()
-        assert_dfa_order(
+        assert_chronology_order(
             [
-                ["DFA-0014"],
-                ["DFA-0012", "DFA-0013"],
-                ["DFA-0015", "DFA-0016", "DFA-0014", "DFA-0015", "DFA-0016"],
+                {"dfa": ["DFA-0014"], "heads": []},
+                {"dfa": ["DFA-0012", "DFA-0013"], "heads": []},
+                {
+                    "dfa": ["DFA-0015", "DFA-0016", "DFA-0014", "DFA-0015", "DFA-0016"],
+                    "heads": [],
+                },
             ],
             records,
         )
+
+    def test_head_only_descendant_then_older_finding_is_rejected(self) -> None:
+        records = ledger_by_id()
+        descendant = records["DFA-0012"]["head_sha"]
+        with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
+            assert_chronology_order(
+                [
+                    {"dfa": [], "heads": [descendant]},
+                    {"dfa": ["DFA-0014"], "heads": []},
+                ],
+                records,
+            )
 
     def test_reverse_ancestor_order_is_rejected(self) -> None:
         records = ledger_by_id()
@@ -226,7 +294,13 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
             )
         )
         with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
-            assert_dfa_order([["DFA-0012"], ["DFA-0014"]], records)
+            assert_chronology_order(
+                [
+                    {"dfa": ["DFA-0012"], "heads": []},
+                    {"dfa": ["DFA-0014"], "heads": []},
+                ],
+                records,
+            )
 
 
 if __name__ == "__main__":
