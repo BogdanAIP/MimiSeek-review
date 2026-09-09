@@ -21,6 +21,7 @@ TOKEN_RE = re.compile(
 )
 CHRONOLOGY_HEADING_RE = re.compile(r"^#{0,6}\s*Review/remediation chronology:?\s*$")
 NUMBERED_RE = re.compile(r"^[0-9]+\.\s")
+_SOURCE_PR_HEADS: dict[int, str] = {}
 
 
 def git_text(path: str) -> str:
@@ -118,10 +119,24 @@ def commit_available(sha: str) -> bool:
     ).returncode == 0
 
 
-def ensure_source_history(pr: int, *shas: str) -> None:
-    if all(commit_available(sha) for sha in shas):
-        return
+def _git_is_ancestor(older: str, newer: str) -> bool:
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", older, newer],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    raise AssertionError(
+        f"git ancestry check failed for {older} -> {newer}: "
+        + result.stderr.decode(errors="replace")
+    )
 
+
+def ensure_source_history(pr: int, *shas: str) -> None:
     shallow = subprocess.run(
         ["git", "rev-parse", "--is-shallow-repository"],
         cwd=ROOT,
@@ -143,7 +158,8 @@ def ensure_source_history(pr: int, *shas: str) -> None:
                 + result.stderr.decode(errors="replace")
             )
 
-    if not all(commit_available(sha) for sha in shas):
+    source_ref = f"refs/remotes/origin/mimiseek-chronology-pr-{pr}"
+    if pr not in _SOURCE_PR_HEADS:
         result = subprocess.run(
             [
                 "git",
@@ -151,7 +167,7 @@ def ensure_source_history(pr: int, *shas: str) -> None:
                 "--quiet",
                 "--no-tags",
                 "origin",
-                f"+refs/pull/{pr}/head:refs/remotes/origin/mimiseek-chronology-pr-{pr}",
+                f"+refs/pull/{pr}/head:{source_ref}",
             ],
             cwd=ROOT,
             stdout=subprocess.PIPE,
@@ -159,9 +175,20 @@ def ensure_source_history(pr: int, *shas: str) -> None:
         )
         if result.returncode != 0:
             raise AssertionError(
-                f"cannot fetch exact source PR #{pr} history for chronology ancestry: "
+                f"cannot fetch exact source PR #{pr} head for chronology provenance: "
                 + result.stderr.decode(errors="replace")
             )
+        source_head = subprocess.run(
+            ["git", "rev-parse", "--verify", source_ref],
+            cwd=ROOT,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        ).stdout.strip()
+        if not re.fullmatch(r"[0-9a-f]{40}", source_head):
+            raise AssertionError(f"source PR #{pr} head ref did not resolve to an exact commit")
+        _SOURCE_PR_HEADS[pr] = source_head
 
     missing = [sha for sha in shas if not commit_available(sha)]
     if missing:
@@ -170,22 +197,14 @@ def ensure_source_history(pr: int, *shas: str) -> None:
         )
 
 
+def source_pr_contains(pr: int, sha: str) -> bool:
+    ensure_source_history(pr, sha)
+    return _git_is_ancestor(sha, _SOURCE_PR_HEADS[pr])
+
+
 def is_ancestor(pr: int, older: str, newer: str) -> bool:
     ensure_source_history(pr, older, newer)
-    result = subprocess.run(
-        ["git", "merge-base", "--is-ancestor", older, newer],
-        cwd=ROOT,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    if result.returncode == 0:
-        return True
-    if result.returncode == 1:
-        return False
-    raise AssertionError(
-        f"git ancestry check failed for PR #{pr} {older} -> {newer}: "
-        + result.stderr.decode(errors="replace")
-    )
+    return _git_is_ancestor(older, newer)
 
 
 def assert_chronology_order(events: list[list[tuple[str, str]]], records: dict[str, dict]) -> None:
@@ -232,6 +251,11 @@ def assert_chronology_order(events: list[list[tuple[str, str]]], records: dict[s
                     )
                 label = f"event-{event_number}-HEAD"
                 head = value
+                if not source_pr_contains(pr, head):
+                    raise AssertionError(
+                        f"explicit HEAD {head} is not reachable from source PR #{pr} head "
+                        f"{_SOURCE_PR_HEADS[pr]}"
+                    )
 
             previous = last_by_pr.get(pr)
             if previous is not None:
@@ -310,6 +334,28 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
                 [
                     [("HEAD", descendant)],
                     [("DFA", "DFA-0014")],
+                ],
+                records,
+            )
+
+    def test_explicit_head_outside_source_pr_is_rejected(self) -> None:
+        records = ledger_by_id()
+        older = records["DFA-0014"]["head_sha"]
+        foreign_descendant = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        ).stdout.strip()
+        ensure_source_history(26, older, foreign_descendant)
+        self.assertTrue(_git_is_ancestor(older, foreign_descendant))
+        with self.assertRaisesRegex(AssertionError, "not reachable from source PR #26 head"):
+            assert_chronology_order(
+                [
+                    [("DFA", "DFA-0014")],
+                    [("HEAD", foreign_descendant)],
                 ],
                 records,
             )
