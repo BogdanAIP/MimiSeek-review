@@ -112,7 +112,8 @@ def source_review(r,get):
  if p.get('id')!=int(m.group(1)) or not str(p.get('pull_request_url','')).endswith(f"/repos/{REPO}/pulls/{r.get('pr')}"): raise E('source review repo/PR differs')
  if p.get('original_commit_id')!=r.get('head_sha'): raise E('source review original commit differs')
  if (p.get('user') or {}).get('login')!=r.get('source_author_login') or p.get('updated_at')!=r.get('source_updated_at'): raise E('source review actor/update differs')
- if not isinstance(body,str) or h(body)!=r.get('source_body_sha256'): raise E('source review body digest differs')
+ live=h(body) if isinstance(body,str) else None; expected=r.get('source_body_sha256')
+ if live!=expected: raise E(f"{r.get('adjudication_id')}: source review body digest differs: expected={expected} live={live}")
 def sources(rows):
  out={}
  for r in rows:
