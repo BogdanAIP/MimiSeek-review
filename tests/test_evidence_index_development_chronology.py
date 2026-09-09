@@ -100,7 +100,10 @@ def chronology_blocks(text: str) -> list[list[list[tuple[str, str]]]]:
             flush_event()
             current_event = [stripped]
         elif current_event is not None:
-            current_event.append(stripped)
+            if not stripped or line[:1].isspace():
+                current_event.append(stripped)
+            else:
+                flush_block()
 
     flush_block()
     return blocks
@@ -270,6 +273,17 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
         )
         self.assertEqual(blocks[0][0], [("DFA", "DFA-0014")])
         self.assertEqual(blocks[0][1], [("DFA", "DFA-0012")])
+
+    def test_top_level_prose_ends_numbered_chronology(self) -> None:
+        records = ledger_by_id()
+        older = records["DFA-0014"]["head_sha"]
+        blocks = chronology_blocks(
+            "Review/remediation chronology:\n\n"
+            "1. Review completed `DFA-0012`.\n\n"
+            f"Trailing note about older exact HEAD `{older}` must not belong to the list.\n\n"
+            "# next\n"
+        )
+        self.assertEqual(blocks, [[[("DFA", "DFA-0012")]]])
 
     def test_repeated_summary_refs_do_not_create_new_events(self) -> None:
         records = ledger_by_id()
