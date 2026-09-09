@@ -121,7 +121,7 @@ class DevelopmentFailurePatternTests(unittest.TestCase):
         self.assertEqual(patterns[9]["failure_class"], "evidence.acceptance_chronology_not_git_ordered")
         self.assertEqual(patterns[9]["occurrences"][0]["evidence_locator"], "review_comment:3964918481")
         records = guard.load_adjudications(ROOT)
-        self.assertEqual(len(records), 17)
+        self.assertEqual(len(records), 20)
         for pattern in patterns:
             for occurrence in pattern["occurrences"]:
                 if occurrence["evidence_locator"].startswith("review_comment:"):
