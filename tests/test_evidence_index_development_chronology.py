@@ -53,7 +53,67 @@ def chronology_dfa_ids(text: str) -> list[str]:
     return ids
 
 
-def is_ancestor(older: str, newer: str) -> bool:
+def commit_available(sha: str) -> bool:
+    return subprocess.run(
+        ["git", "cat-file", "-e", f"{sha}^{{commit}}"],
+        cwd=ROOT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    ).returncode == 0
+
+
+def ensure_source_history(pr: int, *shas: str) -> None:
+    if all(commit_available(sha) for sha in shas):
+        return
+
+    shallow = subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],
+        cwd=ROOT,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    ).stdout.strip()
+    if shallow == "true":
+        result = subprocess.run(
+            ["git", "fetch", "--quiet", "--no-tags", "--unshallow", "origin", "main"],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if result.returncode != 0:
+            raise AssertionError(
+                "cannot unshallow canonical main for chronology ancestry: "
+                + result.stderr.decode(errors="replace")
+            )
+
+    if not all(commit_available(sha) for sha in shas):
+        result = subprocess.run(
+            [
+                "git",
+                "fetch",
+                "--quiet",
+                "--no-tags",
+                "origin",
+                f"+refs/pull/{pr}/head:refs/remotes/origin/mimiseek-chronology-pr-{pr}",
+            ],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if result.returncode != 0:
+            raise AssertionError(
+                f"cannot fetch exact source PR #{pr} history for chronology ancestry: "
+                + result.stderr.decode(errors="replace")
+            )
+
+    missing = [sha for sha in shas if not commit_available(sha)]
+    if missing:
+        raise AssertionError(f"source PR #{pr} chronology commits are unavailable after exact history fetch: {missing}")
+
+
+def is_ancestor(pr: int, older: str, newer: str) -> bool:
+    ensure_source_history(pr, older, newer)
     result = subprocess.run(
         ["git", "merge-base", "--is-ancestor", older, newer],
         cwd=ROOT,
@@ -65,7 +125,7 @@ def is_ancestor(older: str, newer: str) -> bool:
     if result.returncode == 1:
         return False
     raise AssertionError(
-        f"git ancestry check failed for {older} -> {newer}: "
+        f"git ancestry check failed for PR #{pr} {older} -> {newer}: "
         + result.stderr.decode(errors="replace")
     )
 
@@ -81,7 +141,7 @@ def assert_dfa_order(ids: list[str], records: dict[str, dict]) -> None:
         previous = last_by_pr.get(pr)
         if previous is not None:
             previous_aid, previous_head = previous
-            if not is_ancestor(previous_head, head):
+            if not is_ancestor(pr, previous_head, head):
                 raise AssertionError(
                     f"chronology reverses source PR #{pr}: {previous_aid}@{previous_head} "
                     f"is not an ancestor of {aid}@{head}"
@@ -98,7 +158,13 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
 
     def test_reverse_ancestor_order_is_rejected(self) -> None:
         records = ledger_by_id()
-        self.assertTrue(is_ancestor(records["DFA-0014"]["head_sha"], records["DFA-0012"]["head_sha"]))
+        self.assertTrue(
+            is_ancestor(
+                26,
+                records["DFA-0014"]["head_sha"],
+                records["DFA-0012"]["head_sha"],
+            )
+        )
         with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
             assert_dfa_order(["DFA-0012", "DFA-0014"], records)
 
