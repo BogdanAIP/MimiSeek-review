@@ -518,6 +518,52 @@ Review/remediation chronology:
 1. Prior exact HEAD `a6a79485db9caac3cf68a6a9049a0a6ef9cd1c26` received one P1 finding because the verifier authenticated selected comment identities but did not bind their semantic bodies.
 2. Final HEAD `34d964d47328ca89c81d66f04cce67a99eff06c0` replaced token-only semantics with exact body/update bindings and negative edited/swapped/negating regressions; CI `33972038089` passed and terminal PASS was persisted in comment `5554129428` before merge.
 
+### Accepted bootstrap commentary semantic-binding hardening — PR #26
+
+PR #26 — `Stage 1: harden bootstrap commentary semantic bindings` closed the bounded DFP-0001 / issue #22 hardening work for the accepted F050-F061 bootstrap-commentary family without claiming that the overall Stage 1 commentary corpus is complete.
+
+Acceptance identity:
+
+- BASE: `5ca7c001f18a698440c2e9635a873088a58d1b16`
+- accepted exact PR HEAD: `8cb7d24ce18042227ebf6e9b4acbdcdb6b947922`
+- `review_policy_ref`: `5ca7c001f18a698440c2e9635a873088a58d1b16`
+- changed files: `10`
+- reviewer: `ChatGPT/GPT-5.6-Sol`
+- review context: `ordinary_chat_fresh`
+- review mode: `read_only`
+- terminal review validity: `CURRENT`
+- terminal review status: `PASS`
+- material actionable findings: `0`
+- findings: `NONE`
+- durable GitHub terminal-result comment id: `5590931370`
+- exact-head Development Finding Authority run: `34266209204` (#30) — `PASS`
+- exact-head CI run: `34266209237` (CI #213) — `PASS`
+- merge commit on `main`: `3abc1a03f69e08faab792e308593decdaa59ed8b`
+
+No review timestamp is recorded here because the received terminal `REVIEW_RESULT_V1` did not provide one; the later GitHub comment timestamp is publication evidence, not a manufactured reviewer timestamp.
+
+Accepted PR #26 establishes:
+
+- one shared fail-closed semantic-binding layer for the accepted claim-bearing bootstrap-commentary surfaces used by F050-F061 reconciliation;
+- independent required-family inventory using exact `(role, repository, pr, surface, comment_id)` identity before target filtering, so a mistyped repository/PR/surface/role/comment cannot silently disappear and a required accepted target cannot succeed with zero selected bindings;
+- 18 direct semantic-binding records plus 4 delegated F055/F056 records = 22 effective claim-bearing bindings;
+- exact actor, `updated_at`, unnormalized UTF-8 body SHA-256, and applicable review-thread / `original_commit_id` checks before bounded reconciliation consumes the commentary;
+- F055/F056 delegation to the already accepted authority/exact-head-CI reconciliation owner rather than duplicating those mutable evidence facts in a second canonical record;
+- the exact F052 clean-result binding for CAP PR #129 issue comment `5455644288`, including body SHA-256 `08c3572354baf08e273f20cfa83d3aae19cbdbb4b74d7ad8e3321e84414c8dd9`;
+- DFP-0001 `repository_search.status=COMPLETED` and closure of durable follow-up issue #22 after terminal acceptance and merge.
+
+PR #26 does **not** assert global source-commentary reconciliation complete. Other material source-commentary/disposition assertions remain pending before baseline derivation. It also does not resolve DFP-0004: issue #24 remains an active `BOUNDED_FOLLOW_UP` for `workflow.noop_head_mutation` prevention.
+
+Review/remediation chronology:
+
+1. The first final-looking exact HEAD `7058c8ed84f48ac7e3192e41af55ee9f838a665a` passed then-current hosted gates but fresh independent review found the same DFP-0001 mechanism could still bypass binding through repository/PR tuple drift and Codex also found duplicate F055/F056 canonical evidence ownership. These became `DFA-0012` / `DFP-0001-O003` and `DFA-0013` / `DFP-0003-O003`, both `REPEAT / GUARD_TOO_NARROW`, and the prior gates became stale when HEAD moved.
+2. Later inline findings `3958213154`, `3960993298`, and `3960993308` were confirmed as `DFA-0014`..`DFA-0016` and remediated as CI/test-maintenance defects without inventing new durable failure-pattern identities where no new mechanism was established. External adjudication authority is bound by PR #21 supplement `5590210857`.
+3. During development, DFP-0004 process occurrences O008-O015 were recorded as `REPEAT / GUARD_TOO_NARROW`; the final accepted tree contains none of the accidental `dummy`, `NO_SUCH_FILE`, or `THIS_SHOULD_NOT_EXIST` paths, and issue #24 intentionally remains open.
+4. Final exact HEAD `8cb7d24ce18042227ebf6e9b4acbdcdb6b947922` passed Development Finding Authority #30 (`34266209204`) and CI #213 (`34266209237`), including registry validation, unit, canonical-ref-boundary, and the complete bootstrap provenance/commentary reconciliation job. All five actionable inline review threads were resolved before terminal acceptance.
+5. Fresh independent ordinary-Chat review returned `PASS` with zero material actionable findings for exact HEAD `8cb7d24ce18042227ebf6e9b4acbdcdb6b947922`. The result was persisted before merge as top-level PR comment `5590931370` without moving the reviewed HEAD.
+
+The merge used `expected_head_sha=8cb7d24ce18042227ebf6e9b4acbdcdb6b947922` and separately produced merge commit `3abc1a03f69e08faab792e308593decdaa59ed8b`. Durable issue #22 was then closed as `completed`; issue #24 remains open.
+
 Stage 1 continues under the normal accepted-BASE repository-development review policy. PR #1's no-policy bootstrap exception is no longer available. Material source commentary remains only partially reconciled; other material commentary/disposition assertions remain pending, reviewer-policy refs and generic/project-specific classification remain unresolved, and no baseline seed exists.
 
 ## Track R — Independent review-job coordination
