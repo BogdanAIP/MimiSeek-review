@@ -34,6 +34,10 @@ class FindingSupplementTests(unittest.TestCase):
         ids = [spec[0] for spec in a.SUPPLEMENTS]
         self.assertIn(5588130388, ids)
 
+    def test_current_pr27_finding_supplement_is_configured(self) -> None:
+        ids = [spec[0] for spec in a.SUPPLEMENTS]
+        self.assertIn(5597570658, ids)
+
     def test_process_issue_records_reads_every_configured_supplement(self) -> None:
         original_specs = a.PROCESS_SUPPLEMENTS
         original_supplement = a.process_issue_supplement_manifest
