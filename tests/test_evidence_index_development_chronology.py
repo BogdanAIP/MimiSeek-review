@@ -19,7 +19,10 @@ TOKEN_RE = re.compile(
     r"|(?P<head>\bHEAD\s*:?\s*`(?P<sha>[0-9a-f]{40})`)",
     re.IGNORECASE,
 )
-CHRONOLOGY_HEADING_RE = re.compile(r"^#{0,6}\s*Review/remediation chronology:?\s*$")
+CHRONOLOGY_HEADING_RE = re.compile(
+    r"^#{0,6}\s*(?:PR\s+#[1-9][0-9]*\s+)?review/remediation chronology:?\s*$",
+    re.IGNORECASE,
+)
 NUMBERED_RE = re.compile(r"^[0-9]+\.\s")
 _SOURCE_PR_HEADS: dict[int, str] = {}
 
@@ -286,6 +289,17 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
             dfa_refs("`DFA-0014`..`DFA-0016`"),
             ["DFA-0014", "DFA-0015", "DFA-0016"],
         )
+
+    def test_prefixed_chronology_heading_is_governed(self) -> None:
+        records = ledger_by_id()
+        blocks = chronology_blocks(
+            "#### PR #26 review/remediation chronology\n\n"
+            "1. Later finding `DFA-0012`.\n"
+            "2. Older finding `DFA-0014`.\n"
+        )
+        self.assertEqual(len(blocks), 1)
+        with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
+            assert_chronology_order(blocks[0], records)
 
     def test_continuation_lines_are_part_of_numbered_event(self) -> None:
         blocks = chronology_blocks(
