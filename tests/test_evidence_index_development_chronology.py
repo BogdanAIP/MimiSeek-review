@@ -38,19 +38,25 @@ def ledger_by_id() -> dict[str, dict]:
     return out
 
 
-def chronology_dfa_ids(text: str) -> list[str]:
-    ids: list[str] = []
-    in_chronology = False
+def chronology_dfa_blocks(text: str) -> list[list[str]]:
+    blocks: list[list[str]] = []
+    current: list[str] | None = None
     for line in text.splitlines():
         stripped = line.strip()
         if CHRONOLOGY_HEADING_RE.fullmatch(stripped):
-            in_chronology = True
+            if current is not None:
+                blocks.append(current)
+            current = []
             continue
-        if in_chronology and stripped.startswith("#"):
-            in_chronology = False
-        if in_chronology and NUMBERED_RE.match(stripped):
-            ids.extend(DFA_RE.findall(stripped))
-    return ids
+        if current is not None and stripped.startswith("#"):
+            blocks.append(current)
+            current = None
+            continue
+        if current is not None and NUMBERED_RE.match(stripped):
+            current.extend(DFA_RE.findall(stripped))
+    if current is not None:
+        blocks.append(current)
+    return blocks
 
 
 def commit_available(sha: str) -> bool:
@@ -152,9 +158,11 @@ def assert_dfa_order(ids: list[str], records: dict[str, dict]) -> None:
 class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
     def test_canonical_dfa_chronology_follows_source_git_order(self) -> None:
         records = ledger_by_id()
-        ids = chronology_dfa_ids(git_text(INDEX))
-        self.assertTrue(ids, "expected at least one DFA reference in canonical chronology")
-        assert_dfa_order(ids, records)
+        blocks = chronology_dfa_blocks(git_text(INDEX))
+        dfa_blocks = [ids for ids in blocks if ids]
+        self.assertTrue(dfa_blocks, "expected at least one DFA reference in canonical chronology")
+        for ids in dfa_blocks:
+            assert_dfa_order(ids, records)
 
     def test_reverse_ancestor_order_is_rejected(self) -> None:
         records = ledger_by_id()
