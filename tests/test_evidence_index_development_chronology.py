@@ -71,17 +71,44 @@ def visible_markdown_lines(text: str) -> list[str]:
     visible: list[str] = []
     fence_char: str | None = None
     fence_len = 0
+    in_html_comment = False
 
-    for line in text.splitlines():
+    for raw_line in text.splitlines():
         if fence_char is not None:
-            candidate = line.lstrip(" ")
-            indent = len(line) - len(candidate)
+            candidate = raw_line.lstrip(" ")
+            indent = len(raw_line) - len(candidate)
             if indent <= 3 and re.fullmatch(
                 rf"{re.escape(fence_char)}{{{fence_len},}}[ \t]*",
                 candidate,
             ):
                 fence_char = None
                 fence_len = 0
+            continue
+
+        line = raw_line
+        rendered: list[str] = []
+        cursor = 0
+        while cursor < len(line):
+            if in_html_comment:
+                end = line.find("-->", cursor)
+                if end < 0:
+                    cursor = len(line)
+                    break
+                in_html_comment = False
+                cursor = end + 3
+                continue
+
+            start = line.find("<!--", cursor)
+            if start < 0:
+                rendered.append(line[cursor:])
+                cursor = len(line)
+                break
+            rendered.append(line[cursor:start])
+            in_html_comment = True
+            cursor = start + 4
+
+        line = "".join(rendered)
+        if not line and in_html_comment:
             continue
 
         match = FENCE_OPEN_RE.fullmatch(line)
@@ -100,10 +127,16 @@ def visible_markdown_lines(text: str) -> list[str]:
     return visible
 
 
+def top_level_indented_code(line: str) -> bool:
+    return line.startswith("\t") or line.startswith("    ")
+
+
 def accepted_pr_heads(text: str) -> dict[int, str]:
     heads: dict[int, str] = {}
     current_pr: int | None = None
     for line in visible_markdown_lines(text):
+        if top_level_indented_code(line):
+            continue
         stripped = line.strip()
         context = PR_CONTEXT_RE.fullmatch(stripped)
         if context is not None:
@@ -169,17 +202,18 @@ def chronology_blocks(text: str) -> list[list[list[tuple[str, str]]]]:
         current_block = None
 
     for line in visible_markdown_lines(text):
+        indented_code = top_level_indented_code(line)
         stripped = line.strip()
-        if CHRONOLOGY_HEADING_RE.fullmatch(stripped):
+        if not indented_code and CHRONOLOGY_HEADING_RE.fullmatch(stripped):
             flush_block()
             current_block = []
             continue
-        if current_block is not None and stripped.startswith("#"):
+        if current_block is not None and not indented_code and stripped.startswith("#"):
             flush_block()
             continue
         if current_block is None:
             continue
-        if NUMBERED_RE.match(stripped):
+        if not indented_code and NUMBERED_RE.match(stripped):
             flush_event()
             current_event = [stripped]
         elif current_event is not None:
@@ -423,6 +457,46 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
                 )
                 self.assertEqual(accepted_pr_heads(text), {26: accepted})
 
+    def test_html_commented_chronology_examples_are_ignored(self) -> None:
+        text = (
+            "<!--\n"
+            "Review/remediation chronology:\n"
+            "1. Example `DFA-9999`.\n"
+            "-->\n"
+        )
+        self.assertEqual(chronology_blocks(text), [])
+
+    def test_html_commented_accepted_heads_are_ignored(self) -> None:
+        accepted = "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
+        fake = "f" * 40
+        text = (
+            "<!--\n"
+            "PR #26 — `example only`\n"
+            f"- accepted exact PR HEAD: `{fake}`\n"
+            "-->\n"
+            "PR #26 — `Stage 1: harden bootstrap commentary semantic bindings`\n"
+            f"- accepted exact PR HEAD: `{accepted}`\n"
+        )
+        self.assertEqual(accepted_pr_heads(text), {26: accepted})
+
+    def test_top_level_indented_code_examples_are_ignored(self) -> None:
+        text = (
+            "    Review/remediation chronology:\n"
+            "    1. Example `DFA-9999`.\n"
+        )
+        self.assertEqual(chronology_blocks(text), [])
+
+    def test_top_level_indented_accepted_heads_are_ignored(self) -> None:
+        accepted = "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
+        fake = "f" * 40
+        text = (
+            "    PR #26 — `example only`\n"
+            f"    - accepted exact PR HEAD: `{fake}`\n"
+            "PR #26 — `Stage 1: harden bootstrap commentary semantic bindings`\n"
+            f"- accepted exact PR HEAD: `{accepted}`\n"
+        )
+        self.assertEqual(accepted_pr_heads(text), {26: accepted})
+
     def test_acceptance_context_with_title_is_parsed(self) -> None:
         text = (
             "PR #26 — `Stage 1: harden bootstrap commentary semantic bindings`\n"
@@ -446,6 +520,17 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
             "Review/remediation chronology:\n\n"
             "1. Review completed.\n"
             "   - finding: `DFA-0014`\n"
+            "2. Later event `DFA-0012`.\n\n"
+            "# next\n"
+        )
+        self.assertEqual(blocks[0][0], [("DFA", "DFA-0014")])
+        self.assertEqual(blocks[0][1], [("DFA", "DFA-0012")])
+
+    def test_four_space_continuation_is_part_of_numbered_event(self) -> None:
+        blocks = chronology_blocks(
+            "Review/remediation chronology:\n\n"
+            "1. Review completed.\n"
+            "    - finding: `DFA-0014`\n"
             "2. Later event `DFA-0012`.\n\n"
             "# next\n"
         )
