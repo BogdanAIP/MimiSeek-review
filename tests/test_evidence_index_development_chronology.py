@@ -31,7 +31,7 @@ NUMBERED_RE = re.compile(r"^[0-9]{1,9}[.)][ \t]{1,4}(?=\S)")
 PR_CONTEXT_RE = re.compile(
     r"^(?:"
     r"#{1,6}[ \t]+.*?\bPR[ \t]+#(?P<heading>[1-9][0-9]*)\b.*"
-    r"|(?:[-*][ \t]+)?PR[ \t]+#(?P<body>[1-9][0-9]*)[ \t]+—"
+    r"|(?:[-*][ \t]+)?PR[ \t]+#(?P<body>[1-9][0-9]*)[ \t]+—.*"
     r")$",
     re.IGNORECASE,
 )
@@ -354,6 +354,17 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
         self.assertEqual(len(blocks), 1)
         with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
             assert_chronology_order(blocks[0], records)
+
+    def test_acceptance_context_with_title_is_parsed(self) -> None:
+        text = (
+            "PR #26 — `Stage 1: harden bootstrap commentary semantic bindings`\n"
+            "\nAcceptance identity:\n\n"
+            "- accepted exact PR HEAD: `8cb7d24ce18042227ebf6e9b4acbdcdb6b947922`\n"
+        )
+        self.assertEqual(
+            accepted_pr_heads(text),
+            {26: "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"},
+        )
 
     def test_source_pr_membership_uses_immutable_accepted_head(self) -> None:
         self.assertEqual(
