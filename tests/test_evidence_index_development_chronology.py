@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import re
 import subprocess
@@ -20,10 +21,24 @@ TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 CHRONOLOGY_HEADING_RE = re.compile(
-    r"^#{0,6}\s*(?:PR\s+#[1-9][0-9]*\s+)?review/remediation chronology:?\s*$",
+    r"^(?:"
+    r"#{1,6}[ \t]+(?:PR[ \t]+#[1-9][0-9]*[ \t]+)?review/remediation chronology:?(?:[ \t]+#+)?"
+    r"|(?:PR[ \t]+#[1-9][0-9]*[ \t]+)?review/remediation chronology:?"
+    r")[ \t]*$",
     re.IGNORECASE,
 )
-NUMBERED_RE = re.compile(r"^[0-9]+\.\s")
+NUMBERED_RE = re.compile(r"^[0-9]{1,9}[.)][ \t]{1,4}(?=\S)")
+PR_CONTEXT_RE = re.compile(
+    r"^(?:"
+    r"#{1,6}[ \t]+.*?\bPR[ \t]+#(?P<heading>[1-9][0-9]*)\b.*"
+    r"|(?:[-*][ \t]+)?PR[ \t]+#(?P<body>[1-9][0-9]*)[ \t]+—"
+    r")$",
+    re.IGNORECASE,
+)
+ACCEPTED_HEAD_RE = re.compile(
+    r"^-[ \t]+accepted exact PR HEAD:[ \t]*`(?P<head>[0-9a-f]{40})`[ \t]*$",
+    re.IGNORECASE,
+)
 _SOURCE_PR_HEADS: dict[int, str] = {}
 
 
@@ -49,6 +64,36 @@ def ledger_by_id() -> dict[str, dict]:
             raise AssertionError(f"duplicate adjudication id: {aid}")
         out[aid] = row
     return out
+
+
+def accepted_pr_heads(text: str) -> dict[int, str]:
+    heads: dict[int, str] = {}
+    current_pr: int | None = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        context = PR_CONTEXT_RE.fullmatch(stripped)
+        if context is not None:
+            current_pr = int(context.group("heading") or context.group("body"))
+            continue
+        accepted = ACCEPTED_HEAD_RE.fullmatch(stripped)
+        if accepted is None:
+            continue
+        if current_pr is None:
+            raise AssertionError("accepted exact PR HEAD lacks an unambiguous PR context")
+        head = accepted.group("head").lower()
+        previous = heads.get(current_pr)
+        if previous is not None and previous != head:
+            raise AssertionError(f"conflicting accepted exact heads for PR #{current_pr}")
+        heads[current_pr] = head
+    return heads
+
+
+def accepted_source_head(pr: int) -> str:
+    heads = accepted_pr_heads(git_text(INDEX))
+    head = heads.get(pr)
+    if head is None:
+        raise AssertionError(f"canonical EVIDENCE_INDEX lacks accepted exact PR HEAD for PR #{pr}")
+    return head
 
 
 def ordered_refs(text: str) -> list[tuple[str, str]]:
@@ -161,42 +206,29 @@ def ensure_source_history(pr: int, *shas: str) -> None:
                 + result.stderr.decode(errors="replace")
             )
 
-    source_ref = f"refs/remotes/origin/mimiseek-chronology-pr-{pr}"
     if pr not in _SOURCE_PR_HEADS:
+        source_head = accepted_source_head(pr)
         result = subprocess.run(
-            [
-                "git",
-                "fetch",
-                "--quiet",
-                "--no-tags",
-                "origin",
-                f"+refs/pull/{pr}/head:{source_ref}",
-            ],
+            ["git", "fetch", "--quiet", "--no-tags", "origin", source_head],
             cwd=ROOT,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
         if result.returncode != 0:
             raise AssertionError(
-                f"cannot fetch exact source PR #{pr} head for chronology provenance: "
+                f"cannot fetch immutable accepted source PR #{pr} head {source_head}: "
                 + result.stderr.decode(errors="replace")
             )
-        source_head = subprocess.run(
-            ["git", "rev-parse", "--verify", source_ref],
-            cwd=ROOT,
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        ).stdout.strip()
-        if not re.fullmatch(r"[0-9a-f]{40}", source_head):
-            raise AssertionError(f"source PR #{pr} head ref did not resolve to an exact commit")
+        if not commit_available(source_head):
+            raise AssertionError(
+                f"immutable accepted source PR #{pr} head {source_head} is unavailable after exact fetch"
+            )
         _SOURCE_PR_HEADS[pr] = source_head
 
     missing = [sha for sha in shas if not commit_available(sha)]
     if missing:
         raise AssertionError(
-            f"source PR #{pr} chronology commits are unavailable after exact history fetch: {missing}"
+            f"source PR #{pr} chronology commits are unavailable after accepted-head history fetch: {missing}"
         )
 
 
@@ -256,7 +288,7 @@ def assert_chronology_order(events: list[list[tuple[str, str]]], records: dict[s
                 head = value
                 if not source_pr_contains(pr, head):
                     raise AssertionError(
-                        f"explicit HEAD {head} is not reachable from source PR #{pr} head "
+                        f"explicit HEAD {head} is not reachable from accepted source PR #{pr} head "
                         f"{_SOURCE_PR_HEADS[pr]}"
                     )
 
@@ -300,6 +332,35 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
         self.assertEqual(len(blocks), 1)
         with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
             assert_chronology_order(blocks[0], records)
+
+    def test_parenthesis_ordered_markers_are_governed(self) -> None:
+        records = ledger_by_id()
+        blocks = chronology_blocks(
+            "#### PR #26 review/remediation chronology\n\n"
+            "1) Later finding `DFA-0012`.\n"
+            "2) Older finding `DFA-0014`.\n"
+        )
+        self.assertEqual(len(blocks), 1)
+        with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
+            assert_chronology_order(blocks[0], records)
+
+    def test_closing_hash_atx_heading_is_governed(self) -> None:
+        records = ledger_by_id()
+        blocks = chronology_blocks(
+            "#### PR #26 review/remediation chronology ####\n\n"
+            "1. Later finding `DFA-0012`.\n"
+            "2. Older finding `DFA-0014`.\n"
+        )
+        self.assertEqual(len(blocks), 1)
+        with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
+            assert_chronology_order(blocks[0], records)
+
+    def test_source_pr_membership_uses_immutable_accepted_head(self) -> None:
+        self.assertEqual(
+            accepted_source_head(26),
+            "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922",
+        )
+        self.assertNotIn("refs/pull/", inspect.getsource(ensure_source_history))
 
     def test_continuation_lines_are_part_of_numbered_event(self) -> None:
         blocks = chronology_blocks(
@@ -365,7 +426,7 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
         ).stdout.strip()
         ensure_source_history(26, older, foreign_descendant)
         self.assertTrue(_git_is_ancestor(older, foreign_descendant))
-        with self.assertRaisesRegex(AssertionError, "not reachable from source PR #26 head"):
+        with self.assertRaisesRegex(AssertionError, "not reachable from accepted source PR #26 head"):
             assert_chronology_order(
                 [
                     [("DFA", "DFA-0014")],
