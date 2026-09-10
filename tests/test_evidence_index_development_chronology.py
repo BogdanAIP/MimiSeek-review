@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import inspect
 import json
 import re
@@ -20,26 +21,22 @@ TOKEN_RE = re.compile(
     r"|(?P<head>\bHEAD\s*:?\s*`(?P<sha>[0-9a-f]{40})`)",
     re.IGNORECASE,
 )
-CHRONOLOGY_HEADING_RE = re.compile(
-    r"^(?:"
-    r"#{1,6}[ \t]+(?:PR[ \t]+#[1-9][0-9]*[ \t]+)?review/remediation chronology:?(?:[ \t]+#+)?"
-    r"|(?:PR[ \t]+#[1-9][0-9]*[ \t]+)?review/remediation chronology:?"
-    r")[ \t]*$",
+CHRONOLOGY_TEXT_RE = re.compile(
+    r"^(?:PR[ \t]+#[1-9][0-9]*[ \t]+)?review/remediation chronology:?$",
     re.IGNORECASE,
 )
 NUMBERED_RE = re.compile(r"^[0-9]{1,9}[.)][ \t]{1,4}(?=\S)")
-PR_CONTEXT_RE = re.compile(
-    r"^(?:"
-    r"#{1,6}[ \t]+.*?\bPR[ \t]+#(?P<heading>[1-9][0-9]*)\b.*"
-    r"|(?:[-*][ \t]+)?PR[ \t]+#(?P<body>[1-9][0-9]*)[ \t]+—.*"
-    r")$",
+LIST_MARKER_RE = re.compile(r"^(?P<indent> {0,3})(?P<marker>(?:[0-9]{1,9}[.)]|[-+*]))(?P<space>[ \t]{1,4})(?=\S)")
+PR_BODY_CONTEXT_RE = re.compile(
+    r"^(?:[-*][ \t]+)?PR[ \t]+#(?P<pr>[1-9][0-9]*)[ \t]+—.*$",
     re.IGNORECASE,
 )
 ACCEPTED_HEAD_RE = re.compile(
     r"^-[ \t]+accepted exact PR HEAD:[ \t]*`(?P<head>[0-9a-f]{40})`[ \t]*$",
     re.IGNORECASE,
 )
-FENCE_OPEN_RE = re.compile(r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})(?P<info>.*)$")
+ATX_RE = re.compile(r"^(?P<indent> {0,3})(?P<marks>#{1,6})(?:[ \t]+(?P<body>.*)|[ \t]*)$")
+FENCE_RE = re.compile(r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})(?P<info>.*)$")
 _SOURCE_PR_HEADS: dict[int, str] = {}
 
 
@@ -67,59 +64,215 @@ def ledger_by_id() -> dict[str, dict]:
     return out
 
 
-def visible_markdown_lines(text: str) -> list[str]:
-    visible: list[str] = []
-    fence_char: str | None = None
-    fence_len = 0
-    in_html_comment = False
+def _escaped(text: str, pos: int) -> bool:
+    count = 0
+    pos -= 1
+    while pos >= 0 and text[pos] == "\\":
+        count += 1
+        pos -= 1
+    return bool(count % 2)
 
-    for raw_line in text.splitlines():
-        if fence_char is not None:
-            candidate = raw_line.lstrip(" ")
-            indent = len(raw_line) - len(candidate)
-            if indent <= 3 and re.fullmatch(
-                rf"{re.escape(fence_char)}{{{fence_len},}}[ \t]*",
-                candidate,
-            ):
-                fence_char = None
-                fence_len = 0
+
+def _inline_code_spans(line: str) -> list[tuple[int, int]]:
+    """Return same-line CommonMark-style backtick spans, including delimiters.
+
+    Unmatched runs remain ordinary literal text. This is enough to prevent literal
+    HTML-comment delimiters inside rendered inline code from affecting comment
+    state, without letting an unmatched backtick hide a real comment.
+    """
+    runs: list[tuple[int, int]] = []
+    i = 0
+    while i < len(line):
+        if line[i] != "`" or _escaped(line, i):
+            i += 1
             continue
+        j = i + 1
+        while j < len(line) and line[j] == "`":
+            j += 1
+        runs.append((i, j))
+        i = j
 
-        line = raw_line
-        rendered: list[str] = []
-        cursor = 0
-        while cursor < len(line):
-            if in_html_comment:
-                end = line.find("-->", cursor)
-                if end < 0:
-                    cursor = len(line)
-                    break
-                in_html_comment = False
-                cursor = end + 3
+    spans: list[tuple[int, int]] = []
+    used: set[int] = set()
+    for n, (start, end) in enumerate(runs):
+        if n in used:
+            continue
+        width = end - start
+        for m in range(n + 1, len(runs)):
+            if m in used:
                 continue
-
-            start = line.find("<!--", cursor)
-            if start < 0:
-                rendered.append(line[cursor:])
-                cursor = len(line)
+            other_start, other_end = runs[m]
+            if other_end - other_start == width:
+                spans.append((start, other_end))
+                used.add(n)
+                used.add(m)
                 break
-            rendered.append(line[cursor:start])
-            in_html_comment = True
-            cursor = start + 4
+    return spans
 
-        line = "".join(rendered)
-        if not line and in_html_comment:
+
+def _inside_spans(pos: int, spans: list[tuple[int, int]]) -> bool:
+    return any(start <= pos < end for start, end in spans)
+
+
+def _strip_html_comments(line: str, in_comment: bool) -> tuple[str, bool]:
+    """Remove real HTML comments while treating delimiters in inline code literally."""
+    rendered: list[str] = []
+    cursor = 0
+    spans = _inline_code_spans(line)
+
+    while cursor < len(line):
+        if in_comment:
+            end = line.find("-->", cursor)
+            if end < 0:
+                return "".join(rendered), True
+            in_comment = False
+            cursor = end + 3
             continue
 
-        match = FENCE_OPEN_RE.fullmatch(line)
-        if match is not None:
-            fence = match.group("fence")
-            info = match.group("info")
-            if fence[0] == "`" and "`" in info:
-                visible.append(line)
+        start = line.find("<!--", cursor)
+        while start >= 0 and _inside_spans(start, spans):
+            rendered.append(line[cursor : start + 4])
+            cursor = start + 4
+            start = line.find("<!--", cursor)
+
+        if start < 0:
+            rendered.append(line[cursor:])
+            break
+
+        rendered.append(line[cursor:start])
+        in_comment = True
+        cursor = start + 4
+
+    return "".join(rendered), in_comment
+
+
+def _render_inline_text(text: str) -> str:
+    """Normalize the rendered text needed for heading identity.
+
+    This is intentionally bounded: preserve code-span contents literally, remove
+    common emphasis/link wrappers, decode entities, and normalize whitespace.
+    """
+    placeholders: list[str] = []
+
+    def stash_code(match: re.Match[str]) -> str:
+        content = match.group(2).replace("\n", " ")
+        token = f"\x00CODE{len(placeholders)}\x00"
+        placeholders.append(content)
+        return token
+
+    text = re.sub(r"(`+)(.*?)\1", stash_code, text, flags=re.DOTALL)
+    text = re.sub(r"!\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
+    text = re.sub(r"<[^>\n]+>", "", text)
+    text = re.sub(r"\\([!\"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])", r"\1", text)
+    text = text.replace("**", "").replace("__", "").replace("~~", "")
+    text = text.replace("*", "").replace("_", "")
+    text = html.unescape(text)
+
+    for i, content in enumerate(placeholders):
+        text = text.replace(f"\x00CODE{i}\x00", content)
+
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _atx_heading_text(line: str) -> str | None:
+    match = ATX_RE.fullmatch(line)
+    if match is None:
+        return None
+    body = match.group("body") or ""
+    body = re.sub(r"[ \t]+#+[ \t]*$", "", body)
+    return _render_inline_text(body)
+
+
+def _chronology_heading(line: str) -> bool:
+    heading_text = _atx_heading_text(line)
+    if heading_text is not None:
+        if CHRONOLOGY_TEXT_RE.fullmatch(heading_text):
+            return True
+        if "review/remediation chronology" in heading_text.lower():
+            raise AssertionError(
+                f"unsupported rendered chronology heading syntax: {heading_text!r}"
+            )
+        return False
+
+    plain = _render_inline_text(line.strip())
+    return CHRONOLOGY_TEXT_RE.fullmatch(plain) is not None
+
+
+def _opening_fence(candidate: str) -> tuple[str, int] | None:
+    match = FENCE_RE.fullmatch(candidate)
+    if match is None:
+        return None
+    fence = match.group("fence")
+    info = match.group("info")
+    if fence[0] == "`" and "`" in info:
+        return None
+    return fence[0], len(fence)
+
+
+def _closing_fence(candidate: str, char: str, length: int) -> bool:
+    stripped = candidate.lstrip(" ")
+    indent = len(candidate) - len(stripped)
+    return indent <= 3 and re.fullmatch(
+        rf"{re.escape(char)}{{{length},}}[ \t]*", stripped
+    ) is not None
+
+
+def _list_content_indent(line: str) -> int | None:
+    match = LIST_MARKER_RE.match(line)
+    if match is None:
+        return None
+    return len(match.group("indent")) + len(match.group("marker")) + len(match.group("space").expandtabs(4))
+
+
+def visible_markdown_lines(text: str) -> list[str]:
+    """Return source lines that participate in rendered Markdown authority.
+
+    Block fences are excluded at top level and relative to the active list-item
+    content indentation. Real HTML comments are removed, but inline-code literals
+    containing comment delimiters stay visible.
+    """
+    visible: list[str] = []
+    fence: tuple[str, int, int] | None = None
+    in_html_comment = False
+    list_indent: int | None = None
+
+    for raw in text.splitlines():
+        raw_line = raw.expandtabs(4)
+
+        if fence is not None:
+            char, length, container_indent = fence
+            if len(raw_line) >= container_indent and _closing_fence(
+                raw_line[container_indent:], char, length
+            ):
+                fence = None
+            continue
+
+        if raw_line.strip():
+            marker_indent = _list_content_indent(raw_line)
+            if marker_indent is not None:
+                list_indent = marker_indent
+            elif not raw_line.startswith(" "):
+                list_indent = None
+
+        candidates: list[tuple[int, str]] = [(0, raw_line)]
+        if list_indent is not None and len(raw_line) >= list_indent:
+            candidates.insert(0, (list_indent, raw_line[list_indent:]))
+
+        opened = False
+        for container_indent, candidate in candidates:
+            found = _opening_fence(candidate)
+            if found is None:
                 continue
-            fence_char = fence[0]
-            fence_len = len(fence)
+            char, length = found
+            fence = (char, length, container_indent)
+            opened = True
+            break
+        if opened:
+            continue
+
+        line, in_html_comment = _strip_html_comments(raw_line, in_html_comment)
+        if not line and in_html_comment:
             continue
 
         visible.append(line)
@@ -128,7 +281,16 @@ def visible_markdown_lines(text: str) -> list[str]:
 
 
 def top_level_indented_code(line: str) -> bool:
-    return line.startswith("\t") or line.startswith("    ")
+    return line.startswith("    ")
+
+
+def _pr_context_number(line: str) -> int | None:
+    heading = _atx_heading_text(line)
+    if heading is not None:
+        match = re.search(r"\bPR[ \t]+#([1-9][0-9]*)\b", heading, re.IGNORECASE)
+        return int(match.group(1)) if match else None
+    match = PR_BODY_CONTEXT_RE.fullmatch(_render_inline_text(line.strip()))
+    return int(match.group("pr")) if match else None
 
 
 def accepted_pr_heads(text: str) -> dict[int, str]:
@@ -137,12 +299,11 @@ def accepted_pr_heads(text: str) -> dict[int, str]:
     for line in visible_markdown_lines(text):
         if top_level_indented_code(line):
             continue
-        stripped = line.strip()
-        context = PR_CONTEXT_RE.fullmatch(stripped)
+        context = _pr_context_number(line)
         if context is not None:
-            current_pr = int(context.group("heading") or context.group("body"))
+            current_pr = context
             continue
-        accepted = ACCEPTED_HEAD_RE.fullmatch(stripped)
+        accepted = ACCEPTED_HEAD_RE.fullmatch(line.strip())
         if accepted is None:
             continue
         if current_pr is None:
@@ -204,15 +365,19 @@ def chronology_blocks(text: str) -> list[list[list[tuple[str, str]]]]:
     for line in visible_markdown_lines(text):
         indented_code = top_level_indented_code(line)
         stripped = line.strip()
-        if not indented_code and CHRONOLOGY_HEADING_RE.fullmatch(stripped):
+
+        if not indented_code and _chronology_heading(line):
             flush_block()
             current_block = []
             continue
-        if current_block is not None and not indented_code and stripped.startswith("#"):
+
+        if current_block is not None and not indented_code and _atx_heading_text(line) is not None:
             flush_block()
             continue
+
         if current_block is None:
             continue
+
         if not indented_code and NUMBERED_RE.match(stripped):
             flush_event()
             current_event = [stripped]
@@ -423,6 +588,56 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
             assert_chronology_order(blocks[0], records)
 
+    def test_emphasis_formatted_heading_is_governed(self) -> None:
+        records = ledger_by_id()
+        blocks = chronology_blocks(
+            "#### **PR #26 review/remediation chronology**\n\n"
+            "1. Later finding `DFA-0012`.\n"
+            "2. Older finding `DFA-0014`.\n"
+        )
+        self.assertEqual(len(blocks), 1)
+        with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
+            assert_chronology_order(blocks[0], records)
+
+    def test_formatted_heading_cannot_hide_behind_other_governed_block(self) -> None:
+        records = ledger_by_id()
+        blocks = chronology_blocks(
+            "Review/remediation chronology:\n"
+            "1. Older finding `DFA-0014`.\n"
+            "2. Later finding `DFA-0012`.\n\n"
+            "#### **PR #26 review/remediation chronology**\n"
+            "1. Later finding `DFA-0012`.\n"
+            "2. Older finding `DFA-0014`.\n"
+        )
+        self.assertEqual(len(blocks), 2)
+        assert_chronology_order(blocks[0], records)
+        with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
+            assert_chronology_order(blocks[1], records)
+
+    def test_inline_code_comment_delimiters_do_not_hide_rendered_event(self) -> None:
+        records = ledger_by_id()
+        blocks = chronology_blocks(
+            "Review/remediation chronology:\n"
+            "1. Later `DFA-0012`; literal `<!--`.\n"
+            "2. Literal `-->`; older `DFA-0014`.\n"
+        )
+        self.assertEqual(
+            blocks,
+            [[
+                [("DFA", "DFA-0012")],
+                [("DFA", "DFA-0014")],
+            ]],
+        )
+        with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
+            assert_chronology_order(blocks[0], records)
+
+    def test_genuine_inline_html_comment_is_excluded_around_code_literal(self) -> None:
+        blocks = chronology_blocks(
+            "Review/remediation chronology:\n"
+            "1. Visible `<!--` literal <!-- hidden `DFA-9999` --> `DFA-0014`.\n"
+        )
+        self.assertEqual(blocks, [[[("DFA", "DFA-0014")]]])
+
     def test_fenced_chronology_examples_are_ignored(self) -> None:
         cases = (
             ("```markdown", "```"),
@@ -456,6 +671,42 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
                     f"- accepted exact PR HEAD: `{accepted}`\n"
                 )
                 self.assertEqual(accepted_pr_heads(text), {26: accepted})
+
+    def test_nested_fenced_examples_inside_numbered_event_are_ignored(self) -> None:
+        for fence in ("```", "~~~~"):
+            with self.subTest(fence=fence):
+                blocks = chronology_blocks(
+                    "Review/remediation chronology:\n"
+                    "1. Real event `DFA-0014`.\n"
+                    f"    {fence}text\n"
+                    "    example `DFA-9999` and HEAD: `ffffffffffffffffffffffffffffffffffffffff`\n"
+                    f"    {fence}\n"
+                    "2. Later real event `DFA-0012`.\n"
+                )
+                self.assertEqual(
+                    blocks,
+                    [[
+                        [("DFA", "DFA-0014")],
+                        [("DFA", "DFA-0012")],
+                    ]],
+                )
+
+    def test_nested_fence_html_markers_do_not_poison_later_rendered_lines(self) -> None:
+        blocks = chronology_blocks(
+            "Review/remediation chronology:\n"
+            "1. Real event `DFA-0014`.\n"
+            "    ```text\n"
+            "    <!-- fake comment opener\n"
+            "    ```\n"
+            "2. Later real event `DFA-0012`.\n"
+        )
+        self.assertEqual(
+            blocks,
+            [[
+                [("DFA", "DFA-0014")],
+                [("DFA", "DFA-0012")],
+            ]],
+        )
 
     def test_html_commented_chronology_examples_are_ignored(self) -> None:
         text = (
@@ -501,6 +752,16 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
         text = (
             "PR #26 — `Stage 1: harden bootstrap commentary semantic bindings`\n"
             "\nAcceptance identity:\n\n"
+            "- accepted exact PR HEAD: `8cb7d24ce18042227ebf6e9b4acbdcdb6b947922`\n"
+        )
+        self.assertEqual(
+            accepted_pr_heads(text),
+            {26: "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"},
+        )
+
+    def test_formatted_heading_pr_context_is_parsed(self) -> None:
+        text = (
+            "#### **PR #26 — accepted evidence**\n"
             "- accepted exact PR HEAD: `8cb7d24ce18042227ebf6e9b4acbdcdb6b947922`\n"
         )
         self.assertEqual(
