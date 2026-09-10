@@ -48,9 +48,79 @@ def assert_no_fenced_authority(text: str) -> None:
         )
 
 
+def _leading_spaces(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def assert_no_ambiguous_chronology_structure(text: str) -> None:
+    """Keep canonical chronology on a deliberately narrow rendered-Markdown profile.
+
+    The ancestry parser is intentionally not a complete CommonMark implementation.
+    Canonical EVIDENCE_INDEX therefore fails closed on two list-relative constructs
+    that can otherwise change what is rendered without changing the parser's event
+    boundary: indented code blocks and ATX headings nested inside a numbered event.
+    """
+    in_chronology = False
+    event_content_indent: int | None = None
+    after_blank = False
+
+    for line in c.visible_markdown_lines(text):
+        line = line.expandtabs(4)
+        stripped = line.strip()
+
+        if not in_chronology:
+            if not c.top_level_indented_code(line) and c._chronology_heading(line):
+                in_chronology = True
+                event_content_indent = None
+                after_blank = False
+            continue
+
+        if event_content_indent is not None and stripped:
+            leading = _leading_spaces(line)
+            if leading >= event_content_indent:
+                relative = line[event_content_indent:]
+                if c._atx_heading_text(relative) is not None:
+                    raise AssertionError(
+                        "nested ATX headings are forbidden inside canonical EVIDENCE_INDEX chronology events"
+                    )
+                if after_blank and relative.startswith("    "):
+                    raise AssertionError(
+                        "list-relative indented code is forbidden inside canonical EVIDENCE_INDEX chronology events"
+                    )
+
+        if not c.top_level_indented_code(line) and c.NUMBERED_RE.match(stripped):
+            indent = c._list_content_indent(line)
+            if indent is None:
+                raise AssertionError("numbered chronology event lacks a stable list content column")
+            event_content_indent = indent
+            after_blank = False
+            continue
+
+        if event_content_indent is None:
+            if not stripped:
+                continue
+            in_chronology = False
+            after_blank = False
+            continue
+
+        if not stripped:
+            after_blank = True
+            continue
+
+        leading = _leading_spaces(line)
+        if leading >= event_content_indent:
+            after_blank = False
+            continue
+
+        in_chronology = False
+        event_content_indent = None
+        after_blank = False
+
+
 def assert_canonical_authority_profile(text: str) -> None:
     assert_no_raw_html_authority(text)
     assert_no_fenced_authority(text)
+    assert_no_ambiguous_chronology_structure(text)
 
 
 class FindingSupplementTests(unittest.TestCase):
@@ -154,6 +224,36 @@ class EvidenceIndexAuthoritySurfaceTests(unittest.TestCase):
             with self.subTest(fence=fence):
                 with self.assertRaisesRegex(AssertionError, "fenced blocks are forbidden"):
                     assert_canonical_authority_profile(f"1. {fence}text\nexample\n{fence}\n")
+
+    def test_nested_indented_code_in_chronology_fails_closed(self) -> None:
+        text = (
+            "Review/remediation chronology:\n"
+            "1. Real event `DFA-0014`.\n"
+            "\n"
+            "       fake `DFA-9999` and HEAD: `ffffffffffffffffffffffffffffffffffffffff`\n"
+            "2. Later real event `DFA-0012`.\n"
+        )
+        with self.assertRaisesRegex(AssertionError, "list-relative indented code is forbidden"):
+            assert_canonical_authority_profile(text)
+
+    def test_nested_atx_heading_in_chronology_fails_closed(self) -> None:
+        text = (
+            "Review/remediation chronology:\n"
+            "1. Later finding `DFA-0012`.\n"
+            "   #### Details\n"
+            "2. Older finding `DFA-0014`.\n"
+        )
+        with self.assertRaisesRegex(AssertionError, "nested ATX headings are forbidden"):
+            assert_canonical_authority_profile(text)
+
+    def test_ordinary_indented_chronology_continuation_remains_permitted(self) -> None:
+        text = (
+            "Review/remediation chronology:\n"
+            "1. Real event.\n"
+            "   - finding: `DFA-0014`\n"
+            "2. Later event `DFA-0012`.\n"
+        )
+        assert_canonical_authority_profile(text)
 
     def test_zero_to_three_space_atx_chronology_is_rendered_authority(self) -> None:
         for count in range(4):
