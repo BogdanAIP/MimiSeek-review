@@ -39,6 +39,7 @@ ACCEPTED_HEAD_RE = re.compile(
     r"^-[ \t]+accepted exact PR HEAD:[ \t]*`(?P<head>[0-9a-f]{40})`[ \t]*$",
     re.IGNORECASE,
 )
+FENCE_OPEN_RE = re.compile(r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})(?P<info>.*)$")
 _SOURCE_PR_HEADS: dict[int, str] = {}
 
 
@@ -66,10 +67,43 @@ def ledger_by_id() -> dict[str, dict]:
     return out
 
 
+def visible_markdown_lines(text: str) -> list[str]:
+    visible: list[str] = []
+    fence_char: str | None = None
+    fence_len = 0
+
+    for line in text.splitlines():
+        if fence_char is not None:
+            candidate = line.lstrip(" ")
+            indent = len(line) - len(candidate)
+            if indent <= 3 and re.fullmatch(
+                rf"{re.escape(fence_char)}{{{fence_len},}}[ \t]*",
+                candidate,
+            ):
+                fence_char = None
+                fence_len = 0
+            continue
+
+        match = FENCE_OPEN_RE.fullmatch(line)
+        if match is not None:
+            fence = match.group("fence")
+            info = match.group("info")
+            if fence[0] == "`" and "`" in info:
+                visible.append(line)
+                continue
+            fence_char = fence[0]
+            fence_len = len(fence)
+            continue
+
+        visible.append(line)
+
+    return visible
+
+
 def accepted_pr_heads(text: str) -> dict[int, str]:
     heads: dict[int, str] = {}
     current_pr: int | None = None
-    for line in text.splitlines():
+    for line in visible_markdown_lines(text):
         stripped = line.strip()
         context = PR_CONTEXT_RE.fullmatch(stripped)
         if context is not None:
@@ -134,7 +168,7 @@ def chronology_blocks(text: str) -> list[list[list[tuple[str, str]]]]:
             blocks.append(current_block)
         current_block = None
 
-    for line in text.splitlines():
+    for line in visible_markdown_lines(text):
         stripped = line.strip()
         if CHRONOLOGY_HEADING_RE.fullmatch(stripped):
             flush_block()
@@ -354,6 +388,40 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
         self.assertEqual(len(blocks), 1)
         with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
             assert_chronology_order(blocks[0], records)
+
+    def test_fenced_chronology_examples_are_ignored(self) -> None:
+        cases = (
+            ("```markdown", "```"),
+            ("  ~~~~text", "  ~~~~"),
+        )
+        for opening, closing in cases:
+            with self.subTest(opening=opening):
+                text = (
+                    f"{opening}\n"
+                    "Review/remediation chronology:\n"
+                    "1. Example `DFA-9999`.\n"
+                    f"{closing}\n"
+                )
+                self.assertEqual(chronology_blocks(text), [])
+
+    def test_fenced_accepted_heads_are_ignored(self) -> None:
+        accepted = "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
+        fake = "f" * 40
+        cases = (
+            ("```markdown", "```"),
+            ("  ~~~~text", "  ~~~~"),
+        )
+        for opening, closing in cases:
+            with self.subTest(opening=opening):
+                text = (
+                    f"{opening}\n"
+                    "PR #26 — `example only`\n"
+                    f"- accepted exact PR HEAD: `{fake}`\n"
+                    f"{closing}\n"
+                    "PR #26 — `Stage 1: harden bootstrap commentary semantic bindings`\n"
+                    f"- accepted exact PR HEAD: `{accepted}`\n"
+                )
+                self.assertEqual(accepted_pr_heads(text), {26: accepted})
 
     def test_acceptance_context_with_title_is_parsed(self) -> None:
         text = (
