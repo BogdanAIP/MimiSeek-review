@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 P = ROOT / "tools" / "verify_development_finding_authority.py"
 C = ROOT / "tests" / "test_evidence_index_development_chronology.py"
 INDEX = "docs/EVIDENCE_INDEX.md"
-FENCE_AUTHORITY_RE = re.compile(r"(?m)^[ \t]*(?:`{3,}|~{3,})")
+FENCE_AUTHORITY_RE = re.compile(r"`{3,}|~{3,}")
 spec = importlib.util.spec_from_file_location("authority_supplements", P)
 a = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
@@ -147,6 +147,12 @@ class EvidenceIndexAuthoritySurfaceTests(unittest.TestCase):
                 )
                 with self.assertRaisesRegex(AssertionError, "fenced blocks are forbidden"):
                     assert_canonical_authority_profile(text)
+
+    def test_fence_after_list_marker_is_still_forbidden(self) -> None:
+        for fence in ("```", "~~~"):
+            with self.subTest(fence=fence):
+                with self.assertRaisesRegex(AssertionError, "fenced blocks are forbidden"):
+                    assert_canonical_authority_profile(f"1. {fence}text\nexample\n{fence}\n")
 
     def test_zero_to_three_space_atx_chronology_is_rendered_authority(self) -> None:
         for count in range(4):
