@@ -48,6 +48,7 @@ def git_text(path: str) -> str:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
     ).stdout
 
 
@@ -348,6 +349,7 @@ def chronology_blocks(text: str) -> list[list[list[tuple[str, str]]]]:
     blocks: list[list[list[tuple[str, str]]]] = []
     current_block: list[list[tuple[str, str]]] | None = None
     current_event: list[str] | None = None
+    after_blank = False
 
     def flush_event() -> None:
         nonlocal current_event
@@ -369,10 +371,12 @@ def chronology_blocks(text: str) -> list[list[list[tuple[str, str]]]]:
         if not indented_code and _chronology_heading(line):
             flush_block()
             current_block = []
+            after_blank = False
             continue
 
         if current_block is not None and not indented_code and _atx_heading_text(line) is not None:
             flush_block()
+            after_blank = False
             continue
 
         if current_block is None:
@@ -381,15 +385,25 @@ def chronology_blocks(text: str) -> list[list[list[tuple[str, str]]]]:
         if not indented_code and NUMBERED_RE.match(stripped):
             flush_event()
             current_event = [stripped]
+            after_blank = False
         elif current_event is not None:
-            if not stripped or line[:1].isspace():
+            if not stripped:
                 current_event.append(stripped)
-            else:
+                after_blank = True
+            elif line[:1].isspace():
+                current_event.append(stripped)
+                after_blank = False
+            elif after_blank:
                 flush_block()
+                after_blank = False
+            else:
+                raise AssertionError(
+                    "ambiguous chronology lazy paragraph continuation; "
+                    "indent continuation content or separate top-level prose with a blank line"
+                )
 
     flush_block()
     return blocks
-
 
 def commit_available(sha: str) -> bool:
     return subprocess.run(
@@ -808,6 +822,24 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
             "# next\n"
         )
         self.assertEqual(blocks, [[[("DFA", "DFA-0012")]]])
+
+    def test_lazy_continuation_without_blank_fails_closed(self) -> None:
+        with self.assertRaisesRegex(AssertionError, "lazy paragraph continuation"):
+            chronology_blocks(
+                "Review/remediation chronology:\n"
+                "1. Older finding `DFA-0014`.\n"
+                "Continuation text.\n"
+                "2. Later finding `DFA-0012`.\n"
+            )
+
+    def test_reversed_chronology_cannot_hide_behind_lazy_continuation(self) -> None:
+        with self.assertRaisesRegex(AssertionError, "lazy paragraph continuation"):
+            chronology_blocks(
+                "Review/remediation chronology:\n"
+                "1. Later finding `DFA-0012`.\n"
+                "Continuation text.\n"
+                "2. Older finding `DFA-0014`.\n"
+            )
 
     def test_repeated_summary_refs_do_not_create_new_events(self) -> None:
         records = ledger_by_id()

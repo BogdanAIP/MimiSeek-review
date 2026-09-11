@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import subprocess
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 P = ROOT / "tools" / "verify_development_finding_authority.py"
@@ -29,6 +30,7 @@ def exact_head_text(path: str) -> str:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
     ).stdout
 
 
@@ -56,9 +58,10 @@ def assert_no_ambiguous_chronology_structure(text: str) -> None:
     """Keep canonical chronology on a deliberately narrow rendered-Markdown profile.
 
     The ancestry parser is intentionally not a complete CommonMark implementation.
-    Canonical EVIDENCE_INDEX therefore fails closed on two list-relative constructs
-    that can otherwise change what is rendered without changing the parser's event
-    boundary: indented code blocks and ATX headings nested inside a numbered event.
+    Canonical EVIDENCE_INDEX therefore fails closed on constructs that can otherwise
+    change rendered list/event boundaries without changing ancestry parsing:
+    list-relative indented code, nested ATX headings, and unindented lazy paragraph
+    continuation inside an active numbered chronology event.
     """
     in_chronology = False
     event_content_indent: int | None = None
@@ -112,10 +115,21 @@ def assert_no_ambiguous_chronology_structure(text: str) -> None:
             after_blank = False
             continue
 
+        if not c.top_level_indented_code(line) and c._atx_heading_text(line) is not None:
+            in_chronology = c._chronology_heading(line)
+            event_content_indent = None
+            after_blank = False
+            continue
+
+        if not after_blank:
+            raise AssertionError(
+                "unindented lazy paragraph continuation is forbidden inside "
+                "canonical EVIDENCE_INDEX chronology events"
+            )
+
         in_chronology = False
         event_content_indent = None
         after_blank = False
-
 
 def assert_canonical_authority_profile(text: str) -> None:
     assert_no_raw_html_authority(text)
@@ -150,6 +164,7 @@ class FindingSupplementTests(unittest.TestCase):
         ids = [spec[0] for spec in a.SUPPLEMENTS]
         self.assertIn(5597570658, ids)
         self.assertIn(5619871599, ids)
+        self.assertIn(5634074780, ids)
         self.assertNotIn(5619597338, ids)
 
     def test_process_issue_records_reads_every_configured_supplement(self) -> None:
@@ -279,6 +294,27 @@ class EvidenceIndexAuthoritySurfaceTests(unittest.TestCase):
                     f"{prefix}- accepted exact PR HEAD: `{accepted}`\n"
                 )
                 self.assertEqual(c.accepted_pr_heads(text), {26: accepted})
+
+    def test_unindented_lazy_chronology_continuation_fails_closed(self) -> None:
+        text = (
+            "Review/remediation chronology:\n"
+            "1. Later finding `DFA-0012`.\n"
+            "Continuation text.\n"
+            "2. Older finding `DFA-0014`.\n"
+        )
+        with self.assertRaisesRegex(AssertionError, "lazy paragraph continuation"):
+            assert_canonical_authority_profile(text)
+
+    def test_exact_head_helpers_force_utf8_decoding(self) -> None:
+        with mock.patch.object(subprocess, "run") as run:
+            run.return_value.stdout = "ok"
+            exact_head_text(INDEX)
+            self.assertEqual(run.call_args.kwargs.get("encoding"), "utf-8")
+
+        with mock.patch.object(c.subprocess, "run") as run:
+            run.return_value.stdout = "ok"
+            c.git_text(INDEX)
+            self.assertEqual(run.call_args.kwargs.get("encoding"), "utf-8")
 
     def test_escaped_html_text_remains_permitted(self) -> None:
         assert_canonical_authority_profile("Use &lt;pre&gt; or &lt;!-- --&gt; for literal examples.\n")
