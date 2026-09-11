@@ -16,9 +16,9 @@ DFA_RE = re.compile(r"DFA-[0-9]{4}", re.IGNORECASE)
 DFA_RANGE_RE = re.compile(r"`?DFA-([0-9]{4})`?\s*\.\.\s*`?DFA-([0-9]{4})`?", re.IGNORECASE)
 HEAD_RE = re.compile(r"\bHEAD\s*:?\s*`([0-9a-f]{40})`", re.IGNORECASE)
 TOKEN_RE = re.compile(
-    r"(?P<range>`?DFA-(?P<start>[0-9]{4})`?\s*\.\.\s*`?DFA-(?P<end>[0-9]{4})`?)"
+    r"(?P<range>DFA-(?P<start>[0-9]{4})\s*\.\.\s*DFA-(?P<end>[0-9]{4}))"
     r"|(?P<dfa>DFA-[0-9]{4})"
-    r"|(?P<head>\bHEAD\s*:?\s*`(?P<sha>[0-9a-f]{40})`)",
+    r"|(?P<head>\bHEAD\s*:?\s*(?P<sha>[0-9a-f]{40}))",
     re.IGNORECASE,
 )
 CHRONOLOGY_TEXT_RE = re.compile(
@@ -326,6 +326,7 @@ def accepted_source_head(pr: int) -> str:
 
 
 def ordered_refs(text: str) -> list[tuple[str, str]]:
+    text = _render_inline_text(text)
     refs: list[tuple[str, str]] = []
     for match in TOKEN_RE.finditer(text):
         if match.group("range") is not None:
@@ -567,6 +568,40 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
         self.assertEqual(
             dfa_refs("`DFA-0014`..`DFA-0016`"),
             ["DFA-0014", "DFA-0015", "DFA-0016"],
+        )
+
+    def test_rendered_entity_dfa_reference_is_governed(self) -> None:
+        records = ledger_by_id()
+        blocks = chronology_blocks(
+            "Review/remediation chronology:\n"
+            "1. Later finding `DFA-0012`.\n"
+            "2. Older finding DFA&#45;0014.\n"
+        )
+        self.assertEqual(blocks[0][1], [("DFA", "DFA-0014")])
+        with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
+            assert_chronology_order(blocks[0], records)
+
+    def test_markdown_escaped_dfa_reference_is_governed(self) -> None:
+        records = ledger_by_id()
+        blocks = chronology_blocks(
+            "Review/remediation chronology:\n"
+            "1. Later finding `DFA-0012`.\n"
+            "2. Older finding DFA\\-0014.\n"
+        )
+        self.assertEqual(blocks[0][1], [("DFA", "DFA-0014")])
+        with self.assertRaisesRegex(AssertionError, "chronology reverses source PR #26"):
+            assert_chronology_order(blocks[0], records)
+
+    def test_rendered_reference_normalization_preserves_ranges_and_heads(self) -> None:
+        head = "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
+        self.assertEqual(
+            ordered_refs(f"DFA&#45;0014..DFA\\-0016 and HEAD&#58; `{head}`"),
+            [
+                ("DFA", "DFA-0014"),
+                ("DFA", "DFA-0015"),
+                ("DFA", "DFA-0016"),
+                ("HEAD", head),
+            ],
         )
 
     def test_prefixed_chronology_heading_is_governed(self) -> None:
