@@ -13,18 +13,18 @@ INDEX = "docs/EVIDENCE_INDEX.md"
 LEDGER = "data/development-finding-adjudications.jsonl"
 
 DFA_CANDIDATE_RE = re.compile(
-    r"(?<![A-Za-z0-9_-])DFA-(?P<suffix>[A-Za-z0-9_-]+)",
+    r"(?P<value>[A-Za-z0-9_-]*DFA-[A-Za-z0-9_-]+)",
     re.IGNORECASE,
 )
 HEAD_CANDIDATE_RE = re.compile(
-    r"\bHEAD\s*:?\s*(?P<value>[A-Za-z0-9]{39,})(?![A-Za-z0-9])",
+    r"\bHEAD\s*:?\s*(?P<value>[A-Za-z0-9_-]{39,})",
     re.IGNORECASE,
 )
 TOKEN_RE = re.compile(
     r"(?P<range>(?<![A-Za-z0-9_-])DFA-(?P<start>[0-9]{4})"
     r"\s*\.\.\s*DFA-(?P<end>[0-9]{4})(?![A-Za-z0-9_-]))"
     r"|(?P<dfa>(?<![A-Za-z0-9_-])DFA-[0-9]{4}(?![A-Za-z0-9_-]))"
-    r"|(?P<head>\bHEAD\s*:?\s*(?P<sha>[0-9a-f]{40})(?![A-Za-z0-9]))",
+    r"|(?P<head>\bHEAD\s*:?\s*(?P<sha>[0-9a-f]{40})(?![A-Za-z0-9_-]))",
     re.IGNORECASE,
 )
 CHRONOLOGY_TEXT_RE = re.compile(
@@ -334,8 +334,9 @@ def accepted_source_head(pr: int) -> str:
 def ordered_refs(text: str) -> list[tuple[str, str]]:
     text = _render_inline_text(text)
     for match in DFA_CANDIDATE_RE.finditer(text):
-        if re.fullmatch(r"[0-9]{4}", match.group("suffix")) is None:
-            raise AssertionError(f"malformed DFA identity: {match.group(0)!r}")
+        value = match.group("value")
+        if re.fullmatch(r"DFA-[0-9]{4}", value, re.IGNORECASE) is None:
+            raise AssertionError(f"malformed DFA identity: {value!r}")
     for match in HEAD_CANDIDATE_RE.finditer(text):
         value = match.group("value")
         if re.fullmatch(r"[0-9a-f]{40}", value, re.IGNORECASE) is None:
@@ -622,15 +623,14 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
             ("DFA-00120", "malformed DFA identity"),
             ("DFA-0014..DFA-00160", "malformed DFA identity"),
             ("DFA-0012suffix", "malformed DFA identity"),
+            ("XDFA-0012", "malformed DFA identity"),
             ("HEAD: `8cb7d24ce18042227ebf6e9b4acbdcdb6b9479220`", "malformed HEAD identity"),
             ("HEAD: `8cb7d24ce18042227ebf6e9b4acbdcdb6b947922x`", "malformed HEAD identity"),
+            ("HEAD: `8cb7d24ce18042227ebf6e9b4acbdcdb6b947922_suffix`", "malformed HEAD identity"),
         )
         for text, error in cases:
             with self.subTest(text=text), self.assertRaisesRegex(AssertionError, error):
                 ordered_refs(text)
-
-    def test_identity_tokens_require_a_left_boundary(self) -> None:
-        self.assertEqual(ordered_refs("XDFA-0012"), [])
 
     def test_prefixed_chronology_heading_is_governed(self) -> None:
         records = ledger_by_id()
