@@ -166,6 +166,7 @@ class FindingSupplementTests(unittest.TestCase):
         self.assertIn(5619871599, ids)
         self.assertIn(5634074780, ids)
         self.assertIn(5634518059, ids)
+        self.assertIn(5644287275, ids)
         self.assertNotIn(5619597338, ids)
 
     def test_process_issue_records_reads_every_configured_supplement(self) -> None:

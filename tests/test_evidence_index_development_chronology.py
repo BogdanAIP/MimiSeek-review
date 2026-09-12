@@ -12,13 +12,19 @@ ROOT = Path(__file__).resolve().parents[1]
 INDEX = "docs/EVIDENCE_INDEX.md"
 LEDGER = "data/development-finding-adjudications.jsonl"
 
-DFA_RE = re.compile(r"DFA-[0-9]{4}", re.IGNORECASE)
-DFA_RANGE_RE = re.compile(r"`?DFA-([0-9]{4})`?\s*\.\.\s*`?DFA-([0-9]{4})`?", re.IGNORECASE)
-HEAD_RE = re.compile(r"\bHEAD\s*:?\s*`([0-9a-f]{40})`", re.IGNORECASE)
+DFA_CANDIDATE_RE = re.compile(
+    r"(?<![A-Za-z0-9_-])DFA-(?P<suffix>[A-Za-z0-9_-]+)",
+    re.IGNORECASE,
+)
+HEAD_CANDIDATE_RE = re.compile(
+    r"\bHEAD\s*:?\s*(?P<value>[A-Za-z0-9]{39,})(?![A-Za-z0-9])",
+    re.IGNORECASE,
+)
 TOKEN_RE = re.compile(
-    r"(?P<range>DFA-(?P<start>[0-9]{4})\s*\.\.\s*DFA-(?P<end>[0-9]{4}))"
-    r"|(?P<dfa>DFA-[0-9]{4})"
-    r"|(?P<head>\bHEAD\s*:?\s*(?P<sha>[0-9a-f]{40}))",
+    r"(?P<range>(?<![A-Za-z0-9_-])DFA-(?P<start>[0-9]{4})"
+    r"\s*\.\.\s*DFA-(?P<end>[0-9]{4})(?![A-Za-z0-9_-]))"
+    r"|(?P<dfa>(?<![A-Za-z0-9_-])DFA-[0-9]{4}(?![A-Za-z0-9_-]))"
+    r"|(?P<head>\bHEAD\s*:?\s*(?P<sha>[0-9a-f]{40})(?![A-Za-z0-9]))",
     re.IGNORECASE,
 )
 CHRONOLOGY_TEXT_RE = re.compile(
@@ -32,7 +38,7 @@ PR_BODY_CONTEXT_RE = re.compile(
     re.IGNORECASE,
 )
 ACCEPTED_HEAD_RE = re.compile(
-    r"^-[ \t]+accepted exact PR HEAD:[ \t]*`(?P<head>[0-9a-f]{40})`[ \t]*$",
+    r"^-[ \t]+accepted exact PR HEAD:[ \t]*(?P<head>[0-9a-f]{40})[ \t]*$",
     re.IGNORECASE,
 )
 ATX_RE = re.compile(r"^(?P<indent> {0,3})(?P<marks>#{1,6})(?:[ \t]+(?P<body>.*)|[ \t]*)$")
@@ -304,7 +310,7 @@ def accepted_pr_heads(text: str) -> dict[int, str]:
         if context is not None:
             current_pr = context
             continue
-        accepted = ACCEPTED_HEAD_RE.fullmatch(line.strip())
+        accepted = ACCEPTED_HEAD_RE.fullmatch(_render_inline_text(line.strip()))
         if accepted is None:
             continue
         if current_pr is None:
@@ -327,6 +333,13 @@ def accepted_source_head(pr: int) -> str:
 
 def ordered_refs(text: str) -> list[tuple[str, str]]:
     text = _render_inline_text(text)
+    for match in DFA_CANDIDATE_RE.finditer(text):
+        if re.fullmatch(r"[0-9]{4}", match.group("suffix")) is None:
+            raise AssertionError(f"malformed DFA identity: {match.group(0)!r}")
+    for match in HEAD_CANDIDATE_RE.finditer(text):
+        value = match.group("value")
+        if re.fullmatch(r"[0-9a-f]{40}", value, re.IGNORECASE) is None:
+            raise AssertionError(f"malformed HEAD identity: {value!r}")
     refs: list[tuple[str, str]] = []
     for match in TOKEN_RE.finditer(text):
         if match.group("range") is not None:
@@ -604,6 +617,21 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
             ],
         )
 
+    def test_partial_dfa_and_head_identities_fail_closed(self) -> None:
+        cases = (
+            ("DFA-00120", "malformed DFA identity"),
+            ("DFA-0014..DFA-00160", "malformed DFA identity"),
+            ("DFA-0012suffix", "malformed DFA identity"),
+            ("HEAD: `8cb7d24ce18042227ebf6e9b4acbdcdb6b9479220`", "malformed HEAD identity"),
+            ("HEAD: `8cb7d24ce18042227ebf6e9b4acbdcdb6b947922x`", "malformed HEAD identity"),
+        )
+        for text, error in cases:
+            with self.subTest(text=text), self.assertRaisesRegex(AssertionError, error):
+                ordered_refs(text)
+
+    def test_identity_tokens_require_a_left_boundary(self) -> None:
+        self.assertEqual(ordered_refs("XDFA-0012"), [])
+
     def test_prefixed_chronology_heading_is_governed(self) -> None:
         records = ledger_by_id()
         blocks = chronology_blocks(
@@ -817,6 +845,28 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
             accepted_pr_heads(text),
             {26: "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"},
         )
+
+    def test_rendered_accepted_head_assertions_are_parsed(self) -> None:
+        accepted = "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
+        cases = (
+            f"- accepted exact PR HEAD&#58; `{accepted}`\n",
+            f"- **accepted exact PR HEAD:** `{accepted}`\n",
+        )
+        for assertion in cases:
+            with self.subTest(assertion=assertion):
+                text = "PR #26 — accepted evidence\n" + assertion
+                self.assertEqual(accepted_pr_heads(text), {26: accepted})
+
+    def test_formatted_conflicting_accepted_head_fails_closed(self) -> None:
+        accepted = "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
+        conflicting = "7cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
+        text = (
+            "PR #26 — accepted evidence\n"
+            f"- accepted exact PR HEAD: `{accepted}`\n"
+            f"- **accepted exact PR HEAD:** `{conflicting}`\n"
+        )
+        with self.assertRaisesRegex(AssertionError, "conflicting accepted exact heads"):
+            accepted_pr_heads(text)
 
     def test_source_pr_membership_uses_immutable_accepted_head(self) -> None:
         self.assertEqual(
