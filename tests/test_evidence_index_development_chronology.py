@@ -33,12 +33,15 @@ CHRONOLOGY_TEXT_RE = re.compile(
 )
 NUMBERED_RE = re.compile(r"^[0-9]{1,9}[.)][ \t]{1,4}(?=\S)")
 LIST_MARKER_RE = re.compile(r"^(?P<indent> {0,3})(?P<marker>(?:[0-9]{1,9}[.)]|[-+*]))(?P<space>[ \t]{1,4})(?=\S)")
+UNORDERED_ITEM_RE = re.compile(
+    r"^ {0,3}[-+*][ \t]{1,4}(?P<body>\S.*)$"
+)
 PR_BODY_CONTEXT_RE = re.compile(
-    r"^(?:[-*][ \t]+)?PR[ \t]+#(?P<pr>[1-9][0-9]*)[ \t]+—.*$",
+    r"^PR[ \t]+#(?P<pr>[1-9][0-9]*)[ \t]+—.*$",
     re.IGNORECASE,
 )
 ACCEPTED_HEAD_RE = re.compile(
-    r"^-[ \t]+accepted exact PR HEAD:[ \t]*(?P<head>[0-9a-f]{40})[ \t]*$",
+    r"^accepted exact PR HEAD:[ \t]*(?P<head>[0-9a-f]{40})[ \t]*$",
     re.IGNORECASE,
 )
 ATX_RE = re.compile(r"^(?P<indent> {0,3})(?P<marks>#{1,6})(?:[ \t]+(?P<body>.*)|[ \t]*)$")
@@ -291,12 +294,22 @@ def top_level_indented_code(line: str) -> bool:
     return line.startswith("    ")
 
 
+def _unordered_item_text(line: str) -> str | None:
+    match = UNORDERED_ITEM_RE.fullmatch(line)
+    if match is None:
+        return None
+    return _render_inline_text(match.group("body"))
+
+
 def _pr_context_number(line: str) -> int | None:
     heading = _atx_heading_text(line)
     if heading is not None:
         match = re.search(r"\bPR[ \t]+#([1-9][0-9]*)\b", heading, re.IGNORECASE)
         return int(match.group(1)) if match else None
-    match = PR_BODY_CONTEXT_RE.fullmatch(_render_inline_text(line.strip()))
+    rendered = _unordered_item_text(line)
+    if rendered is None:
+        rendered = _render_inline_text(line.strip())
+    match = PR_BODY_CONTEXT_RE.fullmatch(rendered)
     return int(match.group("pr")) if match else None
 
 
@@ -310,7 +323,10 @@ def accepted_pr_heads(text: str) -> dict[int, str]:
         if context is not None:
             current_pr = context
             continue
-        accepted = ACCEPTED_HEAD_RE.fullmatch(_render_inline_text(line.strip()))
+        rendered_item = _unordered_item_text(line)
+        if rendered_item is None:
+            continue
+        accepted = ACCEPTED_HEAD_RE.fullmatch(rendered_item)
         if accepted is None:
             continue
         if current_pr is None:
@@ -364,13 +380,15 @@ def chronology_blocks(text: str) -> list[list[list[tuple[str, str]]]]:
     blocks: list[list[list[tuple[str, str]]]] = []
     current_block: list[list[tuple[str, str]]] | None = None
     current_event: list[str] | None = None
+    current_event_indent: int | None = None
     after_blank = False
 
     def flush_event() -> None:
-        nonlocal current_event
+        nonlocal current_event, current_event_indent
         if current_block is not None and current_event is not None:
             current_block.append(ordered_refs("\n".join(current_event)))
         current_event = None
+        current_event_indent = None
 
     def flush_block() -> None:
         nonlocal current_block
@@ -382,8 +400,20 @@ def chronology_blocks(text: str) -> list[list[list[tuple[str, str]]]]:
     for line in visible_markdown_lines(text):
         indented_code = top_level_indented_code(line)
         stripped = line.strip()
+        leading = len(line) - len(line.lstrip(" "))
+        inside_event_container = (
+            current_event is not None
+            and current_event_indent is not None
+            and bool(stripped)
+            and leading >= current_event_indent
+        )
 
-        if not indented_code and _chronology_heading(line):
+        if inside_event_container and _chronology_heading(line):
+            raise AssertionError(
+                "nested chronology heading text is forbidden inside a numbered chronology event"
+            )
+
+        if not indented_code and not inside_event_container and _chronology_heading(line):
             flush_block()
             current_block = []
             after_blank = False
@@ -400,12 +430,15 @@ def chronology_blocks(text: str) -> list[list[list[tuple[str, str]]]]:
         if not indented_code and NUMBERED_RE.match(stripped):
             flush_event()
             current_event = [stripped]
+            current_event_indent = _list_content_indent(line)
+            if current_event_indent is None:
+                raise AssertionError("numbered chronology event lacks a stable list content column")
             after_blank = False
         elif current_event is not None:
             if not stripped:
                 current_event.append(stripped)
                 after_blank = True
-            elif line[:1].isspace():
+            elif current_event_indent is not None and leading >= current_event_indent:
                 current_event.append(stripped)
                 after_blank = False
             elif after_blank:
@@ -857,6 +890,16 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
                 text = "PR #26 — accepted evidence\n" + assertion
                 self.assertEqual(accepted_pr_heads(text), {26: accepted})
 
+    def test_all_unordered_markers_bind_accepted_head_and_pr_context(self) -> None:
+        accepted = "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
+        for marker in ("-", "+", "*"):
+            with self.subTest(marker=marker):
+                text = (
+                    f"{marker} PR #26 — accepted evidence\n"
+                    f"{marker} **accepted exact PR HEAD:** `{accepted}`\n"
+                )
+                self.assertEqual(accepted_pr_heads(text), {26: accepted})
+
     def test_formatted_conflicting_accepted_head_fails_closed(self) -> None:
         accepted = "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
         conflicting = "7cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
@@ -867,6 +910,21 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(AssertionError, "conflicting accepted exact heads"):
             accepted_pr_heads(text)
+
+    def test_alternate_marker_conflicting_accepted_heads_fail_closed(self) -> None:
+        accepted = "8cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
+        conflicting = "7cb7d24ce18042227ebf6e9b4acbdcdb6b947922"
+        for marker in ("+", "*"):
+            with self.subTest(marker=marker):
+                text = (
+                    "PR #26 — accepted evidence\n"
+                    f"- accepted exact PR HEAD: `{accepted}`\n"
+                    f"{marker} accepted exact PR HEAD: `{conflicting}`\n"
+                )
+                with self.assertRaisesRegex(
+                    AssertionError, "conflicting accepted exact heads"
+                ):
+                    accepted_pr_heads(text)
 
     def test_source_pr_membership_uses_immutable_accepted_head(self) -> None:
         self.assertEqual(
@@ -896,6 +954,18 @@ class EvidenceIndexDevelopmentChronologyTests(unittest.TestCase):
         )
         self.assertEqual(blocks[0][0], [("DFA", "DFA-0014")])
         self.assertEqual(blocks[0][1], [("DFA", "DFA-0012")])
+
+    def test_indented_chronology_heading_continuation_fails_closed(self) -> None:
+        with self.assertRaisesRegex(
+            AssertionError,
+            "nested chronology heading text is forbidden inside a numbered chronology event",
+        ):
+            chronology_blocks(
+                "Review/remediation chronology:\n"
+                "1. Later finding `DFA-0012`.\n"
+                "   Review/remediation chronology:\n"
+                "2. Older finding `DFA-0014`.\n"
+            )
 
     def test_top_level_prose_ends_numbered_chronology(self) -> None:
         records = ledger_by_id()

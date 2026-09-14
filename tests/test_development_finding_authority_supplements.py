@@ -81,6 +81,10 @@ def assert_no_ambiguous_chronology_structure(text: str) -> None:
         if event_content_indent is not None and stripped:
             leading = _leading_spaces(line)
             if leading >= event_content_indent:
+                if c._chronology_heading(line):
+                    raise AssertionError(
+                        "nested chronology heading text is forbidden inside a numbered chronology event"
+                    )
                 relative = line[event_content_indent:]
                 if c._atx_heading_text(relative) is not None:
                     raise AssertionError(
@@ -167,6 +171,7 @@ class FindingSupplementTests(unittest.TestCase):
         self.assertIn(5634074780, ids)
         self.assertIn(5634518059, ids)
         self.assertIn(5644287275, ids)
+        self.assertIn(5660578716, ids)
         self.assertNotIn(5619597338, ids)
 
     def test_process_issue_records_reads_every_configured_supplement(self) -> None:
@@ -271,6 +276,19 @@ class EvidenceIndexAuthoritySurfaceTests(unittest.TestCase):
             "2. Later event `DFA-0012`.\n"
         )
         assert_canonical_authority_profile(text)
+
+    def test_indented_chronology_heading_continuation_fails_closed(self) -> None:
+        text = (
+            "Review/remediation chronology:\n"
+            "1. Later finding `DFA-0012`.\n"
+            "   Review/remediation chronology:\n"
+            "2. Older finding `DFA-0014`.\n"
+        )
+        with self.assertRaisesRegex(
+            AssertionError,
+            "nested chronology heading text is forbidden inside a numbered chronology event",
+        ):
+            assert_canonical_authority_profile(text)
 
     def test_zero_to_three_space_atx_chronology_is_rendered_authority(self) -> None:
         for count in range(4):
